@@ -1,0 +1,39 @@
+{
+  "name": "schoolsoft-plus",
+  "version": "0.3.7",
+  "type": "module",
+  "description": "Enhanced alternative to Schoolsoft with modern UI, AI integration, and fast navigation.",
+  "main": "index.js",
+  "scripts": {
+    "start": "vercel build",
+    "lint": "eslint . --ext .js,.mjs",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "schoolsoft",
+    "education",
+    "AI",
+    "Vercel",
+    "dashboard",
+    "school"
+  ],
+  "author": "Elias <elias4044@pm.me>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^1.25.0",
+    "axios": "^1.9.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "genai": "^0.0.18",
+    "jsdom": "^26.1.0",
+    "vercel": "^48.6.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.48.0"
+  }
+}

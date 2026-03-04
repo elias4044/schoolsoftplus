@@ -1,0 +1,621 @@
+/* Light / Default Theme */
+:root {
+  /* 🎨 Brand & Accent Colors */
+  --primary-color: #4299e1;       /* Main accent (buttons, highlights) */
+  --success: #38a169;             /* Calmer green (less saturated) */
+  --warning: #f6ad55;             /* Softer amber */
+  --danger: #e53e3e;              /* More cohesive red */
+
+  /* 🌞 Light Mode (Default) */
+  --bg-primary: #ffffff;          /* Page background */
+  --bg-secondary: #f7fafc;        /* Card/section background */
+  --bg-tertiary: #edf2f7;         /* Slightly darker layer (hover states) */
+
+  --text-primary: #2d3748;        /* Main text color (dark gray) */
+  --text-secondary: #4a5568;      /* Slightly muted text */
+  --text-muted: #718096;          /* Hints, placeholders, less important */
+
+  --border-color: #e2e8f0;        /* Light gray borders */
+
+  /* 🪟 Card & Container Styling */
+  --card-bg: #ffffff;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.08), 
+                 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  /* 🧭 Sidebar & Navigation */
+  --sidebar-bg: #ffffff;
+  --nav-item-hover: #f7fafc;
+  --nav-item-active: #ebf8ff;
+
+  /* 🔘 Buttons */
+  --btn-primary-bg: var(--primary-color);
+  --btn-primary-hover: #3182ce;
+  --btn-primary-text: #ffffff;
+
+  /* 📝 Form Inputs */
+  --input-bg: #ffffff;
+  --input-border: #e1e4e8;
+  --input-focus-border: var(--primary-color);
+  --input-focus-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+
+  /* 📚 Lesson & Result Cards */
+  --lesson-item-bg: #ffffff;
+  --lesson-item-border: #e5e7eb;
+
+  /* 📆 Week Navigation Buttons */
+  --week-nav-btn-bg: #f3f4f6;
+  --week-nav-btn-border: #e5e7eb;
+
+  /* 🔔 Messages & Alerts */
+  --top-message-bg: #ffffff;
+  --error-text: #e53e3e;
+  --success-bg: #c6f6d5;
+  --success-text: #276749;
+  --warning-bg: #feebc8;
+  --warning-text: #c05621;
+  --info-bg: #ebf8ff;
+  --info-text: #2b6cb0;
+
+  /* 🎨 Misc. UI */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --message-box-bg: #ffffff;
+  --message-box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  --close-btn-color: #ffffff;
+  --close-btn-border: #ffffff;
+
+  /* 📊 Sections & Results */
+  --section-title-color: #2d3748;
+  --section-border: #edf2f7;
+  --result-card-border: var(--primary-color);
+  --older-result-border: #a0aec0;
+  --result-card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --result-card-hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+
+  /* 🎭 Hover & Click Effects */
+  --clickable-hover-bg: #f7fafc;
+  --clickable-hover-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  /* ⏳ Loader */
+  --loader-border: rgba(0, 0, 0, 0.1);
+  --loader-border-top: var(--primary-color);
+
+  /* 🦴 Skeleton Loader */
+  --skeleton-bg: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #2a2a2a;
+
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+
+  --border-color: #2f2f2f;
+  --card-bg: #1e1e1e;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  --sidebar-bg: rgba(18, 18, 18, 0.9);
+  --nav-item-hover: rgba(255, 255, 255, 0.05);
+  --nav-item-active: #0ea5e9;
+
+  --btn-primary-bg: #0ea5e9;
+  --btn-primary-hover: #0284c7;
+  --btn-primary-text: #ffffff;
+
+  --input-bg: #1e1e1e;
+  --input-border: #2f2f2f;
+  --input-focus-border: #0ea5e9;
+  --input-focus-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+
+  --lesson-item-bg: #1e1e1e;
+  --lesson-item-border: #2f2f2f;
+
+  --week-nav-btn-bg: #1e1e1e;
+  --week-nav-btn-border: #2f2f2f;
+
+  --top-message-bg: #1e1e1e;
+  --login-page-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+
+  --error-text: #f87171;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-text: #34d399;
+  --warning-bg: rgba(251, 191, 36, 0.15);
+  --warning-text: #fbbf24;
+  --info-bg: rgba(14, 165, 233, 0.15);
+  --info-text: #93c5fd;
+
+  --message-box-bg: #1e1e1e;
+  --message-box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
+  --close-btn-color: #d1d5db;
+  --close-btn-border: #2f2f2f;
+
+  --result-card-border: #0ea5e9;
+  --older-result-border: #6b7280;
+  --result-card-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  --result-card-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+
+  --clickable-hover-bg: rgba(255, 255, 255, 0.05);
+  --clickable-hover-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+  --loader-border: rgba(255, 255, 255, 0.1);
+  --loader-border-top: #0ea5e9;
+
+  --skeleton-bg: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+}
+
+/* High Contrast Mode */
+[data-high-contrast="true"] {
+  --bg-primary: #000000;
+  --bg-secondary: #121212;
+  --bg-tertiary: #1e1e1e;
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --text-muted: #cccccc;
+  --border-color: #ffffff;
+  --card-bg: #121212;
+  --card-shadow: 0 0 0 2px #ffffff;
+
+  --sidebar-bg: #000000;
+  --nav-item-hover: #333333;
+  --nav-item-active: #0066cc;
+
+  --btn-primary-bg: #0066cc;
+  --btn-primary-hover: #0052a3;
+  --btn-primary-text: #ffffff;
+
+  --input-bg: #000000;
+  --input-border: #ffffff;
+  --input-focus-border: #ffff00;
+  --input-focus-shadow: 0 0 0 3px rgba(255, 255, 0, 0.5);
+
+  --lesson-item-bg: #121212;
+  --lesson-item-border: #ffffff;
+
+  --week-nav-btn-bg: #121212;
+  --week-nav-btn-border: #ffffff;
+
+  --top-message-bg: #121212;
+  --error-text: #ff6666;
+  --success-bg: #006600;
+  --success-text: #99ff99;
+  --warning-bg: #663300;
+  --warning-text: #ffcc66;
+  --info-bg: #003366;
+  --info-text: #99ccff;
+
+  --overlay-bg: rgba(0, 0, 0, 0.9);
+  --message-box-bg: #121212;
+  --message-box-shadow: 0 0 0 2px #ffffff;
+
+  --close-btn-color: #ffffff;
+  --close-btn-border: #ffffff;
+
+  --section-title-color: #ffffff;
+  --section-border: #ffffff;
+  --result-card-border: #ffffff;
+  --older-result-border: #cccccc;
+  --result-card-shadow: 0 0 0 1px #ffffff;
+  --result-card-hover-shadow: 0 0 0 2px #ffffff;
+  --clickable-hover-bg: #333333;
+  --clickable-hover-shadow: 0 0 0 1px #ffffff;
+
+  --loader-border: rgba(255, 255, 255, 0.5);
+  --loader-border-top: #ffffff;
+
+  --skeleton-bg: linear-gradient(90deg, #121212 25%, #333333 50%, #121212 75%);
+}
+
+
+/* Apply variables to elements */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary) !important;
+}
+
+.app-container {
+  background-color: var(--bg-primary) !important;
+}
+
+.sidebar {
+  background-color: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--border-color) !important;
+}
+
+.sidebar-header h1, 
+.app-title {
+  color: var(--text-primary) !important;
+}
+
+.nav-group-title {
+  color: var(--text-muted) !important;
+}
+
+.nav-item {
+  color: var(--text-secondary) !important;
+}
+
+.nav-item:hover {
+  background-color: var(--nav-item-hover) !important;
+}
+
+.nav-item.active {
+  background-color: var(--nav-item-active);
+}
+
+.main-content {
+  background-color: var(--bg-primary) !important;
+}
+
+.content-header h2 {
+  color: var(--text-primary) !important;
+}
+
+.card {
+  background-color: var(--card-bg) !important;
+  box-shadow: var(--card-shadow) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.card-header {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.card-header h3 {
+  color: var(--text-primary);
+}
+
+.item-list li {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.item-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+}
+
+.add-btn {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+
+.add-btn:hover {
+  background-color: var(--btn-primary-hover);
+}
+
+/* Login page */
+.login-page {
+  background-image: var(--login-page-bg);
+}
+
+.login-card {
+  background-color: var(--card-bg);
+}
+
+.login-header h1 {
+  color: var(--text-primary);
+}
+
+.login-header p {
+  color: var(--text-secondary);
+}
+
+.form-group label {
+  color: var(--text-secondary);
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group select {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+}
+
+.login-btn {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+
+.login-btn:hover {
+  background-color: var(--btn-primary-hover);
+}
+
+#top-message {
+  background-color: var(--top-message-bg);
+  color: var(--text-primary);
+}
+
+#top-message a {
+  color: var(--btn-primary-bg);
+}
+
+/* Subject page */
+.subject-tab {
+  color: var(--text-secondary);
+}
+
+.subject-tab.active {
+  color: var(--btn-primary-bg);
+}
+
+.teacher-card {
+  background-color: var(--card-bg);
+}
+
+.result-card {
+  background-color: var(--card-bg);
+}
+
+/* Dark mode toggle button */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  outline: none;
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+.theme-toggle:hover {
+  background-color: var(--bg-secondary);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* Additional dark mode styles for elements from other CSS files */
+
+/* Error messages */
+.error-message {
+  color: var(--error-text);
+}
+
+/* Overlay and message box */
+#overlay {
+  background-color: var(--overlay-bg);
+}
+
+#message-box {
+  background-color: var(--message-box-bg);
+  box-shadow: var(--message-box-shadow);
+  color: var(--text-primary);
+}
+
+#close-btn {
+  color: var(--close-btn-color);
+  border-color: var(--close-btn-border);
+}
+
+/* Section headers */
+.section-title {
+  color: var(--section-title-color);
+  border-bottom-color: var(--section-border);
+}
+
+.section-header h2 {
+  color: var(--text-primary);
+}
+
+/* Subject page specific styles */
+.subject-tabs-container {
+  border-bottom-color: var(--border-color);
+}
+
+.subject-tab::after {
+  background-color: var(--btn-primary-bg);
+}
+
+.no-content {
+  color: var(--text-muted);
+}
+
+/* Result cards */
+.result-card {
+  background-color: var(--card-bg);
+  box-shadow: var(--result-card-shadow);
+  border-left-color: var(--result-card-border);
+}
+
+.result-card:hover {
+  box-shadow: var(--result-card-hover-shadow);
+}
+
+.older-result {
+  border-left-color: var(--older-result-border);
+}
+
+.result-title {
+  color: var(--text-primary);
+}
+
+.status-badge {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.status-badge.completed {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.status-badge.pending {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.result-grade {
+  background-color: var(--info-bg);
+  color: var(--info-text);
+}
+
+.result-details {
+  color: var(--text-muted);
+}
+
+.result-card.expanded .result-content {
+  border-top-color: var(--border-color);
+}
+
+.result-description h6, 
+.result-comments h6 {
+  color: var(--text-secondary);
+}
+
+.description-content, 
+.comments-content {
+  color: var(--text-secondary);
+}
+
+.description-content a {
+  color: var(--btn-primary-bg);
+}
+
+.view-details-btn {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.view-details-btn:hover {
+  background-color: var(--bg-secondary);
+}
+
+/* Clickable items */
+.clickable:hover {
+  background-color: var(--clickable-hover-bg);
+  box-shadow: var(--clickable-hover-shadow);
+}
+
+/* Loaders and animations */
+.loader-spinner {
+  border-color: var(--loader-border);
+  border-top-color: var(--loader-border-top);
+}
+
+.loader-text {
+  color: var(--text-secondary);
+}
+
+.skeleton-loader {
+  background: var(--skeleton-bg);
+}
+
+/* Notes area */
+#notes-area {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+/* Calendar and schedule */
+.calendar-date {
+  border-bottom-color: var(--border-color);
+}
+
+.lesson-item {
+  background-color: var(--lesson-item-bg);
+  border-color: var(--lesson-item-border);
+}
+
+.lesson-time {
+  color: var(--text-primary);
+}
+
+.lesson-name {
+  color: var(--text-primary);
+}
+
+.lesson-details {
+  color: var(--text-muted);
+}
+
+.day-header {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Grade display */
+.grade-container {
+  background-color: var(--bg-secondary);
+  border-left-color: var(--btn-primary-bg);
+}
+
+#grade-display {
+  border-top-color: var(--border-color);
+}
+
+.criteria-table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.criteria-table td {
+  border-color: var(--border-color);
+}
+
+.criteria-table tr:nth-child(even) {
+  background-color: var(--bg-secondary);
+}
+
+#help-button {
+  color: var(--text-primary);
+}
+
+#card-content {
+  color: var(--text-primary) !important;
+}
+
+.test-item {
+  color: var(--text-primary)!important;
+}
+
+.test-title {
+  color: var(--text-primary)!important;
+}
+
+.item-title {
+  color: var(--text-primary)!important;
+}
+
+.item-time {
+  color: var(--text-primary)!important;
+  background-color: var(--bg-secondary)!important;
+}
+
+.result-info {
+  color: var(--text-primary)!important;
+  background-color: var(--bg-secondary)!important;
+}
+
+#card-content {
+  color: var(--text-primary)!important;
+  background-color: var(--bg-secondary)!important;
+}
+
+#criteria-container {
+  color: var(--text-primary)!important;
+  background-color: var(--bg-primary)!important;
+}
+
+#ai-main-overlay {
+  background-color: var(--ai-dark-bg-color) !important;
+}
+
+.lesson-main h4 {
+  color: var(--text-primary)!important;
+}

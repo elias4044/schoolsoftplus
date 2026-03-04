@@ -1,0 +1,406 @@
+/* General AI UI Variables (can be overridden by dark-mode.css) */
+:root {
+    --ai-bg-color: rgba(255, 255, 255, 0.095); /* Light translucent white */
+    --ai-dark-bg-color: rgba(30, 30, 30, 0.85); /* Dark translucent gray */
+    --ai-backdrop-filter: blur(20px);
+    --ai-card-bg: #fff;
+    --ai-dark-card-bg: #2a2a2a;
+    --ai-border-color: #e1e4e8;
+    --ai-dark-border-color: #3b3b3b;
+    --ai-text-primary: #333;
+    --ai-dark-text-primary: #f5f7fa;
+    --ai-text-secondary: #666;
+    --ai-dark-text-secondary: #b0b0b0;
+    --ai-input-bg: #f8f8f8;
+    --ai-dark-input-bg: #1e1e1e;
+    --ai-primary-color: var(--primary-color);
+    --ai-ai-message-bg: #edf2f7; /* Light gray for AI messages */
+    --ai-dark-ai-message-bg: #4a4a4a;
+    --ai-user-message-bg: #e2f0ff; /* Light blue for user messages */
+    --ai-dark-user-message-bg: #324a66;
+}
+
+/* Dark mode specific overrides, integrating with your existing dark-mode.css concept */
+[data-theme="dark"] {
+    --ai-bg-color: var(--ai-dark-bg-color);
+    --ai-card-bg: var(--ai-dark-card-bg);
+    --ai-border-color: var(--ai-dark-border-color);
+    --ai-text-primary: var(--ai-dark-text-primary);
+    --ai-text-secondary: var(--ai-dark-text-secondary);
+    --ai-input-bg: var(--ai-dark-input-bg);
+    --ai-ai-message-bg: var(--ai-dark-ai-message-bg);
+    --ai-user-message-bg: var(--ai-dark-user-message-bg);
+}
+
+[data-high-contrast="true"] {
+    --ai-bg-color: var(--ai-dark-bg-color) !important; /* Keep the same background color */
+}
+
+
+/* Main overlay for AI chat window */
+#ai-main-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--ai-bg-color) !important;
+    backdrop-filter: var(--ai-backdrop-filter);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999999; /* On top of everything */
+
+    opacity: 0;
+    visibility: hidden; /* Start hidden */
+    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+}
+
+#ai-main-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+/* AI Chat Window (the main UI part) */
+#ai-chat-window {
+    background-color: var(--ai-card-bg);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    width: clamp(320px, 90%, 700px); /* Responsive width */
+    height: clamp(400px, 80vh, 800px); /* Responsive height */
+    overflow: hidden;
+    transform: translateY(50px); /* Start slightly below center */
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease-out; /* Smooth slide-up and fade-in */
+}
+
+#ai-main-overlay.is-active #ai-chat-window {
+    transform: translateY(0); /* Slide to center */
+    opacity: 1;
+}
+
+/* Header for AI chat window */
+.ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    border-bottom: 1px solid var(--ai-border-color);
+    background-color: var(--ai-card-bg); /* Match chat window background */
+    z-index: 10; /* Keep header above messages */
+}
+
+.ai-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ai-text-primary);
+    margin: 0;
+}
+
+.ai-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ai-text-secondary);
+    transition: color 0.2s ease;
+    padding: 5px; /* Increase hit area */
+}
+
+.ai-close-btn:hover {
+    color: var(--ai-primary-color);
+}
+
+
+/* Conversation Area */
+#ai-conversation {
+    flex-grow: 1;
+    padding: 20px 25px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
+}
+
+#ai-conversation::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+    background-color: transparent;
+}
+
+#ai-conversation::-webkit-scrollbar-thumb {
+    background-color: var(--ai-dark-text-secondary); /* Color of the scrollbar thumb */
+    border-radius: 4px; /* Rounded corners */
+}
+
+.ai-message {
+    max-width: 85%;
+    padding: 12px 18px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    animation: fadeInMessage 0.3s ease-out forwards; /* Animation for new messages */
+    color: var(--ai-text-primary);
+}
+
+.ai-message p {
+    margin: 0;
+}
+
+.ai-message.ai-bot {
+    background-color: var(--ai-ai-message-bg);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px; /* Slight corner for bot messages */
+}
+
+.ai-message.ai-user {
+    background-color: var(--ai-user-message-bg);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px; /* Slight corner for user messages */
+}
+
+/* Input Area */
+#ai-input-area {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    border-top: 1px solid var(--ai-border-color);
+    background-color: var(--ai-card-bg); /* Match chat window background */
+    gap: 10px;
+}
+
+#ai-input {
+    flex-grow: 1;
+    padding: 12px 18px;
+    border: 1px solid var(--ai-border-color);
+    border-radius: 25px; /* Pill shape */
+    font-size: 1rem;
+    background-color: var(--ai-input-bg);
+    color: var(--ai-text-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#ai-input:focus {
+    outline: none;
+    border-color: var(--ai-primary-color);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+/* Disable state for input and button */
+#ai-input:disabled {
+    background-color: var(--ai-input-bg);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+#ai-send-btn:disabled {
+    background-color: #a0aec0; /* A neutral gray */
+    cursor: not-allowed;
+    transform: none;
+}
+
+
+#ai-send-btn {
+    background-color: var(--ai-primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%; /* Circle shape */
+    width: 48px;
+    height: 48px;
+    min-width: 48px; /* Ensure it doesn't shrink */
+    min-height: 48px; /* Ensure it doesn't shrink */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+#ai-send-btn:not(:disabled):hover {
+    background-color: #3182ce;
+    transform: translateY(-1px);
+}
+
+#ai-send-btn:not(:disabled):active {
+    transform: translateY(0);
+}
+
+#ai-send-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* Dynamic Island Toggle Button */
+#ai-toggle-button {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(70, 70, 70, 0.95), rgba(40, 40, 40, 0.95)); /* Dark subtle gradient */
+    color: white;
+    padding: 8px 20px;
+    border-radius: 999px; /* Pill shape */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25), 0 1px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 100000; /* Higher than other app content, lower than overlay */
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    user-select: none; /* Prevent text selection */
+}
+
+#ai-toggle-button p {
+    margin: 0;
+}
+
+/* Hide toggle when AI chat is active */
+#ai-toggle-button.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Keyframe for message animation */
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* AI Typing Indicator (Loading Animation) */
+.ai-typing-indicator {
+    max-width: 85%; /* Match message width */
+    align-self: flex-start; /* Match bot message alignment */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: var(--ai-ai-message-bg);
+    padding: 12px 18px;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    animation: fadeInMessage 0.3s ease-out forwards;
+}
+
+.ai-typing-indicator span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--ai-text-secondary);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.ai-typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.ai-typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #ai-chat-window {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .ai-header {
+        padding: 10px 20px;
+    }
+
+    .ai-header h3 {
+        font-size: 1.1rem;
+    }
+
+    #ai-conversation {
+        padding: 15px 20px;
+        gap: 10px;
+    }
+
+    .ai-message {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    #ai-input-area {
+        padding: 10px 20px;
+    }
+
+    #ai-input {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    #ai-send-btn {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+    }
+    #ai-send-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    #ai-toggle-button {
+        top: 15px;
+        padding: 6px 15px;
+        font-size: 0.8rem;
+    }
+
+    .ai-typing-indicator span {
+        width: 6px;
+        height: 6px;
+    }
+    @keyframes bounce {
+        0%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-6px); }
+    }
+}
+
+/* Small adjustments for high contrast, assuming a high-contrast class or data-attribute */
+[data-high-contrast="true"] #ai-main-overlay {
+    background-color: rgba(255, 255, 255, 0.98); /* Less translucent for HC */
+    backdrop-filter: none; /* Remove blur for HC */
+}
+[data-high-contrast="true"] #ai-toggle-button {
+    border: 2px solid var(--ai-primary-color);
+    background: var(--ai-card-bg);
+    color: var(--ai-primary-color);
+    box-shadow: none;
+}
+[data-high-contrast="true"] #ai-send-btn {
+    border: 2px solid var(--ai-primary-color);
+    background: none;
+    color: var(--ai-primary-color);
+}
+[data-high-contrast="true"] #ai-send-btn:hover {
+    background: var(--ai-primary-color);
+    color: white;
+}
+[data-high-contrast="true"] .ai-message.ai-bot {
+    border: 1px solid var(--ai-primary-color);
+    background-color: transparent;
+}
+[data-high-contrast="true"] .ai-message.ai-user {
+    border: 1px solid var(--ai-primary-color);
+    background-color: transparent;
+}
+[data-high-contrast="true"] .ai-typing-indicator {
+    border: 1px solid var(--ai-primary-color);
+    background-color: transparent;
+}

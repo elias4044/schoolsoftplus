@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /subjects
+Disallow: /subject
+Allow: /
+
+Sitemap: https://schoolsoftplus.vercel.app/sitemap.xml

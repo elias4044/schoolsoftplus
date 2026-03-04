@@ -1,0 +1,459 @@
+/* /css/login-page.css */
+
+/* --- Root Variables for Login Page (can extend global vars) --- */
+:root {
+    --login-bg-light: #eef2f7;
+    --login-card-bg-light: #ffffff;
+    --login-text-primary-light: #2d3748;
+    --login-text-secondary-light: #718096;
+    --login-accent-color: #4299e1;
+    --login-accent-color-darker: #3182ce;
+    --login-error-color: #e53e3e;
+    --login-input-border-light: #cbd5e0;
+    --login-input-focus-border-light: var(--login-accent-color);
+    --login-input-focus-shadow-light: rgba(66, 153, 225, 0.2);
+
+    --login-bg-dark: #121212;
+    --login-card-bg-dark: #1e1e1e;
+    --login-text-primary-dark: #ffffff;
+    --login-text-secondary-dark: #d1d5db;
+    --login-input-border-dark: #2f2f2f;
+    --login-input-focus-border-dark: var(--login-accent-color);
+    --login-input-focus-shadow-dark: rgba(48, 54, 59, 0.25);
+}
+
+
+
+
+/* --- Login Page Body --- */
+.login-page-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--login-bg-light);
+    font-family: 'Inter', sans-serif;
+    padding: 15px; /* Reduced overall padding slightly */
+    transition: background-color 0.3s ease;
+    box-sizing: border-box; /* Ensure padding doesn't add to 100vh */
+}
+
+/* --- Theme Toggle (specific positioning for login page) --- */
+.login-page-body .theme-toggle {
+    position: absolute;
+    top: 15px; /* Adjusted to match body padding */
+    right: 15px; /* Adjusted to match body padding */
+    z-index: 1001;
+}
+
+
+/* --- Info Banner (Top Message) --- */
+.info-banner {
+    background-color: var(--login-accent-color);
+    color: white;
+    padding: 8px 15px; /* Reduced padding */
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.85rem; /* Slightly smaller font */
+    margin-bottom: 15px; /* Reduced margin */
+    max-width: 420px; /* Match card max-width for alignment */
+    width: 100%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.info-banner p {
+    margin: 0;
+}
+.info-banner i {
+    margin-right: 8px;
+}
+
+/* --- Login Main Container (holds the card) --- */
+.login-main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* --- Login Card --- */
+.login-card {
+    background-color: var(--login-card-bg-light);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08), 0 5px 10px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    width: 100%;
+    max-width: 420px;
+    animation: fadeInScaleUp 0.5s ease-out forwards;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    /* max-height: calc(100vh - 30px - (banner height + banner margin)); If absolutely needed */
+}
+
+@keyframes fadeInScaleUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* --- Login Header --- */
+.login-header {
+    padding: 20px 30px 15px; /* Reduced vertical padding */
+    text-align: center;
+    border-bottom: 1px solid var(--login-input-border-light);
+}
+
+.login-logo {
+    max-width: 60px; /* Slightly smaller */
+    margin-bottom: 10px; /* Reduced margin */
+    border-radius: 5px;
+}
+
+.login-header h1 {
+    font-size: 1.6rem; /* Slightly smaller */
+    font-weight: 700;
+    color: var(--login-text-primary-light);
+    margin-bottom: 6px; /* Reduced margin */
+}
+
+.login-header p {
+    color: var(--login-text-secondary-light);
+    font-size: 0.88rem; /* Slightly smaller */
+    line-height: 1.4;
+}
+
+/* --- Login Form --- */
+.login-form {
+    padding: 20px 30px; /* Reduced top/bottom padding */
+}
+
+.form-group {
+    margin-bottom: 16px; /* Reduced spacing */
+}
+
+.form-group:last-of-type { /* For the submit button group */
+    margin-bottom: 12px; /* Reduced */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px; /* Reduced */
+    font-weight: 500;
+    color: var(--login-text-primary-light);
+    font-size: 0.85rem; /* Slightly smaller */
+}
+
+/* Static School Info */
+.static-school-info p {
+    background-color: #f8f9fa;
+    padding: 10px 12px; /* Reduced */
+    border-radius: 6px;
+    border: 1px solid var(--login-input-border-light);
+    color: var(--login-text-secondary-light);
+    font-size: 0.9rem; /* Slightly smaller */
+    margin-top: 0;
+}
+html[data-theme="dark"] .static-school-info p {
+    background-color: #2f2f2f;
+    border-color: var(--login-input-border-dark);
+    color: var(--login-text-secondary-dark);
+}
+
+
+/* Input field with icon wrapper */
+.input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon-wrapper .input-icon {
+    position: absolute;
+    left: 12px; /* Adjusted */
+    color: var(--login-text-secondary-light);
+    font-size: 0.85em;
+}
+
+.input-icon-wrapper input[type="text"],
+.input-icon-wrapper input[type="password"] {
+    width: 100%;
+    padding: 10px 12px 10px 36px; /* Adjusted for icon and reduced height */
+    border: 1px solid var(--login-input-border-light);
+    border-radius: 6px;
+    font-size: 0.95rem; /* Slightly smaller */
+    color: var(--login-text-primary-light);
+    background-color: var(--login-card-bg-light);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input-icon-wrapper input::placeholder {
+    color: #a0aec0;
+}
+
+.input-icon-wrapper input[type="text"]:focus,
+.input-icon-wrapper input[type="password"]:focus {
+    border-color: var(--login-input-focus-border-light);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--login-input-focus-shadow-light);
+}
+
+/* Password Toggle Icon */
+.password-toggle-icon {
+    position: absolute;
+    right: 12px; /* Adjusted */
+    cursor: pointer;
+    color: var(--login-text-secondary-light);
+}
+.password-toggle-icon:hover {
+    color: var(--login-accent-color);
+}
+
+
+/* Select Wrapper for styling select arrow */
+.select-wrapper {
+    position: relative;
+}
+.select-wrapper select {
+    width: 100%;
+    padding: 10px 12px; /* Reduced */
+    border: 1px solid var(--login-input-border-light);
+    border-radius: 6px;
+    font-size: 0.95rem; /* Slightly smaller */
+    color: var(--login-text-primary-light);
+    background-color: var(--login-card-bg-light);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+}
+.select-wrapper::after {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    right: 12px; /* Adjusted */
+    transform: translateY(-50%);
+    color: var(--login-text-secondary-light);
+    pointer-events: none;
+}
+
+
+/* Login Button */
+.login-btn {
+    width: 100%;
+    background-color: var(--login-accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px; /* Reduced padding */
+    font-size: 0.95rem; /* Slightly smaller font */
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.login-btn:hover {
+    background-color: var(--login-accent-color-darker);
+    transform: translateY(-1px);
+}
+.login-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Error Messages */
+.error-message {
+    color: var(--login-error-color);
+    font-size: 0.75rem; /* Slightly smaller */
+    margin-top: 5px; /* Reduced */
+    min-height: 1.1em;
+    text-align: left;
+}
+.error-message.global-error {
+    text-align: center;
+    margin-top: 12px; /* Reduced */
+    font-weight: 500;
+}
+
+
+/* Login Footer (ToS, Help Link) */
+.login-footer {
+    padding: 12px 30px; /* Reduced padding */
+    text-align: center;
+    border-top: 1px solid var(--login-input-border-light);
+    background-color: #fcfdff;
+}
+html[data-theme="dark"] .login-footer {
+    background-color: #242424;
+    border-top-color: var(--login-input-border-dark);
+}
+
+
+#agree-tos {
+    font-size: 0.75rem; /* Slightly smaller */
+    color: var(--login-text-secondary-light);
+    margin-bottom: 8px; /* Reduced margin */
+    line-height: 1.3;
+}
+
+#agree-tos a, #help-link {
+    color: var(--login-accent-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+#agree-tos a:hover, #help-link:hover {
+    text-decoration: underline;
+    color: var(--login-accent-color-darker);
+}
+
+#help-link {
+    display: inline-block;
+    font-size: 0.85rem; /* Slightly smaller */
+}
+
+
+/* --- Dark Mode Specific Styles for Login --- */
+html[data-theme="dark"] .login-page-body {
+    background-color: var(--login-bg-dark);
+}
+html[data-theme="dark"] .info-banner {
+    background-color: var(--login-accent-color-darker);
+    color: var(--login-text-primary-dark);
+}
+html[data-theme="dark"] .login-card {
+    background-color: var(--login-card-bg-dark);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+html[data-theme="dark"] .login-header {
+    border-bottom-color: var(--login-input-border-dark);
+}
+html[data-theme="dark"] .login-header h1 {
+    color: var(--login-text-primary-dark);
+}
+html[data-theme="dark"] .login-header p {
+    color: var(--login-text-secondary-dark);
+}
+html[data-theme="dark"] .form-group label {
+    color: var(--login-text-primary-dark);
+}
+html[data-theme="dark"] .input-icon-wrapper .input-icon {
+    color: var(--login-text-secondary-dark);
+}
+html[data-theme="dark"] .input-icon-wrapper input[type="text"],
+html[data-theme="dark"] .input-icon-wrapper input[type="password"],
+html[data-theme="dark"] .select-wrapper select {
+    border-color: var(--login-input-border-dark);
+    background-color: var(--login-card-bg-dark);
+    color: var(--login-text-primary-dark);
+}
+html[data-theme="dark"] .input-icon-wrapper input::placeholder {
+    color: #718096;
+}
+html[data-theme="dark"] .input-icon-wrapper input[type="text"]:focus,
+html[data-theme="dark"] .input-icon-wrapper input[type="password"]:focus {
+    border-color: var(--login-input-focus-border-dark);
+    box-shadow: 0 0 0 3px var(--login-input-focus-shadow-dark);
+}
+html[data-theme="dark"] .password-toggle-icon {
+    color: var(--login-text-secondary-dark);
+}
+html[data-theme="dark"] .password-toggle-icon:hover {
+    color: var(--login-accent-color);
+}
+html[data-theme="dark"] .select-wrapper::after {
+    color: var(--login-text-secondary-dark);
+}
+html[data-theme="dark"] #agree-tos {
+    color: var(--login-text-secondary-dark);
+}
+
+/* Responsive Adjustments for very short screens */
+@media (max-height: 680px) { /* Target shorter viewports */
+    .login-page-body {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .info-banner {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        margin-bottom: 10px;
+    }
+    .login-logo {
+        max-width: 50px;
+        margin-bottom: 8px;
+    }
+    .login-header {
+        padding: 15px 20px 10px;
+    }
+    .login-header h1 {
+        font-size: 1.4rem;
+        margin-bottom: 4px;
+    }
+     .login-header p {
+        font-size: 0.8rem;
+    }
+    .login-form {
+        padding: 15px 20px;
+    }
+    .form-group {
+        margin-bottom: 12px;
+    }
+    .form-group label {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+    }
+    .input-icon-wrapper input[type="text"],
+    .input-icon-wrapper input[type="password"],
+    .select-wrapper select {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    .static-school-info p {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        font-size: 0.85rem;
+    }
+    .login-btn {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    .login-footer {
+        padding: 10px 20px;
+    }
+     #agree-tos, #help-link {
+        font-size: 0.7rem;
+    }
+    #agree-tos {
+        margin-bottom: 6px;
+    }
+     .error-message {
+        font-size: 0.7rem;
+        margin-top: 4px;
+    }
+}
+
+
+@media (max-width: 480px) { /* General small screen width, already had one, can merge or refine */
+    .login-page-body {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    .login-card {
+        border-radius: 10px;
+    }
+     .info-banner, .login-card {
+        max-width: 100%; /* Ensure they don't exceed screen width */
+    }
+    .login-page-body .theme-toggle {
+        top: 10px;
+        right: 10px;
+    }
+    /* Further adjustments from the max-height query might also apply here or be duplicated if needed */
+}

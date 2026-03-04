@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home | Schoolsoft+</title>
+
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Schoolsoft+",
+          "url": "https://schoolsoftplus.vercel.app/",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://schoolsoftplus.vercel.app/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+    </script>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Schoolsoft+ enhances your Schoolsoft experience with a cleaner interface, organized schedules, assignment tracking, and test result insights." />
+    <meta name="keywords"
+        content="Schoolsoft, Schoolsoft+, school management, student tools, schedule planner, assignments, grades, school dashboard, student portal" />
+    <meta name="author" content="Elias" />
+    <link rel="canonical" href="https://schoolsoftplus.vercel.app/" />
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="Schoolsoft+ | Smarter School Management for Students" />
+    <meta property="og:description"
+        content="Get a better overview of your school life with Schoolsoft+. Track assignments, view your schedule, and stay organized – all in one place." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://schoolsoftplus.vercel.app/" />
+    <meta property="og:image" content="https://schoolsoftplus.vercel.app/img/social-preview.png" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Schoolsoft+ | Smarter School Management" />
+    <meta name="twitter:description"
+        content="An improved platform to manage your school life - with smarter tools for schedules, grades, and assignments." />
+    <meta name="twitter:image" content="https://schoolsoftplus.vercel.app/img/social-preview.png" />
+
+    <!-- Favicon & Theme -->
+    <link rel="icon" href="img/favicon-32x32.png" type="image/png" />
+    <meta name="theme-color" content="#2a2a2a" />
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/animations.css" />
+    <link rel="stylesheet" href="css/dark-mode.css" />
+    <link rel="stylesheet" href="css/ai.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=assignment,auto_stories,calendar_month,home,how_to_reg,logout,news,restaurant,schedule,settings,star" />
+    <script>
+        // Initialize the va queue if it doesn’t exist
+        window.va = window.va || function () {
+            (window.vaq = window.vaq || []).push(arguments);
+        };
+    </script>
+
+    <!-- Load Vercel's insights script -->
+    <script defer src="/_vercel/insights/script.js"></script>
+
+</head>
+
+<body>
+    <!-- AI UI Elements - Placed at the very top for maximum z-index control -->
+    <div id="ai-main-overlay">
+        <div id="ai-chat-window">
+            <div class="ai-header">
+                <h3>Schoolsoft+ AI Assistant</h3>
+                <button class="ai-close-btn" aria-label="Close AI Chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="feather feather-x">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div id="ai-conversation">
+                <!-- Initial message from AI -->
+                <div class="ai-message ai-bot">
+                    <p>Hello! I'm your Schoolsoft+ AI Assistant. How can I help you today?</p>
+                </div>
+                <!-- Loading indicator will be inserted here dynamically -->
+            </div>
+            <div id="ai-input-area">
+                <input type="text" id="ai-input" placeholder="Ask Schoolsoft+ AI anything...">
+                <button id="ai-send-btn" aria-label="Send message">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="feather feather-send">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- The dynamic island toggle button -->
+    <div id="ai-toggle-button" class="ai-collapsed">
+        <p>Schoolsoft+ AI</p>
+    </div>
+
+    <!-- Rest of the app-container content starts here -->
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div style="display: flex; flex-direction: column;">
+                    <h1>Schoolsoft+</h1>
+                    <h5 class="version">Version loading...</h5>
+                    <script>
+                        fetch("/api/version")
+                            .then(response => response.text())
+                            .then(data => {
+                                document.querySelector(".version").textContent = data;
+                            })
+                            .catch(error => {
+                                console.error("Error fetching version:", error);
+                            });
+                    </script>
+                    <p>Developed by Elias</p>
+                </div>
+                <button id="sidebar-toggle" class="mobile-toggle">☰</button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Navigation Groups -->
+                <div class="nav-group">
+                    <h3 class="nav-group-title">Main</h3>
+                    <ul class="nav-items">
+                        <li class="nav-item active" data-section="dashboard"><span
+                                class="material-symbols-rounded">home</span>
+                            <p>Dashboard</p>
+                        </li>
+                        <li class="nav-item" data-section="schedule"><span
+                                class="material-symbols-rounded">schedule</span>
+                            <p>Schedule</p>
+                        </li>
+                        <li class="nav-item" data-section="lunchMenu"><span
+                                class="material-symbols-rounded">restaurant</span>
+                            <p>Lunch Menu</p>
+                        </li>
+                        <li class="nav-item" data-section="news"><span class="material-symbols-rounded">news</span>
+                            <p>News</p>
+                        </li>
+                        <li class="nav-item" data-section="calender"><span
+                                class="material-symbols-rounded">calendar_month</span>
+                            <p>Calendar</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-group">
+                    <h3 class="nav-group-title">Personal</h3>
+                    <ul class="nav-items">
+                        <li class="nav-item" data-section="saml-needed"><span
+                                class="material-symbols-rounded">how_to_reg</span>
+                            <p>Attendance</p>
+                        </li>
+                        <li class="nav-item" data-section="saml-needed"><span
+                                class="material-symbols-rounded">star</span>
+                            <p>Grades</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-group">
+                    <h3 class="nav-group-title">Settings</h3>
+                    <ul class="nav-items">
+                        <li class="nav-item" data-section="settings"><span class="material-symbols-rounded"
+                                style="font-variation-settings: 'FILL' 1;">settings</span>
+                            <p>Settings</p>
+                        </li>
+                        <li class="nav-item" id="logout" onclick="logout()"><span
+                                class="material-symbols-rounded">logout</span>
+                            <p>Logout</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <footer>
+                    <a href="/terms-of-service.html">Terms of Service</a>
+                    <p>© 2025 Schoolsoft+. All rights reserved.</p>
+                </footer>
+                <style>
+                    footer {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        text-align: center;
+                        margin-top: 20px;
+                    }
+
+                    footer a {
+                        color: #007bff;
+                        text-decoration: none;
+                        margin-bottom: 5px;
+                        font-size: 14px;
+                    }
+
+                    footer p {
+                        font-size: 12px;
+                        color: #666;
+                    }
+                </style>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="content-header">
+                <button id="mobile-sidebar-toggle" class="mobile-toggle">☰</button>
+                <h2 id="current-section-title">Dashboard</h2>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <div class="section-header">
+                    <h2>Overview</h2>
+                </div>
+
+                <div class="card-grid">
+
+                    <!-- Quick Links (2 grid width) -->
+                    <div class="card" id="quick-links-card">
+                        <div class="card-header">
+                            <h3>Quick Links</h3>
+                        </div>
+                        <div class="card-content">
+                            <!-- Big left link -->
+                            <a class="card-link big-link" href="/subjects.html">
+                                <span class="material-symbols-rounded">auto_stories</span>
+                                <p>Subjects <span class="beta-badge">[BETA]</span></p>
+                            </a>
+
+                            <!-- Right column with two smaller links -->
+
+                            <!--
+                            <div class="right-links">
+                                <a class="card-link small-link" href="#">
+                                    <span class="material-symbols-rounded">star</span>
+                                    <p>Grades</p>
+                                </a>
+                                <a class="card-link small-link" href="#schedule">
+                                    <span class="material-symbols-rounded">schedule</span>
+                                    <p>Schedule</p>
+                                </a>
+                            </div> 
+                            -->
+                        </div>
+                    </div>
+
+                    <!-- This Week's Assignments Card (2 grid height) -->
+                    <div class="card" id="assignments-card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">assignment</span>
+                                This Week's Assignments
+                            </h3>
+                            <span class="item-count" id="assignments-count">0</span>
+                        </div>
+
+                        <div class="card-content">
+                            <ul class="item-list" id="assignments-list">
+                                <p class="empty-state">No assignments this week 🎉</p>
+                            </ul>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Notes Card -->
+                    <div class="card" id="note-card">
+                        <div class="card-header">
+                            <h3>Notes</h3>
+                            <span class="item-count" id="note-count">0</span>
+                        </div>
+                        <div class="card-content">
+                            <ul class="item-list" id="note-list">
+                                <p>Empty</p>
+                            </ul>
+                            <div class="add-item-form"> <input type="text" id="note" placeholder="Add a note"
+                                    class="item-input">
+                                <button id="add-note-btn" class="add-btn">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Goals Card -->
+                    <div class="card" id="goal-card">
+                        <div class="card-header">
+                            <h3>Goals</h3>
+                            <span class="item-count" id="goals-count">0</span>
+                        </div>
+                        <div class="card-content">
+                            <ul class="item-list" id="goals-list">
+                                <p>Empty</p>
+                            </ul>
+                            <div class="add-item-form"> <input type="text" id="goal" placeholder="Add a goal"
+                                    class="item-input">
+                                <button id="add-goal-btn" class="add-btn">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Other Sections (Initially Hidden) -->
+            <section id="homework" class="content-section">
+                <div class="section-header">
+                    <h2>Homework</h2>
+                </div>
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>All Tests</h3>
+                    </div>
+                    <div class="card-content">
+                        <ul class="item-list" id="homework-full-list">
+                            <!-- Items will be added here dynamically -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tests" class="content-section">
+                <div class="section-header">
+                    <h2>Tests</h2>
+                </div>
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>All Tests</h3>
+                    </div>
+                    <div class="card-content">
+                        <ul class="item-list" id="tests-full-list">
+                            <!-- Items will be added here dynamically -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- Schedule Section Start -->
+            <section id="schedule" class="content-section">
+                <!-- Initial state / loading indicator -->
+                <div id="schedule-loader" class="loader-container">
+                    <div class="loader-spinner"></div>
+                    <p class="loader-text">Loading your schedule...</p>
+                </div>
+                <!-- Schedule content will be built here by JS -->
+                <div id="schedule-content-wrapper">
+                    <!-- Week navigation and grid will go here -->
+                </div>
+                <p id="schedule-error" class="empty-state" style="display: none;">Could not load schedule. Please try
+                    again later.</p>
+            </section>
+            <!-- Schedule Section End -->
+
+
+            <!-- News Section Start -->
+            <section id="news" class="content-section">
+                <div class="section-header">
+                    <h2>News</h2>
+                </div>
+                <div id="news-container">
+                    <div id="news-loader" class="loader-container">
+                        <div class="loader-spinner"></div>
+                        <p class="loader-text">Loading scripts...
+                        <p>
+                    </div>
+                </div>
+            </section>
+            <!-- News Section End -->
+
+            <section id="saml-needed" class="content-section">
+                <div class="section-header">
+                    <h2>SAML Login Required</h2>
+                </div>
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Access Restricted</h3>
+                    </div>
+                    <div class="card-content">
+                        <p>To view this page, you must log in securely through SchoolSoft using SAML authentication.
+                            This page is only accessible from the official SchoolSoft platform.</p>
+                        <a href="https://sms.schoolsoft.se/engelska/jsp/student/right_student_startpage.jsp"
+                            style="color: #007bff;">Go to SchoolSoft →</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lunch Menu Section Start -->
+            <section id="lunchMenu" class="content-section">
+                <div class="section-header lunch-menu-section-header"> <!-- Re-using section-header for consistency -->
+                    <h2>Weekly Lunch Menu</h2>
+                    <div class="week-navigation lunch-week-navigation">
+                        <button id="prev-week-lunch" class="btn week-nav-btn" aria-label="Previous week's lunch menu">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="20"
+                                height="20">
+                                <path fill-rule="evenodd"
+                                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Prev</span>
+                        </button>
+                        <h3 class="week-label" aria-live="polite">Week <span id="current-lunch-week">--</span></h3>
+                        <button id="next-week-lunch" class="btn week-nav-btn" aria-label="Next week's lunch menu">
+                            <span>Next</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="20"
+                                height="20">
+                                <path fill-rule="evenodd"
+                                    d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="lunch-menu-grid" class="lunch-menu-grid">
+                    <!-- Lunch items for each day will be populated here by JS -->
+                    <!-- Fallback content if JS fails or data is empty initially -->
+                    <p class="empty-state initial-empty-lunch">Select a week to view the lunch menu.</p>
+                </div>
+
+                <div id="lunch-menu-loading" class="loader-container" style="display: none;">
+                    <div class="loader-spinner"></div>
+                    <p class="loader-text">Loading lunch menu...</p>
+                </div>
+                <p id="lunch-menu-error" class="empty-state" style="display: none;">Could not load lunch menu. Please
+                    try again later.</p>
+            </section>
+            <!-- Lunch Menu Section End -->
+
+
+            <link rel="stylesheet" href="css/settings.css">
+            <section id="settings" class="content-section">
+                <div class="section-header">
+                    <h2>Settings</h2>
+                </div>
+
+                <!-- Appearance Settings -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Appearance</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <label for="dark-mode-toggle">Dark Mode</label>
+                            <input type="checkbox" id="dark-mode-toggle" class="setting-toggle" />
+                        </div>
+                        <div class="setting-item">
+                            <label for="high-contrast-toggle">High Contrast Mode</label>
+                            <input type="checkbox" id="high-contrast-toggle" class="setting-toggle" />
+                        </div>
+                        <div class="setting-item">
+                            <label for="font-size-selector">Font Size</label>
+                            <select id="font-size-selector" class="setting-select">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="accent-color-selector">Accent Color</label>
+                            <select id="accent-color-selector" class="setting-select">
+                                <option value="blue" selected>Blue</option>
+                                <option value="green">Green</option>
+                                <option value="purple">Purple</option>
+                                <option value="orange">Orange</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Calendar Integration</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <label for="calendar-type-selector">Calendar Type</label>
+                            <select id="calendar-type-selector" class="setting-select">
+                                <option value="google">Google Calendar</option>
+                                <option value="outlook">Outlook Calendar</option>
+                                <option value="apple">Apple Calendar</option>
+                                <option value="proton">Proton</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy Settings -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Privacy & Data</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <label for="auto-logout-time">Auto Logout After</label>
+                            <select id="auto-logout-time" class="setting-select">
+                                <option value="15">15 minutes</option>
+                                <option value="30" selected>30 minutes</option>
+                                <option value="60">1 hour</option>
+                                <option value="120">2 hours</option>
+                                <option value="0">Never</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="save-login-toggle">Remember Login</label>
+                            <input type="checkbox" id="save-login-toggle" class="setting-toggle" />
+                        </div>
+                        <div class="setting-item">
+                            <button id="clear-data-btn" class="btn danger-btn">Clear Local Data</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Account</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="setting-item">
+                            <button id="refresh-session-btn" class="btn primary-btn">Refresh Session</button>
+                        </div>
+                        <div class="setting-item">
+                            <button id="logout-btn" class="btn secondary-btn">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://printjs-4de6.kxcdn.com/print.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://printjs-4de6.kxcdn.com/print.min.css" />
+
+    <script src="js/main.js"></script>
+    <script src="js/load-dashboard.js"></script>
+    <script src="js/settings.js" type="module"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/load-lunchMenu.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/global.js"></script>
+
+    <script src="js/helpers/toast.js"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+</body>
+
+</html>

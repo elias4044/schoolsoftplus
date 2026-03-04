@@ -1,0 +1,412 @@
+:root {
+
+    --primary-color: #4299e1;
+    --primary-color-transparent: #4299e152;
+    /* Light mode variables (default) */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f7fa;
+    --bg-tertiary: #edf2f7;
+    --text-primary: #2d3748;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border-color: #e2e8f0;
+    --card-bg: #ffffff;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --sidebar-bg: #ffffff;
+    --nav-item-hover: #f7fafc;
+    --nav-item-active: #ebf8ff;
+    --btn-primary-bg: #4299e1;
+    --btn-primary-hover: #3182ce;
+    --btn-primary-text: #ffffff;
+    --input-bg: #ffffff;
+    --input-border: #e1e4e8;
+    --input-focus-border: #4299e1;
+    --input-focus-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    --lesson-item-bg: #ffffff;
+    --lesson-item-border: #e5e7eb;
+    --week-nav-btn-bg: #f3f4f6;
+    --week-nav-btn-border: #e5e7eb;
+    --top-message-bg: #ffffff;
+    --login-page-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --error-text: #e53e3e;
+    --success-bg: #c6f6d5;
+    --success-text: #276749;
+    --warning-bg: #feebc8;
+    --warning-text: #c05621;
+    --info-bg: #ebf8ff;
+    --info-text: #2b6cb0;
+    --overlay-bg: rgba(0, 0, 0, 0.7);
+    --message-box-bg: #ffffff;
+    --message-box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    --close-btn-color: #ffffff;
+    --close-btn-border: #ffffff;
+    --section-title-color: #2d3748;
+    --section-border: #edf2f7;
+    --result-card-border: #3182ce;
+    --older-result-border: #718096;
+    --result-card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --result-card-hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    --clickable-hover-bg: #f7fafc;
+    --clickable-hover-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --loader-border: rgba(0, 0, 0, 0.1);
+    --loader-border-top: #4299e1;
+    --skeleton-bg: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+
+    /* Lunch Menu Variables */
+    --lunch-menu-bg: var(--bg-secondary);
+    --lunch-day-bg: var(--card-bg);
+    --lunch-day-border: var(--border-color);
+    --lunch-day-shadow: var(--card-shadow);
+    --lunch-day-header-bg: var(--bg-tertiary);
+    --lunch-day-header-text: var(--text-primary);
+    --lunch-dish-text: var(--text-secondary);
+    --lunch-current-day-outline: var(--primary-color);
+    --lunch-current-day-bg: var(--primary-color-transparent);
+    /* Optional, used for glow */
+}
+
+/* Dark mode styles */
+[data-theme="dark"] {
+    --bg-primary: #121212;
+    /* deep blackish background */
+    --bg-secondary: #1e1e1e;
+    /* slightly lighter for cards */
+    --bg-tertiary: #2a2a2a;
+    /* hover/contrast layers */
+
+    --text-primary: #ffffff;
+    --text-secondary: #d1d5db;
+    /* softer gray */
+    --text-muted: #9ca3af;
+    /* even lighter for hints */
+
+    --border-color: #2f2f2f;
+    --card-bg: #1e1e1e;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+    --sidebar-bg: rgba(18, 18, 18, 0.9);
+    /* slight transparency = modern */
+    --nav-item-hover: rgba(255, 255, 255, 0.05);
+    --nav-item-active: #0ea5e9;
+    /* cyan highlight */
+
+    --btn-primary-bg: #0ea5e9;
+    /* cyan accent */
+    --btn-primary-hover: #0284c7;
+    --btn-primary-text: #ffffff;
+
+    --input-bg: #1e1e1e;
+    --input-border: #2f2f2f;
+    --input-focus-border: #0ea5e9;
+    --input-focus-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+
+    --lesson-item-bg: #1e1e1e;
+    --lesson-item-border: #2f2f2f;
+
+    --week-nav-btn-bg: #1e1e1e;
+    --week-nav-btn-border: #2f2f2f;
+
+    --top-message-bg: #1e1e1e;
+    --login-page-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    /* dark blue gradient */
+
+    --error-text: #f87171;
+    --success-bg: #065f46;
+    --success-text: #34d399;
+    --warning-bg: #92400e;
+    --warning-text: #fbbf24;
+    --info-bg: #1e3a8a;
+    --info-text: #93c5fd;
+
+    --overlay-bg: rgba(0, 0, 0, 0.7);
+
+    --message-box-bg: #1e1e1e;
+    --message-box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
+
+    --close-btn-color: #d1d5db;
+    --close-btn-border: #2f2f2f;
+
+    --section-title-color: #e5e7eb;
+    --section-border: #2f2f2f;
+
+    --result-card-border: #0ea5e9;
+    --older-result-border: #6b7280;
+    --result-card-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    --result-card-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+
+    --clickable-hover-bg: rgba(255, 255, 255, 0.05);
+    --clickable-hover-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+    --loader-border: rgba(255, 255, 255, 0.1);
+    --loader-border-top: #0ea5e9;
+
+    --skeleton-bg: linear-gradient(90deg,
+            #1e1e1e 25%,
+            #2a2a2a 50%,
+            #1e1e1e 75%);
+
+
+    /* Lunch Menu Variables */
+    --lunch-menu-bg: var(--bg-secondary);
+    --lunch-day-bg: var(--card-bg);
+    --lunch-day-border: var(--border-color);
+    --lunch-day-shadow: var(--card-shadow);
+    --lunch-day-header-bg: var(--bg-tertiary);
+    --lunch-day-header-text: var(--text-primary);
+    --lunch-dish-text: var(--text-secondary);
+    --lunch-current-day-outline: var(--primary-color);
+    --lunch-current-day-bg: var(--primary-color-transparent);
+    /* Optional, used for glow */
+}
+
+
+/* High Contrast Mode variables */
+[data-high-contrast="true"] {
+    --bg-primary: #000000;
+    --bg-secondary: #121212;
+    --bg-tertiary: #1e1e1e;
+    --text-primary: #ffffff;
+    --text-secondary: #f0f0f0;
+    --text-muted: #cccccc;
+    --border-color: #ffffff;
+    --card-bg: #121212;
+    --card-shadow: 0 0 0 2px #ffffff;
+    --sidebar-bg: #000000;
+    --nav-item-hover: #333333;
+    --nav-item-active: #0066cc;
+    --btn-primary-bg: #0066cc;
+    --btn-primary-hover: #0052a3;
+    --btn-primary-text: #ffffff;
+    --input-bg: #000000;
+    --input-border: #ffffff;
+    --input-focus-border: #ffff00;
+    --input-focus-shadow: 0 0 0 3px rgba(255, 255, 0, 0.5);
+    --lesson-item-bg: #121212;
+    --lesson-item-border: #ffffff;
+    --week-nav-btn-bg: #121212;
+    --week-nav-btn-border: #ffffff;
+    --top-message-bg: #121212;
+    --error-text: #ff6666;
+    --success-bg: #006600;
+    --success-text: #99ff99;
+    --warning-bg: #663300;
+    --warning-text: #ffcc66;
+    --info-bg: #003366;
+    --info-text: #99ccff;
+    --overlay-bg: rgba(0, 0, 0, 0.9);
+    --message-box-bg: #121212;
+    --message-box-shadow: 0 0 0 2px #ffffff;
+    --close-btn-color: #ffffff;
+    --close-btn-border: #ffffff;
+    --section-title-color: #ffffff;
+    --section-border: #ffffff;
+    --result-card-border: #ffffff;
+    --older-result-border: #cccccc;
+    --result-card-shadow: 0 0 0 1px #ffffff;
+    --result-card-hover-shadow: 0 0 0 2px #ffffff;
+    --clickable-hover-bg: #333333;
+    --clickable-hover-shadow: 0 0 0 1px #ffffff;
+    --loader-border: rgba(255, 255, 255, 0.5);
+    --loader-border-top: #ffffff;
+    --skeleton-bg: linear-gradient(90deg, #121212 25%, #333333 50%, #121212 75%);
+
+    /* Lunch Menu Variables */
+    --lunch-menu-bg: var(--bg-primary);
+    --lunch-day-bg: var(--card-bg);
+    --lunch-day-border: var(--border-color);
+    --lunch-day-shadow: none;
+    /* No shadow in HC */
+    --lunch-day-header-bg: var(--bg-secondary);
+    --lunch-day-header-text: var(--text-primary);
+    --lunch-dish-text: var(--text-primary);
+    --lunch-current-day-outline: var(--input-focus-border);
+    /* Bright yellow for HC */
+    --lunch-current-day-bg: transparent;
+    /* No bg glow in HC, rely on outline */
+}
+
+
+/* Settings page styles */
+.setting-item {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.setting-item label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+.setting-toggle {
+    position: relative;
+    width: 50px;
+    height: 24px;
+    appearance: none;
+    background-color: #ccc;
+    border-radius: 12px;
+    transition: background-color 0.3s;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.setting-toggle:checked {
+    background-color: var(--primary-color, #3182ce);
+}
+
+.setting-toggle:before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    background-color: white;
+    transition: transform 0.3s;
+}
+
+.setting-toggle:checked:before {
+    transform: translateX(26px);
+}
+
+.setting-select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    font-size: 14px;
+    max-width: 200px;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.nav-item.active {
+    background-color: var(--primary-color-transparent) !important;
+}
+
+.add-btn {
+    background-color: var(--primary-color);
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.primary-btn {
+    background-color: var(--primary-color, #3182ce);
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: #2c5282;
+}
+
+.secondary-btn {
+    background-color: #e2e8f0;
+    color: #4a5568;
+}
+
+.secondary-btn:hover {
+    background-color: #cbd5e0;
+}
+
+.danger-btn {
+    background-color: #f56565;
+    color: white;
+}
+
+.danger-btn:hover {
+    background-color: #e53e3e;
+}
+
+/* Font size variables */
+:root[data-font-size="small"] {
+    --base-font-size: 14px;
+}
+
+:root[data-font-size="medium"] {
+    --base-font-size: 16px;
+}
+
+:root[data-font-size="large"] {
+    --base-font-size: 18px;
+}
+
+/* Accent color variables */
+:root[data-accent-color="blue"] {
+    --primary-color: #3182ce;
+    --primary-color-transparent: #3182ce52;
+}
+
+:root[data-accent-color="green"] {
+    --primary-color: #38a169;
+    --primary-color-transparent: #38a16952;
+}
+
+:root[data-accent-color="purple"] {
+    --primary-color: #805ad5;
+    --primary-color-transparent: #805ad552;
+}
+
+:root[data-accent-color="orange"] {
+    --primary-color: #dd6b20;
+    --primary-color-transparent: #dd6b2052;
+}
+
+/* Apply font size to elements */
+body {
+    font-size: var(--base-font-size, 16px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .setting-item {
+        margin-bottom: 15px;
+    }
+
+    .checkbox-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+#settings .card {
+    margin-bottom: 20px !important;
+}
+
+
+
+/* Time format classes */
+.time-format-12h .time-display {
+    --time-format: '12h';
+}
+
+.time-format-24h .time-display {
+    --time-format: '24h';
+}

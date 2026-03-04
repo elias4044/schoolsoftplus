@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Schoolsoft+</title>
+
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Schoolsoft+",
+          "url": "https://schoolsoftplus.vercel.app/",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://schoolsoftplus.vercel.app/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+    </script>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Access your Schoolsoft+ account. Log in to manage your schedule, assignments, and school life." />
+    <meta name="keywords" content="Schoolsoft, Schoolsoft+, login, student portal, education, school dashboard" />
+    <meta name="author" content="Elias" />
+    <link rel="canonical" href="https://schoolsoftplus.vercel.app/login" />
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="Login | Schoolsoft+" />
+    <meta property="og:description"
+        content="Log in to Schoolsoft+ to access your personalized student dashboard, schedule, and assignments." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://schoolsoftplus.vercel.app/login" />
+    <meta property="og:image" content="https://schoolsoftplus.vercel.app/img/social-preview.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Login | Schoolsoft+" />
+    <meta name="twitter:description" content="Log in to your Schoolsoft+ account to stay on top of your schoolwork." />
+    <meta name="twitter:image" content="https://schoolsoftplus.vercel.app/img/social-preview.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/img/favicon-32x32.png" type="image/png" />
+    <meta name="theme-color" content="#2a2a2a" /> <!-- Will be overridden by dark mode js potentially -->
+
+    <!-- Stylesheets -->
+    <!-- Global styles first -->
+    <link rel="stylesheet" href="/css/styles.css" /> 
+    <link rel="stylesheet" href="/css/dark-mode.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+
+    <!-- Page-specific styles (new or refined) -->
+    <link rel="stylesheet" href="/css/login-page.css" /> <!-- We will create/refine this -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome for icons (optional, but good for input fields) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+</head>
+
+<body class="login-page-body"> <!-- Renamed class to avoid conflict if .login-page is global -->
+
+    <button id="theme-toggle" class="theme-toggle">
+        <svg id="theme-toggle-dark-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+        <svg id="theme-toggle-light-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg" style="display: none;">
+            <path
+                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                fill-rule="evenodd" clip-rule="evenodd"></path>
+        </svg>
+    </button>
+
+    <main class="login-main-container">
+        <div id="top-message" class="info-banner">
+            <p><i class="fas fa-info-circle"></i> We currently only support Internationella Engelska Skolan.</p>
+        </div>
+
+        <div class="login-card">
+            <div class="login-header">
+                <img src="/img/logo.png" alt="Schoolsoft+ Logo" class="login-logo"> <!-- Add a logo if you have one -->
+                <h1>Welcome to Schoolsoft+</h1>
+                <p>Sign in with your Schoolsoft credentials.</p>
+            </div>
+
+            <form id="login-form" class="login-form">
+                <!-- If only one school, consider this: -->
+                <div class="form-group static-school-info">
+                    <label>School</label>
+                    <p>Internationella Engelska Skolan</p>
+                    <input type="hidden" name="school" value="engelska">
+                </div>
+                <!-- Dropdown
+                <div class="form-group">
+                    <label for="school-select">Choose your school:</label>
+                    <div class="select-wrapper">
+                        <select id="school-select" name="school">
+                            <option value="engelska">Internationella Engelska Skolan</option>
+                        </select>
+                    </div>
+                </div>
+                -->
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
+                    </div>
+                    <div class="error-message" id="username-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+                        <span class="password-toggle-icon"><i class="fas fa-eye"></i></span>
+                    </div>
+                    <div class="error-message" id="password-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="login-btn">Sign In</button>
+                </div>
+                
+                <div class="error-message global-error" id="login-error"></div>
+
+                <div class="login-footer">
+                    <p id="agree-tos">By signing in, you agree to our <a href="terms-of-service.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>.</p>
+                    <a href="login-help.html" id="help-link">Need help logging in?</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Remove inline styles and <style> block from HTML body -->
+
+    <script src="/js/login.js"></script>
+
+    <script src="/js/dark-mode.js"></script>
+    <script>
+        // Password toggle visibility
+        const passwordInput = document.getElementById('password');
+        const togglePasswordButton = document.querySelector('.password-toggle-icon');
+        if (togglePasswordButton && passwordInput) {
+            togglePasswordButton.addEventListener('click', function () {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('fa-eye');
+                this.querySelector('i').classList.toggle('fa-eye-slash');
+            });
+        }
+    </script>
+</body>
+</html>
