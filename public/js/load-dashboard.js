@@ -572,7 +572,6 @@ async function loadThisWeeksAssignments() {
                     typeItem.innerHTML = `<span class="assignment-label">${assignment.subTitle}</span>`;
                     typeItem.classList.add('assignment-meta');
 
-                    listContainer.appendChild(timeItem);
                     listContainer.appendChild(title);
                     listContainer.appendChild(typeItem);
 
