@@ -561,8 +561,6 @@ async function loadThisWeeksAssignments() {
                     };
 
 
-                    const dueDate = duePart.replace('Förfaller ', '');
-
                     // Title
                     const title = document.createElement('li');
                     title.textContent = assignment.title;
