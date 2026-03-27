@@ -1,4 +1,4 @@
-const version = "Preview 0.3.7";
+const version = "Preview 0.3.8";
 
 export default async function handler(req, res) {
     if (req.method !== "GET") {

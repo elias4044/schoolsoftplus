@@ -808,7 +808,7 @@ export async function askAI(req, res) {
 
         const config = { tools, systemInstruction };
 
-        const model = "gemini-3.1-flash-lite-preview";
+        const model = "gemini-2.0-flash-lite";
 
         // --- First Call to the Model ---
         const result = await genAI.models.generateContent({
