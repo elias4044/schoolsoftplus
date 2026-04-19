@@ -1,39 +1,67 @@
 {
-  "name": "schoolsoft-plus",
-  "version": "0.3.7",
-  "type": "module",
-  "description": "Enhanced alternative to Schoolsoft with modern UI, AI integration, and fast navigation.",
-  "main": "index.js",
-  "scripts": {
-    "start": "vercel build",
-    "lint": "eslint . --ext .js,.mjs",
-    "test": "echo \"No tests specified\" && exit 0"
+  "name": "schoolsoftplus",
+  "version": "1.0.0",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/schoolsoftplus.git"
   },
-  "keywords": [
-    "schoolsoft",
-    "education",
-    "AI",
-    "Vercel",
-    "dashboard",
-    "school"
-  ],
-  "author": "Elias <elias4044@pm.me>",
+  "author": {
+    "name": "Elias",
+    "email": "hello@elias4044.com",
+    "url": "https://elias4044.com"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/schoolsoftplus/issues"
+  },
+  "homepage": "https://ssp.elias4044.com",
   "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
+
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
+  
   "dependencies": {
-    "@google/genai": "^1.25.0",
-    "axios": "^1.9.0",
-    "cheerio": "^1.0.0-rc.12",
-    "dotenv": "^16.5.0",
-    "express": "^5.1.0",
-    "firebase-admin": "^13.4.0",
-    "genai": "^0.0.18",
-    "jsdom": "^26.1.0",
-    "vercel": "^48.6.0"
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@google/genai": "^1.49.0",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "axios": "^1.15.0",
+    "cheerio": "^1.2.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase-admin": "^13.8.0",
+    "framer-motion": "^12.38.0",
+    "iconv-lite": "^0.7.2",
+    "lucide-react": "^1.8.0",
+    "next": "16.2.3",
+    "radix-ui": "^1.4.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "shadcn": "^4.2.0",
+    "tailwind-merge": "^3.5.0",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
-    "eslint": "^8.48.0"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
