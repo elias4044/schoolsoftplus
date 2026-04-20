@@ -10,6 +10,7 @@ import NoteEditor, { type Note } from "@/components/NoteEditor";
 import { apiFetch } from "@/lib/api-client";
 import type { NoteStatus } from "@/app/api/lib/notesDb";
 import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
 const STATUS_ICON: Record<NoteStatus, React.ElementType> = {
   draft:     FileText,
@@ -36,6 +37,7 @@ export default function NotesPage() {
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch]     = useState("");
+  const [mobileView, setMobileView] = useState<"list" | "editor">("list");
   const searchRef               = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function NotesPage() {
       });
       setNotes(n => [res.note, ...n]);
       setSelected(res.note.id);
+      setMobileView("editor");
     } finally { setCreating(false); }
   };
 
@@ -75,15 +78,27 @@ export default function NotesPage() {
     const remaining = notes.filter(n => n.id !== id);
     setNotes(remaining);
     setSelected(remaining[0]?.id ?? null);
+    setMobileView("list");
   };
+
+  const selectNote = useCallback((id: string) => {
+    setSelected(id);
+    setMobileView("editor");
+  }, []);
 
   const activeNote = notes.find(n => n.id === selected) ?? null;
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ===== Sidebar / list ===== */}
+      {/* ===== Note list panel ===== */}
       <div
-        className="w-64 shrink-0 flex flex-col border-r"
+        className={cn(
+          // Mobile: full width, toggled by mobileView
+          "flex flex-col border-r",
+          "w-full md:w-64 md:shrink-0",
+          // On mobile hide when viewing editor
+          mobileView === "editor" ? "hidden md:flex" : "flex",
+        )}
         style={{ borderColor: "oklch(1 0 0 / 8%)" }}
       >
         {/* Header */}
@@ -143,7 +158,7 @@ export default function NotesPage() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -8 }}
-                    onClick={() => setSelected(note.id)}
+                    onClick={() => selectNote(note.id)}
                     className={cn(
                       "w-full text-left rounded-lg px-3 py-2.5 transition-colors group",
                       isActive
@@ -183,7 +198,13 @@ export default function NotesPage() {
       </div>
 
       {/* ===== Editor pane ===== */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div
+        className={cn(
+          "flex-1 min-w-0 flex flex-col",
+          // On mobile hide when viewing list
+          mobileView === "list" ? "hidden md:flex" : "flex",
+        )}
+      >
         <AnimatePresence mode="wait">
           {activeNote ? (
             <motion.div
@@ -197,6 +218,7 @@ export default function NotesPage() {
                 note={activeNote}
                 onUpdate={handleUpdate}
                 onDelete={() => handleDelete(activeNote.id)}
+                onBack={() => setMobileView("list")}
               />
             </motion.div>
           ) : (
