@@ -1,13 +1,17 @@
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 
 interface Props { params: Promise<{ token: string }> }
 
 async function fetchNote(token: string) {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  const res = await fetch(`${base}/api/notes/shared/${token}`, { cache: "no-store" });
+  const h = headers();
+  const host = (await h).get("host");
+  const protocol = host?.startsWith("localhost") ? "http" : "https";
+  const url = `${protocol}://${host}/api/notes/shared/${token}`;
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return null;
   const json = await res.json();
   return json.note ?? null;
