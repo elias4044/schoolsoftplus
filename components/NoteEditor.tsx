@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import {
   Bold, Italic, Heading1, Heading2, Code, Link2, List, Quote,
   Eye, Edit3, CheckCircle, Share2, Check, Copy, X, Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
@@ -26,6 +27,7 @@ interface Props {
   note: Note;
   onUpdate: (updated: Note) => void;
   onDelete: () => void;
+  onBack?: () => void;
 }
 
 const STATUS_CONFIG: Record<NoteStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -85,7 +87,7 @@ const TOOLBAR: ToolbarAction[] = [
   { icon: Quote,    label: "Blockquote",      action: ta => prependLine(ta, "> ") },
 ];
 
-export default function NoteEditor({ note, onUpdate, onDelete }: Props) {
+export default function NoteEditor({ note, onUpdate, onDelete, onBack }: Props) {
   const [title, setTitle]       = useState(note.title);
   const [content, setContent]   = useState(note.content);
   const [status, setStatus]     = useState<NoteStatus>(note.status);
@@ -211,9 +213,20 @@ export default function NoteEditor({ note, onUpdate, onDelete }: Props) {
     <div className="flex flex-col h-full min-h-0">
       {/* ---- Top bar ---- */}
       <div
-        className="flex items-center gap-2 px-4 py-2 border-b shrink-0"
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 border-b shrink-0"
         style={{ borderColor: "oklch(1 0 0 / 8%)" }}
       >
+        {/* Back button — mobile only */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/6 transition-colors shrink-0"
+            aria-label="Back to list"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Status selector */}
         <div className="flex items-center gap-1">
           {(["draft", "published", "archived"] as NoteStatus[]).map(s => {
@@ -236,16 +249,17 @@ export default function NoteEditor({ note, onUpdate, onDelete }: Props) {
           })}
         </div>
 
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0" />
 
-        {/* Save indicator */}
-        <div className="text-[10px] text-muted-foreground flex items-center gap-1 min-w-15">
-          {saving === "saving" && <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving</>}
-          {saving === "saved"  && <><Check className="w-2.5 h-2.5 text-green-400" /> Saved</>}
-        </div>
+        {/* Right-side actions — wrap on narrow screens */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* Save indicator */}
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1 min-w-12">
+            {saving === "saving" && <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving</>}
+            {saving === "saved"  && <><Check className="w-2.5 h-2.5 text-green-400" /> Saved</>}
+          </div>
 
-        {/* Share */}
-        <div className="flex items-center gap-1">
+          {/* Share */}
           {shareToken ? (
             <>
               <button
@@ -277,31 +291,31 @@ export default function NoteEditor({ note, onUpdate, onDelete }: Props) {
               Share
             </button>
           )}
+
+          {/* Preview toggle */}
+          <button
+            onClick={() => setPreview(p => !p)}
+            className={cn(
+              "flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors",
+              preview
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            style={{ background: preview ? "oklch(0.65 0.22 278 / 12%)" : "oklch(1 0 0 / 5%)" }}
+          >
+            {preview ? <><Edit3 className="w-2.5 h-2.5" /> Edit</> : <><Eye className="w-2.5 h-2.5" /> Preview</>}
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-muted-foreground hover:text-destructive transition-colors p-1"
+            title="Delete note"
+          >
+            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+          </button>
         </div>
-
-        {/* Preview toggle */}
-        <button
-          onClick={() => setPreview(p => !p)}
-          className={cn(
-            "flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors",
-            preview
-              ? "text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          style={{ background: preview ? "oklch(0.65 0.22 278 / 12%)" : "oklch(1 0 0 / 5%)" }}
-        >
-          {preview ? <><Edit3 className="w-2.5 h-2.5" /> Edit</> : <><Eye className="w-2.5 h-2.5" /> Preview</>}
-        </button>
-
-        {/* Delete */}
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="text-muted-foreground hover:text-destructive transition-colors p-1"
-          title="Delete note"
-        >
-          {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-        </button>
       </div>
 
       {/* ---- Title ---- */}
@@ -317,7 +331,7 @@ export default function NoteEditor({ note, onUpdate, onDelete }: Props) {
       {/* ---- Toolbar (edit mode only) ---- */}
       {!preview && (
         <div
-          className="flex items-center gap-0.5 px-4 py-1.5 border-b shrink-0"
+          className="flex items-center gap-0.5 px-4 py-1.5 border-b shrink-0 overflow-x-auto scrollbar-none"
           style={{ borderColor: "oklch(1 0 0 / 6%)" }}
         >
           {TOOLBAR.map(({ icon: Icon, label, action }) => (

@@ -19,6 +19,8 @@ import {
   Sparkles,
   Bot,
   Timer,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -86,12 +88,20 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
 /* -- Component -------------------------------------------- */
 interface SidebarProps {
   onAiOpen?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function Sidebar({ onAiOpen }: SidebarProps) {
+export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const { session, logout } = useAuth();
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    onMobileClose?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useKeyboardNav(onAiOpen, logout);
 
@@ -101,13 +111,8 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
 
   const sidebarWidth = collapsed ? 64 : 220;
 
-  return (
-    <motion.aside
-      animate={{ width: sidebarWidth }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex flex-col h-full overflow-hidden border-r border-sidebar-border"
-      style={{ background: "var(--sidebar)", minWidth: sidebarWidth }}
-    >
+  const sidebarContent = (isMobile: boolean) => (
+    <>
       {/* Top accent line */}
       <div
         className="absolute top-0 inset-x-0 h-px"
@@ -118,36 +123,46 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
       />
 
       {/* Logo */}
-      <Link href="/"
-        className={cn(
-          "flex items-center gap-3 px-3 h-16 border-b border-sidebar-border shrink-0",
-          collapsed && "opacity-0 pointer-events-none"
-        )}
-      >
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
-          style={{
-            background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))",
-          }}
-        >
-          <Sparkles className="w-4.5 h-4.5 text-white" />
-        </motion.div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              key="label"
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className={"text-sm font-bold tracking-tight text-gradient whitespace-nowrap " + comfortaa.className}
-            >
-              Schoolsoft+
-            </motion.span>
+      <div className="flex items-center justify-between border-b border-sidebar-border shrink-0">
+        <Link href="/"
+          className={cn(
+            "flex items-center gap-3 px-3 h-16",
+            !isMobile && collapsed && "opacity-0 pointer-events-none"
           )}
-        </AnimatePresence>
-      </Link>
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
+            style={{
+              background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))",
+            }}
+          >
+            <Sparkles className="w-4.5 h-4.5 text-white" />
+          </motion.div>
+          <AnimatePresence>
+            {(isMobile || !collapsed) && (
+              <motion.span
+                key="label"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.2 }}
+                className={"text-sm font-bold tracking-tight text-gradient whitespace-nowrap " + comfortaa.className}
+              >
+                Schoolsoft+
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Link>
+        {isMobile && (
+          <button
+            onClick={onMobileClose}
+            className="mr-3 flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* Nav items */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-0.5">
@@ -158,7 +173,7 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
             label={item.label}
             Icon={item.icon}
             active={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
-            collapsed={collapsed}
+            collapsed={!isMobile && collapsed}
             shortcut={item.shortcut}
           />
         ))}
@@ -172,7 +187,7 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
             label={item.label}
             Icon={item.icon}
             active={pathname === item.href}
-            collapsed={collapsed}
+            collapsed={!isMobile && collapsed}
             shortcut={item.shortcut}
           />
         ))}
@@ -183,7 +198,7 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
           label="AI Assistant"
           Icon={Bot}
           active={false}
-          collapsed={collapsed}
+          collapsed={!isMobile && collapsed}
           onClick={onAiOpen}
           accent
           shortcut="Alt+A"
@@ -198,14 +213,14 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
           label="Sign out"
           Icon={LogOut}
           active={false}
-          collapsed={collapsed}
+          collapsed={!isMobile && collapsed}
           onClick={logout}
           danger
           shortcut="Alt+Q"
         />
 
         {/* User info */}
-        {!collapsed && session && (
+        {(isMobile || !collapsed) && session && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -232,16 +247,61 @@ export function Sidebar({ onAiOpen }: SidebarProps) {
         )}
       </div>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(c => !c)}
-        // moved inside the sidebar and aligned with the top header for better accessibility
-        className="absolute right-3 top-4 z-20 flex items-center justify-center w-8 h-8 rounded-full border border-sidebar-border bg-sidebar text-muted-foreground hover:text-foreground transition-colors shadow-md"
-        style={{ boxShadow: "0 2px 8px oklch(0 0 0 / 30%)" }}
+      {/* Collapse toggle — desktop only */}
+      {!isMobile && (
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className="absolute right-3 top-4 z-20 flex items-center justify-center w-8 h-8 rounded-full border border-sidebar-border bg-sidebar text-muted-foreground hover:text-foreground transition-colors shadow-md"
+          style={{ boxShadow: "0 2px 8px oklch(0 0 0 / 30%)" }}
+        >
+          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        </button>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Desktop sidebar ──────────────────────────────── */}
+      <motion.aside
+        animate={{ width: sidebarWidth }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="relative hidden md:flex flex-col h-full overflow-hidden border-r border-sidebar-border"
+        style={{ background: "var(--sidebar)", minWidth: sidebarWidth }}
       >
-        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
-      </button>
-    </motion.aside>
+        {sidebarContent(false)}
+      </motion.aside>
+
+      {/* ── Mobile drawer overlay ────────────────────────── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              onClick={onMobileClose}
+            />
+            {/* Drawer */}
+            <motion.aside
+              key="drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col overflow-hidden border-r border-sidebar-border md:hidden"
+              style={{ background: "var(--sidebar)" }}
+            >
+              {sidebarContent(true)}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
