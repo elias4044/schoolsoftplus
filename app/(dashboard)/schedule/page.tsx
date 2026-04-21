@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
@@ -76,87 +75,90 @@ function timeStr(raw: string) {
   return Number.isNaN(d.getTime()) ? "" : d.toTimeString().slice(0, 5);
 }
 
-/* ── Color helpers ─────────────────────────────────────────── */
-function lessonColor(hex?: string) {
-  if (hex && /^#[0-9a-f]{6}$/i.test(hex)) return hex;
-  return null; // use brand colour below
+function toMinutes(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+function durationLabel(start: string, end: string) {
+  const diff = toMinutes(end) - toMinutes(start);
+  if (diff <= 0) return null;
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
+function lessonAccent(hex?: string): string {
+  if (hex && /^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  return "oklch(0.62 0.16 263)"; // primary fallback
 }
 
 /* ── Lesson card ───────────────────────────────────────────── */
 function LessonCard({ lesson, isOngoing }: { lesson: Lesson; isOngoing: boolean }) {
-  const color = lessonColor(lesson.eventColor);
-  const stripColor = color ?? "oklch(0.62 0.16 263)";
-  const cardBg = color
-    ? hexToRgba(color, 0.08)
-    : "oklch(0.62 0.16 263 / 8%)";
+  const dur = durationLabel(lesson.start, lesson.end);
+  const accent = lessonAccent(lesson.eventColor);
 
   return (
     <div
       className={cn(
-        "relative rounded-lg overflow-hidden flex gap-0",
-        isOngoing && "ring-1 ring-white/20"
+        "rounded-lg overflow-hidden flex",
+        isOngoing
+          ? "bg-white/[0.07] ring-1 ring-white/15"
+          : "bg-white/4 hover:bg-white/6 transition-colors"
       )}
-      style={{ background: cardBg }}
     >
-      {/* Left colour strip */}
+      {/* Left accent strip */}
       <div
-        className="w-1 shrink-0 self-stretch"
-        style={{ background: stripColor }}
+        className="w-0.5 shrink-0 self-stretch"
+        style={{ background: accent }}
       />
 
-      <div className="flex-1 min-w-0 p-2">
-        {/* Name + "Now" badge */}
-        <div className="flex items-start justify-between gap-1">
-          <p className="text-xs font-semibold leading-snug truncate flex-1">{lesson.name}</p>
+      <div className="flex-1 min-w-0 px-2.5 py-2">
+        {/* Name row */}
+        <div className="flex items-start justify-between gap-2">
+          <p className={cn(
+            "text-xs font-semibold leading-snug truncate flex-1",
+            isOngoing ? "text-foreground" : "text-foreground/80"
+          )}>
+            {lesson.name}
+          </p>
           {isOngoing && (
-            <span
-              className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full"
-              style={{
-                background: "oklch(0.72 0.18 148 / 18%)",
-                color: "oklch(0.72 0.18 148)",
-              }}
-            >
+            <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
               Now
             </span>
           )}
         </div>
 
-        {/* Time */}
-        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
+        {/* Time + duration */}
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
           <Clock className="w-2.5 h-2.5 shrink-0" />
           <span>{lesson.start}–{lesson.end}</span>
+          {dur && <span className="opacity-50">· {dur}</span>}
         </div>
 
-        {/* Room */}
-        {lesson.room && (
-          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
-            <MapPin className="w-2.5 h-2.5 shrink-0" />
-            <span className="truncate">{lesson.room}</span>
-          </div>
-        )}
-
-        {/* Teacher */}
-        {lesson.teacher && (
-          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
-            <User className="w-2.5 h-2.5 shrink-0" />
-            <span className="truncate">{lesson.teacher}</span>
-          </div>
-        )}
-
-        {/* Teaching group */}
-        {lesson.teachingGroup && (
-          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
-            <Users className="w-2.5 h-2.5 shrink-0" />
-            <span className="truncate">{lesson.teachingGroup}</span>
-          </div>
-        )}
+        {/* Room / Teacher / Group — collapsed into one line when possible */}
+        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+          {lesson.room && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <MapPin className="w-2.5 h-2.5 shrink-0" />
+              {lesson.room}
+            </span>
+          )}
+          {lesson.teacher && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <User className="w-2.5 h-2.5 shrink-0" />
+              {lesson.teacher}
+            </span>
+          )}
+          {lesson.teachingGroup && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Users className="w-2.5 h-2.5 shrink-0" />
+              {lesson.teachingGroup}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -167,6 +169,7 @@ export default function SchedulePage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
+  const todayColRef = useRef<HTMLDivElement>(null);
 
   const { monday, week, label } = getWeekBounds(weekOffset);
 
@@ -176,10 +179,15 @@ export default function SchedulePage() {
 
   function isOngoing(l: Lesson) {
     if (l.date !== todayKey) return false;
-    const [sh, sm] = l.start.split(":").map(Number);
-    const [eh, em] = l.end.split(":").map(Number);
-    return nowMinutes >= sh * 60 + sm && nowMinutes < eh * 60 + em;
+    return nowMinutes >= toMinutes(l.start) && nowMinutes < toMinutes(l.end);
   }
+
+  /* Scroll today's column into view on mobile when week loads */
+  useEffect(() => {
+    if (!loading && weekOffset === 0 && todayColRef.current) {
+      todayColRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [loading, weekOffset]);
 
   useEffect(() => {
     setLoading(true);
@@ -211,14 +219,19 @@ export default function SchedulePage() {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
     const key = localDateKey(d);
+    const dayLessons = lessons
+      .filter((l) => l.date === key)
+      .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
     return {
       key,
       label: DAYS[i],
       short: d.toLocaleDateString("en-SE", { month: "short", day: "numeric" }),
       isToday: key === todayKey,
-      lessons: lessons.filter((l) => l.date === key),
+      lessons: dayLessons,
     };
   });
+
+  const totalLessons = days.reduce((s, d) => s + d.lessons.length, 0);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -233,7 +246,12 @@ export default function SchedulePage() {
             <CalendarDays className="w-6 h-6 text-primary" />
             Schedule
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {label}
+            {!loading && totalLessons > 0 && (
+              <span className="ml-2 opacity-50">· {totalLessons} lessons</span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -252,7 +270,7 @@ export default function SchedulePage() {
             onClick={() => setWeekOffset(0)}
             disabled={weekOffset === 0}
           >
-            This week
+            Today
           </Button>
           <Button
             variant="outline"
@@ -286,39 +304,44 @@ export default function SchedulePage() {
           {days.map((day, i) => (
             <motion.div
               key={day.key}
+              ref={day.isToday ? todayColRef : undefined}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * 0.04 }}
               className={cn(
                 "rounded-xl border flex flex-col min-h-0",
                 day.isToday
-                  ? "border-primary/30 bg-brand-dim"
+                  ? "border-primary/20 bg-white/3"
                   : "border-white/7 bg-card"
               )}
             >
               {/* Day header */}
-              <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5 shrink-0">
+              <div className={cn(
+                "flex items-center justify-between px-3 py-2.5 border-b shrink-0",
+                day.isToday ? "border-primary/10" : "border-white/5"
+              )}>
                 <div>
-                  <p className="text-xs font-semibold text-foreground/90">{day.label}</p>
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    day.isToday ? "text-primary" : "text-foreground/90"
+                  )}>
+                    {day.label}
+                  </p>
                   <p className="text-[10px] text-muted-foreground">{day.short}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {day.lessons.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className={cn(
+                      "text-[10px]",
+                      day.isToday ? "text-primary/60" : "text-muted-foreground"
+                    )}>
                       {day.lessons.length}
                     </span>
                   )}
                   {day.isToday && (
-                    <Badge
-                      className="text-[9px] px-1.5 py-0 h-4"
-                      style={{
-                        background: "oklch(0.65 0.22 278 / 20%)",
-                        color: "oklch(0.75 0.15 278)",
-                        border: "1px solid oklch(0.65 0.22 278 / 30%)",
-                      }}
-                    >
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
                       Today
-                    </Badge>
+                    </span>
                   )}
                 </div>
               </div>
@@ -326,8 +349,8 @@ export default function SchedulePage() {
               {/* Lesson cards */}
               <div className="flex-1 p-2 space-y-1.5 overflow-y-auto">
                 {day.lessons.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground text-center py-6">
-                    Free day
+                  <p className="text-[10px] text-muted-foreground/40 text-center py-8">
+                    No lessons
                   </p>
                 ) : (
                   day.lessons.map((l) => (
