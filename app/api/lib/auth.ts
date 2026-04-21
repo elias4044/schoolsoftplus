@@ -71,18 +71,8 @@ export async function authUserWithUsername(
       return false;
     }
 
-    const headerRes = await axios.get(
-      `https://sms.schoolsoft.se/${school}/rest-api/student/header/student`,
-      { responseType: "json", headers: baseHeaders, validateStatus: () => true }
-    );
-
-    if (headerRes.status !== 200 || !headerRes.data) {
-      console.warn(`[authUserWithUsername] Student header fetch failed: ${headerRes.status}`);
-      return false;
-    }
-
     const fetchedUsername =
-      `${headerRes.data.firstName}.${headerRes.data.lastName}`.toLowerCase();
+      `${sessionRes.data.user.userName}`.toLowerCase();
 
     if (fetchedUsername !== expectedUsername) {
       console.warn(
