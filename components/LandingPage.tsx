@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRef, useState, useEffect } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -21,6 +21,8 @@ import {
   Star,
   ChevronRight,
   Activity,
+  Users,
+
 } from "lucide-react";
 
 /* ─── Reveal ─────────────────────────────────────────────── */
@@ -43,7 +45,7 @@ function Reveal({ children, delay = 0, className = "" }: {
 }
 
 /* ─── Live counter ───────────────────────────────────────── */
-function LiveCounter({ label, suffix = "" }: { label: string; suffix?: string }) {
+function LiveCounter({ label }: { label: string }) {
   const [value, setValue] = useState<number | null>(null);
   useEffect(() => {
     fetch("/api/stats")
@@ -51,16 +53,115 @@ function LiveCounter({ label, suffix = "" }: { label: string; suffix?: string })
       .then((d) => {
         if (!d.success) return;
         const map: Record<string, number> = {
-          logins: d.uniqueLogins ?? 0,
-          messages: d.totalAiMessages ?? 0,
-          notes: d.totalNotesCreated ?? 0,
+          logins:   d.totalLogins ?? 0,
+          schedule: d.totalScheduleViews ?? 0,
+          lunch:    d.totalLunchFetches ?? 0,
         };
         setValue(map[label] ?? 0);
       })
       .catch(() => {});
   }, [label]);
-  if (value === null) return <span className="opacity-40">—</span>;
-  return <>{value.toLocaleString()}{suffix}</>;
+
+  const [display, setDisplay] = useState("0");
+  useEffect(() => {
+    if (value === null) return;
+    let start: number | null = null;
+    const step = (now: number) => {
+      if (!start) start = now;
+      const t = Math.min((now - start) / 900, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(ease * value).toLocaleString());
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [value]);
+
+  if (value === null) return <span className="opacity-30">—</span>;
+  return <>{display}</>;
+}
+
+/* ─── Hero 3-D mockup ────────────────────────────────────── */
+const LESSONS = [
+  { time: "08:15", subject: "Mathematics", room: "Rm 302", color: "oklch(0.72 0.18 263)" },
+  { time: "10:00", subject: "English",     room: "Rm 105", color: "oklch(0.72 0.18 148)" },
+  { time: "11:45", subject: "Physics",     room: "Lab 3",  color: "oklch(0.75 0.18 310)" },
+];
+
+function HeroMockup() {
+  const rotX = useSpring(10, { stiffness: 110, damping: 22 });
+  const rotY = useSpring(-10, { stiffness: 110, damping: 22 });
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width - 0.5;
+    const ny = (e.clientY - r.top) / r.height - 0.5;
+    rotX.set(10 - ny * 18);
+    rotY.set(-10 + nx * 18);
+  }
+  function onLeave() { rotX.set(10); rotY.set(-10); }
+
+  return (
+    <motion.div
+      className="cursor-default"
+      style={{ perspective: "1100px" }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.75, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <motion.div
+        style={{ rotateX: rotX, rotateY: rotY, transformStyle: "preserve-3d" }}
+        className="rounded-2xl border border-border bg-card overflow-hidden w-72 shadow-[0_32px_80px_oklch(0_0_0/0.5)]"
+      >
+        {/* window chrome */}
+        <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-background/60">
+          <div className="w-2.5 h-2.5 rounded-full bg-border" />
+          <div className="w-2.5 h-2.5 rounded-full bg-border" />
+          <div className="w-2.5 h-2.5 rounded-full bg-border" />
+          <span className="ml-auto text-[10px] text-muted-foreground font-medium">Wednesday · Today</span>
+        </div>
+
+        {/* day label */}
+        <div className="px-4 pt-3 pb-1.5 flex items-center justify-between">
+          <span className="text-xs font-semibold">Schedule</span>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] text-muted-foreground">Live</span>
+          </div>
+        </div>
+
+        {/* lesson rows */}
+        <div className="px-3 pb-3 space-y-1.5">
+          {LESSONS.map((l, i) => (
+            <motion.div
+              key={l.subject}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
+              className="flex items-center gap-3 rounded-lg bg-background/50 border border-border px-3 py-2.5"
+            >
+              <div className="w-1 h-8 rounded-full shrink-0" style={{ background: l.color }} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium leading-none mb-1 truncate">{l.subject}</p>
+                <p className="text-[10px] text-muted-foreground">{l.time} · {l.room}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* footer bar */}
+        <div className="border-t border-border px-4 py-2.5 bg-background/40 flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground">2 assignments due</span>
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === 0 ? "oklch(0.62 0.16 263)" : "oklch(1 0 0 / 12%)" }} />
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 /* ─── Main component ─────────────────────────────────────── */
@@ -90,65 +191,90 @@ export default function LandingPage() {
       </header>
 
       {/* ── Hero ── */}
-      <section className="border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-20 md:py-28">
-          <Reveal>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
-              Free · Open source · No tracking
-            </p>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.1] max-w-2xl mb-5">
-              Your school day,<br />organised properly.
-            </h1>
-          </Reveal>
-          <Reveal delay={0.14}>
-            <p className="text-base text-muted-foreground max-w-xl leading-relaxed mb-8">
-              SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft into one clean interface —
-              with an AI assistant that actually knows your timetable.
-            </p>
-          </Reveal>
-          <Reveal delay={0.20}>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-              >
-                Get started <ArrowRight className="w-4 h-4" />
-              </Link>
-              <a
-                href="https://github.com/elias4044/schoolsoftplus"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
-              >
-                <Star className="w-3.5 h-3.5" /> GitHub
-              </a>
+      <section className="border-b border-border overflow-hidden">
+        <div className="max-w-5xl mx-auto px-6 py-16 md:py-24">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+
+            {/* Left: copy */}
+            <div>
+              <Reveal>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
+                  Free · Open source · No tracking
+                </p>
+              </Reveal>
+              <Reveal delay={0.08}>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.1] max-w-2xl mb-5">
+                  Your school day,<br />organised properly.
+                </h1>
+              </Reveal>
+              <Reveal delay={0.14}>
+                <p className="text-base text-muted-foreground max-w-xl leading-relaxed mb-8">
+                  SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft into one clean interface —
+                  with an AI assistant that actually knows your timetable.
+                </p>
+              </Reveal>
+              <Reveal delay={0.20}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                  >
+                    Get started <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <a
+                    href="https://github.com/elias4044/schoolsoftplus"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                  >
+                    <Star className="w-3.5 h-3.5" /> GitHub
+                  </a>
+                </div>
+              </Reveal>
             </div>
-          </Reveal>
+
+            {/* Right: 3D mockup */}
+            <div className="hidden md:flex justify-center items-center">
+              <HeroMockup />
+            </div>
+
+          </div>
         </div>
       </section>
 
       {/* ── Stats strip ── */}
       <section className="border-b border-border bg-card">
-        <div className="max-w-5xl mx-auto px-6 py-6">
-          <div className="grid grid-cols-3 divide-x divide-border">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <Reveal className="mb-5">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">By the numbers</p>
+          </Reveal>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { key: "logins",   label: "Students using it" },
-              { key: "messages", label: "AI questions answered" },
-              { key: "notes",    label: "Notes written" },
+              { key: "logins",   label: "Times students have logged in", icon: <Users className="w-4 h-4" />, accent: "oklch(0.65 0.22 278)" },
+              { key: "schedule", label: "Schedule views loaded",          icon: <CalendarDays className="w-4 h-4" />, accent: "oklch(0.72 0.18 148)" },
+              { key: "lunch",    label: "Lunch menus checked",            icon: <UtensilsCrossed className="w-4 h-4" />, accent: "oklch(0.78 0.16 55)"  },
             ].map((s, i) => (
-              <Reveal key={s.key} delay={i * 0.07} className="px-6 first:pl-0 last:pr-0">
-                <p className="text-2xl font-bold tabular-nums">
-                  <LiveCounter label={s.key} />
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+              <Reveal key={s.key} delay={i * 0.07}>
+                <div
+                  className="rounded-xl border border-border bg-background p-5 flex flex-col gap-2 relative overflow-hidden"
+                >
+                  {/* faint tinted corner */}
+                  <div
+                    className="absolute -top-6 -right-6 w-20 h-20 rounded-full blur-2xl pointer-events-none"
+                    style={{ background: `${s.accent}18` }}
+                  />
+                  <span className="text-xl leading-none">{s.icon}</span>
+                  <p className="text-2xl md:text-3xl font-bold tabular-nums tracking-tight" style={{ color: s.accent }}>
+                    <LiveCounter label={s.key} />
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-snug">{s.label}</p>
+                </div>
               </Reveal>
             ))}
           </div>
-          <Reveal delay={0.25}>
+          <Reveal delay={0.3}>
             <Link href="/stats" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-4 transition-colors">
-              See full stats <ChevronRight className="w-3 h-3" />
+              See all stats <ChevronRight className="w-3 h-3" />
             </Link>
           </Reveal>
         </div>

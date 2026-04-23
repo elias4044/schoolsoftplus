@@ -180,7 +180,10 @@ export default function StatsPage() {
           <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
-          <span className="text-sm font-medium">Usage</span>
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Live stats
+          </div>
           <div className="w-16" />
         </div>
       </header>
@@ -188,13 +191,42 @@ export default function StatsPage() {
       <main className="max-w-5xl mx-auto px-6">
 
         {/* Page header */}
-        <div className="py-10 border-b border-border">
+        <div className="py-12 border-b border-border">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <h1 className="text-2xl font-semibold tracking-tight mb-2">Usage statistics</h1>
-            <p className="text-sm text-muted-foreground">
-              Anonymous usage data — no personal information is collected or stored.
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">SchoolSoft+ · Live</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-3">
+              What's happening<br />right now.
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Anonymous usage data updated in real-time. No personal information is collected or stored — ever.
             </p>
           </motion.div>
+
+          {/* Quick headline numbers */}
+          {!loading && stats && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="mt-8 flex flex-wrap gap-3"
+            >
+              {[
+                { value: stats.uniqueLogins,   label: "students",    color: "oklch(0.65 0.22 278)" },
+                { value: stats.totalAiMessages, label: "AI messages", color: "oklch(0.75 0.18 310)" },
+                { value: stats.totalApiCalls,  label: "API calls",   color: "oklch(0.72 0.16 263)" },
+              ].map(({ value, label, color }) => (
+                <div
+                  key={label}
+                  className="flex items-baseline gap-1.5 rounded-full border border-border bg-card px-4 py-1.5"
+                >
+                  <span className="text-sm font-bold tabular-nums" style={{ color }}>
+                    {value.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+              ))}
+            </motion.div>
+          )}
         </div>
 
         {/* Overview */}
