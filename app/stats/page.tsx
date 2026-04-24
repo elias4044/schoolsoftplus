@@ -16,6 +16,9 @@ import {
   Clock,
   TrendingUp,
   Activity,
+  MessageSquare,
+  MessagesSquare,
+  Smile,
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -24,12 +27,19 @@ interface StatsPayload {
   failedLogins: number;
   uniqueLogins: number;
   totalApiCalls: number;
+  // Messaging
+  totalMessagesSent: number;
+  totalConversations: number;
+  totalReactions: number;
+  messageHours: Record<string, number>;
+  // Feature
   totalAiMessages: number;
   totalNotesCreated: number;
   totalScheduleViews: number;
   totalAssignmentFetches: number;
   totalLunchFetches: number;
   totalNewsFetches: number;
+  // Histograms
   loginHours: Record<string, number>;
   loginDays: Record<string, number>;
   aiHours: Record<string, number>;
@@ -139,6 +149,7 @@ export default function StatsPage() {
   }, []);
 
   const hours24 = Array.from({ length: 24 }, (_, i) => stats?.loginHours?.[i] ?? 0);
+  const msgHours24 = Array.from({ length: 24 }, (_, i) => stats?.messageHours?.[i] ?? 0);
   const aiHours24 = Array.from({ length: 24 }, (_, i) => stats?.aiHours?.[i] ?? 0);
   const days7 = Array.from({ length: 7 }, (_, i) => stats?.loginDays?.[i] ?? 0);
   const topSchools = Object.entries(stats?.schools ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -146,21 +157,23 @@ export default function StatsPage() {
   const topDates = Object.entries(stats?.peakDates ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const peakHour = hours24.indexOf(Math.max(...hours24));
   const peakDay = days7.indexOf(Math.max(...days7));
+  const peakMsgHour = msgHours24.indexOf(Math.max(...msgHours24));
   const totalFeature =
     (stats?.totalScheduleViews ?? 0) +
     (stats?.totalAssignmentFetches ?? 0) +
     (stats?.totalLunchFetches ?? 0) +
     (stats?.totalNewsFetches ?? 0);
 
+  // Messaging cards first, then community, then AI, then features
   const statCards = [
-    { icon: Users,             value: stats?.uniqueLogins ?? 0,            label: "Unique users",        sublabel: "All time",            color: "oklch(0.65 0.22 278)" },
-    { icon: MousePointerClick, value: stats?.totalLogins ?? 0,             label: "Total logins",        sublabel: "Successful sessions", color: "oklch(0.72 0.18 148)" },
-    { icon: Brain,             value: stats?.totalAiMessages ?? 0,         label: "AI messages",         sublabel: "Questions answered",  color: "oklch(0.75 0.18 310)" },
-    { icon: Activity,          value: stats?.totalApiCalls ?? 0,           label: "API calls",           sublabel: "Server requests",     color: "oklch(0.72 0.16 263)" },
-    { icon: StickyNote,        value: stats?.totalNotesCreated ?? 0,       label: "Notes created",       color: "oklch(0.72 0.18 190)" },
-    { icon: CalendarDays,      value: stats?.totalScheduleViews ?? 0,      label: "Schedule views",      color: "oklch(0.72 0.18 148)" },
-    { icon: ClipboardList,     value: stats?.totalAssignmentFetches ?? 0,  label: "Assignment lookups",  color: "oklch(0.75 0.18 40)" },
-    { icon: UtensilsCrossed,   value: stats?.totalLunchFetches ?? 0,       label: "Lunch menu views",    color: "oklch(0.78 0.16 55)" },
+    { icon: MessageSquare,   value: stats?.totalMessagesSent  ?? 0,           label: "Messages sent",       sublabel: "Across all conversations",  color: "oklch(0.65 0.22 278)" },
+    { icon: MessagesSquare,  value: stats?.totalConversations ?? 0,           label: "Conversations started", sublabel: "DM threads created",       color: "oklch(0.72 0.18 263)" },
+    { icon: Smile,           value: stats?.totalReactions     ?? 0,           label: "Reactions added",     sublabel: "Emoji reactions on messages", color: "oklch(0.78 0.18 310)" },
+    { icon: Users,           value: stats?.uniqueLogins       ?? 0,           label: "Unique users",        sublabel: "All time",                  color: "oklch(0.72 0.18 148)" },
+    { icon: MousePointerClick, value: stats?.totalLogins      ?? 0,           label: "Total logins",        sublabel: "Successful sessions",       color: "oklch(0.75 0.18 40)" },
+    { icon: Brain,           value: stats?.totalAiMessages    ?? 0,           label: "AI messages",         sublabel: "Questions answered",        color: "oklch(0.75 0.18 310)" },
+    { icon: StickyNote,      value: stats?.totalNotesCreated  ?? 0,           label: "Notes created",       color: "oklch(0.72 0.18 190)" },
+    { icon: Activity,        value: stats?.totalApiCalls      ?? 0,           label: "API calls",           sublabel: "Server requests",           color: "oklch(0.70 0.16 263)" },
   ];
 
   const Skeleton = () => (
@@ -211,9 +224,10 @@ export default function StatsPage() {
               className="mt-8 flex flex-wrap gap-3"
             >
               {[
-                { value: stats.uniqueLogins,   label: "students",    color: "oklch(0.65 0.22 278)" },
-                { value: stats.totalAiMessages, label: "AI messages", color: "oklch(0.75 0.18 310)" },
-                { value: stats.totalApiCalls,  label: "API calls",   color: "oklch(0.72 0.16 263)" },
+                { value: stats.totalMessagesSent  ?? 0, label: "messages sent",      color: "oklch(0.65 0.22 278)" },
+                { value: stats.totalConversations ?? 0, label: "conversations",      color: "oklch(0.72 0.18 263)" },
+                { value: stats.uniqueLogins,            label: "students",           color: "oklch(0.72 0.18 148)" },
+                { value: stats.totalAiMessages,         label: "AI messages",        color: "oklch(0.75 0.18 310)" },
               ].map(({ value, label, color }) => (
                 <div
                   key={label}
@@ -247,6 +261,51 @@ export default function StatsPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Messaging */}
+        <section className="py-10 border-b border-border">
+          <Reveal className="mb-5">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Messaging</h2>
+          </Reveal>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              {[
+                { icon: MessageSquare,  value: stats?.totalMessagesSent  ?? 0, label: "Messages sent",        sublabel: "Total across all DMs",        color: "oklch(0.65 0.22 278)" },
+                { icon: MessagesSquare, value: stats?.totalConversations ?? 0, label: "Conversations",        sublabel: "DM threads created",          color: "oklch(0.72 0.18 263)" },
+                { icon: Smile,          value: stats?.totalReactions     ?? 0, label: "Reactions",            sublabel: "Emoji reactions added",       color: "oklch(0.78 0.18 310)" },
+              ].map((s, i) => (
+                <Reveal key={s.label} delay={i * 0.06}>
+                  <StatCard {...s} />
+                </Reveal>
+              ))}
+            </div>
+          )}
+          <Reveal delay={0.1}>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Messages by hour</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    UTC{loading ? "" : ` · peak at ${peakMsgHour}:00`}
+                  </p>
+                </div>
+                <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
+              </div>
+              <div className="mt-5">
+                <BarChart
+                  data={msgHours24}
+                  labels={Array.from({ length: 24 }, (_, i) => i % 6 === 0 ? `${i}h` : "")}
+                  color="oklch(0.65 0.22 278)"
+                  height={96}
+                />
+              </div>
+            </div>
+          </Reveal>
         </section>
 
         {/* Activity patterns */}
@@ -284,7 +343,7 @@ export default function StatsPage() {
                   <div>
                     <p className="text-sm font-medium text-foreground">AI usage by hour</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      UTC{loading ? "" : ` · ${(stats?.totalAiMessages ?? 0).toLocaleString()} messages total`}
+                      UTC{loading ? "" : ` · ${(stats?.totalAiMessages ?? 0).toLocaleString()} total`}
                     </p>
                   </div>
                   <Brain className="w-4 h-4 text-muted-foreground shrink-0" />

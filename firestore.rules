@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ───────────────────────────────────
+
+    // Is the caller signed in (via Firebase custom token)?
+    function isAuthed() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Is the caller the owner of this document (keyed by uid/username)?
+    function isOwner(uid) {
+      return isAuthed() && request.auth.uid == uid;
+    }
+
+    // Is the caller a participant in a conversation document?
+    function isParticipant(convData) {
+      return isAuthed() && request.auth.uid in convData.participants;
+    }
+
+    // Is the caller a participant in a given conversation by ID?
+    function isParticipantOf(convId) {
+      return isAuthed() &&
+        request.auth.uid in
+          get(/databases/$(database)/documents/conversations_v1/$(convId)).data.participants;
+    }
+
+    // ── Profiles ──────────────────────────────────────────
+    // Any authenticated user can read any profile (needed for search + DM name display).
+    // Only the profile owner can write their own document.
+    match /profiles_v1/{username} {
+      allow read:  if isAuthed();
+      allow write: if isOwner(username);
+    }
+
+    // ── Conversations ──────────────────────────────────────
+    // Only participants can read a conversation.
+    // Writes go through the server-side API (Admin SDK bypasses rules).
+    match /conversations_v1/{convId} {
+      allow read:  if isParticipant(resource.data);
+      allow write: if false;
+    }
+
+    // ── Messages ──────────────────────────────────────────
+    // Participants of the parent conversation can read messages.
+    // Writes go through the server-side API only.
+    match /messages_v1/{msgId} {
+      allow read:  if isAuthed() && isParticipantOf(resource.data.conversationId);
+      allow write: if false;
+    }
+
+    // ── Notes ─────────────────────────────────────────────
+    // Entirely server-side; the client SDK never touches these.
+    match /notes_v2/{noteId} {
+      allow read, write: if false;
+    }
+
+    // ── Countdowns ────────────────────────────────────────
+    match /countdowns_v1/{countdownId} {
+      allow read, write: if false;
+    }
+
+    // ── Stats ─────────────────────────────────────────────
+    // Publicly readable (used by the /stats page).
+    // Writes are server-only (Admin SDK bypasses rules).
+    match /stats/{docId} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // ── Default deny ──────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

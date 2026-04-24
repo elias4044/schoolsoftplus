@@ -21,9 +21,12 @@ import {
   Timer,
   Menu,
   X,
+  UserCircle,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useUnread } from "@/lib/unread-context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -43,8 +46,10 @@ const NAV_ITEMS = [
 ] as const;
 
 const BOTTOM_NAV = [
-  { href: "/notes",    label: "Notes",    icon: StickyNote, shortcut: "Alt+N" },
-  { href: "/settings", label: "Settings", icon: Settings,   shortcut: "Alt+," },
+  { href: "/notes",    label: "Notes",    icon: StickyNote,     shortcut: "Alt+N" },
+  { href: "/messages", label: "Messages", icon: MessageSquare,  shortcut: "Alt+M" },
+  { href: "/profile",  label: "Profile",  icon: UserCircle,     shortcut: "Alt+P" },
+  { href: "/settings", label: "Settings", icon: Settings,       shortcut: "Alt+," },
 ] as const;
 
 /* -- Keyboard navigation hook ----------------------------- */
@@ -69,6 +74,10 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "6": e.preventDefault(); router.push("/countdown"); break;
         case "n":
         case "N": e.preventDefault(); router.push("/notes");     break;
+        case "m":
+        case "M": e.preventDefault(); router.push("/messages");  break;
+        case "p":
+        case "P": e.preventDefault(); router.push("/profile");   break;
         case ",": e.preventDefault(); router.push("/settings");  break;
         case "a":
         case "A": e.preventDefault(); onAiOpen?.();              break;
@@ -95,6 +104,7 @@ interface SidebarProps {
 export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { session, logout } = useAuth();
 
   // Close mobile drawer on route change
@@ -110,6 +120,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
     : session?.username?.slice(0, 2).toUpperCase() ?? "??";
 
   const sidebarWidth = collapsed ? 64 : 220;
+  const { totalUnread } = useUnread();
 
   const sidebarContent = (isMobile: boolean) => (
     <>
@@ -189,6 +200,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
             active={pathname === item.href}
             collapsed={!isMobile && collapsed}
             shortcut={item.shortcut}
+            badge={item.href === "/messages" && pathname !== "/messages" ? totalUnread : undefined}
           />
         ))}
 
@@ -224,7 +236,8 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg"
+            className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg cursor-pointer hover:bg-sidebar-accent transition-colors"
+            onClick={() => router.push("/profile")}
           >
             <Avatar className="w-7 h-7 shrink-0">
               <AvatarFallback
@@ -316,9 +329,10 @@ interface NavItemProps {
   accent?: boolean;
   danger?: boolean;
   shortcut?: string;
+  badge?: number;
 }
 
-function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger, shortcut }: NavItemProps) {
+function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger, shortcut, badge }: NavItemProps) {
   const content = (
     <motion.div
       whileHover={{ x: collapsed ? 0 : 2 }}
@@ -359,11 +373,21 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
             className="overflow-hidden whitespace-nowrap flex-1 flex items-center justify-between gap-2"
           >
             {label}
-            {shortcut && (
-              <span className="text-[9px] font-mono tracking-tight opacity-40 shrink-0">
-                {shortcut}
-              </span>
-            )}
+            <span className="flex items-center gap-1.5">
+              {badge != null && badge > 0 && (
+                <span
+                  className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[9px] font-bold text-white"
+                  style={{ background: "oklch(0.65 0.22 278)" }}
+                >
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+              {shortcut && (
+                <span className="text-[9px] font-mono tracking-tight opacity-40 shrink-0">
+                  {shortcut}
+                </span>
+              )}
+            </span>
           </motion.span>
         )}
       </AnimatePresence>
@@ -383,7 +407,17 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div>{wrapped}</div>
+          <div className="relative">
+            {wrapped}
+            {badge != null && badge > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white pointer-events-none"
+                style={{ background: "oklch(0.65 0.22 278)" }}
+              >
+                {badge > 9 ? "9+" : badge}
+              </span>
+            )}
+          </div>
         </TooltipTrigger>
         <TooltipContent side="right" className="text-xs flex items-center gap-2">
           {label}
