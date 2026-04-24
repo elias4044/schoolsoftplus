@@ -7,6 +7,7 @@ import { Menu, Sparkles, Bot } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { AiChatPanel } from "@/components/ai-chat-panel";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { UnreadProvider } from "@/lib/unread-context";
 import { Comfortaa } from "next/font/google";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
@@ -152,7 +153,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <DashboardShell>{children}</DashboardShell>
+      <UnreadProvider>
+        <DashboardShell>{children}</DashboardShell>
+      </UnreadProvider>
     </AuthProvider>
   );
 }

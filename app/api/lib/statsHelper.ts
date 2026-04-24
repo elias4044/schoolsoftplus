@@ -103,3 +103,31 @@ export function trackLunchFetch(): void {
 export function trackNewsFetch(): void {
   bumpCounter("total_news_fetches");
 }
+
+/**
+ * Track a message being sent.
+ */
+export function trackMessageSent(): void {
+  const hour = new Date().getUTCHours();
+  STATS_REF()
+    .update({
+      total_messages_sent:        inc(1),
+      [`message_hours.${hour}`]:  inc(1),
+      total_api_calls:            inc(1),
+    })
+    .catch(() => {});
+}
+
+/**
+ * Track a new conversation being created.
+ */
+export function trackConversationCreated(): void {
+  bumpCounter("total_conversations_created");
+}
+
+/**
+ * Track a reaction being toggled.
+ */
+export function trackReactionAdded(): void {
+  bumpCounter("total_reactions_added");
+}
