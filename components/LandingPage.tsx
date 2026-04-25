@@ -27,6 +27,7 @@ import {
   Bell,
   Reply,
 } from "lucide-react";
+import { ChangelogButton } from "@/components/ChangelogModal";
 
 /* ─── Reveal ─────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = "" }: {
@@ -181,6 +182,7 @@ export default function LandingPage() {
             <span className="font-semibold text-sm">SchoolSoft+</span>
           </div>
           <nav className="hidden sm:flex items-center gap-5 text-sm text-muted-foreground">
+            <ChangelogButton variant="badge" />
             <Link href="/stats" className="hover:text-foreground transition-colors">Stats</Link>
             <Link href="/open-source" className="hover:text-foreground transition-colors">Open source</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
@@ -602,6 +604,7 @@ export default function LandingPage() {
             <Link href="/terms"       className="hover:text-foreground transition-colors">Terms &amp; Privacy</Link>
             <Link href="/login-help"  className="hover:text-foreground transition-colors">Login help</Link>
             <Link href="/stats"       className="hover:text-foreground transition-colors">Stats</Link>
+            <Link href="/changelog"   className="hover:text-foreground transition-colors">Changelog</Link>
             <Link href="/open-source" className="hover:text-foreground transition-colors">Open source</Link>
             <a href="https://github.com/elias4044/schoolsoftplus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           </div>

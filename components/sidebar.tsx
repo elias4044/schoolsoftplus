@@ -24,6 +24,7 @@ import {
   UserCircle,
   MessageSquare,
   GitPullRequest,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -31,6 +32,7 @@ import { useUnread } from "@/lib/unread-context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { ChangelogModal } from "@/components/ChangelogModal";
 
 import { Comfortaa } from "next/font/google";
 
@@ -107,6 +109,7 @@ interface SidebarProps {
 
 export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { session, logout } = useAuth();
@@ -219,6 +222,16 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           accent
           shortcut="Alt+A"
         />
+
+        {/* What's new */}
+        <NavItem
+          href="#"
+          label="What's new"
+          Icon={Megaphone}
+          active={false}
+          collapsed={!isMobile && collapsed}
+          onClick={() => setChangelogOpen(true)}
+        />
       </nav>
 
       {/* User footer */}
@@ -279,6 +292,9 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
 
   return (
     <>
+      {/* Changelog modal */}
+      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+
       {/* ── Desktop sidebar ──────────────────────────────── */}
       <motion.aside
         animate={{ width: sidebarWidth }}
