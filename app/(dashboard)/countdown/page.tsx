@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Pencil, Pin, PinOff, Archive, ArchiveRestore,
   Timer, Check, X, ChevronDown, Loader2, Maximize2, Minimize2,
+  MoreHorizontal,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,22 @@ function progressPercent(c: Countdown) {
   const elapsed  = Date.now() - c.createdAt;
   const duration = totalDuration(c.targetDate, c.createdAt);
   return Math.min(100, Math.max(0, (elapsed / duration) * 100));
+}
+
+/* ---------------------------------------------------------- */
+/*  useIsMobile — true when the primary input is touch/coarse  */
+/* ---------------------------------------------------------- */
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
 }
 
 /* ---------------------------------------------------------- */
@@ -462,6 +479,8 @@ function CountdownCard({
   onTogglePin,
   onToggleArchive,
   onOpen,
+  isMobile,
+  onMobileTap,
 }: {
   countdown: Countdown;
   onEdit: () => void;
@@ -469,6 +488,8 @@ function CountdownCard({
   onTogglePin: () => void;
   onToggleArchive: () => void;
   onOpen: () => void;
+  isMobile: boolean;
+  onMobileTap: () => void;
 }) {
   const [time, setTime] = useState<TimeLeft>(calcTimeLeft(countdown.targetDate));
   const th = getTheme(countdown.theme);
@@ -527,23 +548,37 @@ function CountdownCard({
             </div>
           </div>
 
-          {/* Action buttons (visible on hover) */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button onClick={onOpen} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title="Cinematic view">
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title="Edit">
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={onTogglePin} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title={countdown.pinned ? "Unpin" : "Pin"}>
-              {countdown.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={onToggleArchive} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title={countdown.archived ? "Restore" : "Archive"}>
-              {countdown.archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+          {/* Action buttons */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            {isMobile ? (
+              /* Mobile: single tap target that opens the sheet */
+              <button
+                onClick={onMobileTap}
+                className="p-1.5 rounded-lg bg-white/5 text-muted-foreground active:bg-white/15 transition-colors"
+                title="Actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+            ) : (
+              /* Desktop: hover-revealed icon row */
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={onOpen} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title="Cinematic view">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title="Edit">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={onTogglePin} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title={countdown.pinned ? "Unpin" : "Pin"}>
+                  {countdown.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={onToggleArchive} className="p-1.5 rounded-lg hover:bg-white/8 text-muted-foreground hover:text-foreground transition-colors" title={countdown.archived ? "Restore" : "Archive"}>
+                  {countdown.archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -611,6 +646,8 @@ export default function CountdownPage() {
   const [saving, setSaving]             = useState(false);
   const [cinematic, setCinematic]       = useState<Countdown | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [mobileActionCountdown, setMobileActionCountdown] = useState<Countdown | null>(null);
+  const isMobile = useIsMobile();
 
   /* Load */
   useEffect(() => {
@@ -783,6 +820,8 @@ export default function CountdownPage() {
                   onTogglePin={() => handleTogglePin(c)}
                   onToggleArchive={() => handleToggleArchive(c)}
                   onOpen={() => setCinematic(c)}
+                  isMobile={isMobile}
+                  onMobileTap={() => setMobileActionCountdown(c)}
                 />
               ))}
             </AnimatePresence>
@@ -817,6 +856,8 @@ export default function CountdownPage() {
                       onTogglePin={() => handleTogglePin(c)}
                       onToggleArchive={() => handleToggleArchive(c)}
                       onOpen={() => setCinematic(c)}
+                      isMobile={isMobile}
+                      onMobileTap={() => setMobileActionCountdown(c)}
                     />
                   ))}
                 </motion.div>
@@ -825,6 +866,21 @@ export default function CountdownPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile action sheet */}
+      <AnimatePresence>
+        {mobileActionCountdown && (
+          <CountdownMobileActionSheet
+            countdown={mobileActionCountdown}
+            onClose={() => setMobileActionCountdown(null)}
+            onOpen={() => { setCinematic(mobileActionCountdown); setMobileActionCountdown(null); }}
+            onEdit={() => { setEditTarget(mobileActionCountdown); setShowForm(false); setMobileActionCountdown(null); }}
+            onTogglePin={() => { handleTogglePin(mobileActionCountdown); setMobileActionCountdown(null); }}
+            onToggleArchive={() => { handleToggleArchive(mobileActionCountdown); setMobileActionCountdown(null); }}
+            onDelete={() => { handleDelete(mobileActionCountdown.id); setMobileActionCountdown(null); }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -838,4 +894,105 @@ function sortCountdowns(cs: Countdown[]): Countdown[] {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return a.targetDate - b.targetDate;
   });
+}
+
+/* ---------------------------------------------------------- */
+/*  CountdownMobileActionSheet                                  */
+/* ---------------------------------------------------------- */
+
+function CountdownMobileActionSheet({
+  countdown, onClose, onOpen, onEdit, onTogglePin, onToggleArchive, onDelete,
+}: {
+  countdown: Countdown;
+  onClose: () => void;
+  onOpen: () => void;
+  onEdit: () => void;
+  onTogglePin: () => void;
+  onToggleArchive: () => void;
+  onDelete: () => void;
+}) {
+  const th = getTheme(countdown.theme);
+
+  const actions: { icon: React.ElementType; label: string; onClick: () => void; danger?: boolean }[] = [
+    { icon: Maximize2,                                             label: "Cinematic view",                    onClick: onOpen },
+    { icon: Pencil,                                                label: "Edit",                              onClick: onEdit },
+    { icon: countdown.pinned ? PinOff : Pin,                      label: countdown.pinned ? "Unpin" : "Pin",  onClick: onTogglePin },
+    { icon: countdown.archived ? ArchiveRestore : Archive,        label: countdown.archived ? "Restore" : "Archive", onClick: onToggleArchive },
+    { icon: Trash2,                                                label: "Delete",                            onClick: onDelete, danger: true },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="fixed inset-0 z-50 flex items-end"
+      onClick={onClose}
+    >
+      {/* Scrim */}
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
+
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 320, mass: 0.8 }}
+        className="relative w-full rounded-t-3xl border-t border-white/10 overflow-hidden"
+        style={{ background: "oklch(0.13 0 0)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-9 h-1 rounded-full bg-white/20" />
+        </div>
+
+        {/* Countdown preview */}
+        <div className="px-4 pb-3 pt-1">
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3 border border-white/8"
+            style={{
+              background: "oklch(1 0 0 / 4%)",
+              borderTop: `2px solid ${th.from}`,
+            }}
+          >
+            <span className="text-3xl shrink-0">{countdown.emoji}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{countdown.title}</p>
+              {countdown.description && (
+                <p className="text-xs text-muted-foreground truncate">{countdown.description}</p>
+              )}
+              <p className="text-[10px] mt-0.5" style={{ color: th.from }}>
+                {new Date(countdown.targetDate).toLocaleDateString(undefined, {
+                  month: "short", day: "numeric", year: "numeric",
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action rows */}
+        <div
+          className="mx-4 mb-8 rounded-2xl overflow-hidden"
+          style={{ background: "oklch(1 0 0 / 4%)", border: "1px solid oklch(1 0 0 / 7%)" }}
+        >
+          {actions.map(({ icon: Icon, label, onClick, danger }, i) => (
+            <motion.button
+              key={label}
+              whileTap={{ backgroundColor: "oklch(1 0 0 / 8%)" }}
+              onClick={onClick}
+              className={cn(
+                "w-full flex items-center gap-4 px-5 py-4 text-sm font-medium text-left transition-colors",
+                danger ? "text-destructive" : "text-foreground",
+                i > 0 && "border-t border-white/7"
+              )}
+            >
+              <Icon className="w-4.5 h-4.5 shrink-0" />
+              {label}
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
