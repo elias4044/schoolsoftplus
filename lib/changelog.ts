@@ -74,7 +74,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     summary:
       "Submit bug reports, feature requests, and questions directly from inside SchoolSoft+ — no GitHub account required. Issues are created on GitHub and linked to your SSP username automatically.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.2",
     sections: [
       {
