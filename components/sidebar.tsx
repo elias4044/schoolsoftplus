@@ -23,6 +23,7 @@ import {
   X,
   UserCircle,
   MessageSquare,
+  GitPullRequest,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -48,6 +49,7 @@ const NAV_ITEMS = [
 const BOTTOM_NAV = [
   { href: "/notes",    label: "Notes",    icon: StickyNote,     shortcut: "Alt+N" },
   { href: "/messages", label: "Messages", icon: MessageSquare,  shortcut: "Alt+M" },
+  { href: "/feedback", label: "Feedback", icon: GitPullRequest, shortcut: "Alt+F" },
   { href: "/profile",  label: "Profile",  icon: UserCircle,     shortcut: "Alt+P" },
   { href: "/settings", label: "Settings", icon: Settings,       shortcut: "Alt+," },
 ] as const;
@@ -76,6 +78,8 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "N": e.preventDefault(); router.push("/notes");     break;
         case "m":
         case "M": e.preventDefault(); router.push("/messages");  break;
+        case "f":
+        case "F": e.preventDefault(); router.push("/feedback");  break;
         case "p":
         case "P": e.preventDefault(); router.push("/profile");   break;
         case ",": e.preventDefault(); router.push("/settings");  break;
