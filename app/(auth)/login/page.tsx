@@ -1,22 +1,209 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation"
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 
-const DEFAULT_SCHOOL = "engelska";
+const DEFAULT_SCHOOL_ID   = "engelska";
+const DEFAULT_SCHOOL_NAME = "Internationella Engelska Skolan - IES Halmstad";
+
+interface School { name: string; id: string; }
+
+// How many items to render at most — keeps the DOM small for 3000+ entries
+const MAX_VISIBLE = 100;
+
+// ---------------------------------------------------------------------------
+// SchoolPicker
+// ---------------------------------------------------------------------------
+function SchoolPicker({
+  value,
+  displayName,
+  onChange,
+}: {
+  value: string;
+  displayName: string;
+  onChange: (id: string, name: string) => void;
+}) {
+  const [open, setOpen]         = useState(false);
+  const [query, setQuery]       = useState("");
+  const [schools, setSchools]   = useState<School[]>([]);
+  const [fetched, setFetched]   = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const wrapRef  = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch once on first open
+  const loadSchools = useCallback(async () => {
+    if (fetched || fetching) return;
+    setFetching(true);
+    try {
+      const res = await fetch("/api/schools");
+      const data = await res.json();
+      if (Array.isArray(data.schools)) setSchools(data.schools);
+    } catch { /* ignore */ }
+    finally {
+      setFetched(true);
+      setFetching(false);
+    }
+  }, [fetched, fetching]);
+
+  function openPicker() {
+    setOpen(true);
+    setQuery("");
+    loadSchools();
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Keyboard: close on Escape
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
+  const filtered = query.trim()
+    ? schools.filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
+    : schools;
+  const visible = filtered.slice(0, MAX_VISIBLE);
+  const overflow = filtered.length - visible.length;
+
+  return (
+    <div ref={wrapRef} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={openPicker}
+        className={cn(
+          "w-full h-10 flex items-center gap-2 px-3 rounded-md border text-sm text-left transition-colors",
+          "bg-card border-border hover:border-primary/40",
+          open && "border-primary/50 ring-1 ring-primary/30"
+        )}
+      >
+        <span className="flex-1 truncate text-foreground">
+          {displayName || value}
+        </span>
+        {fetching
+          ? <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
+          : <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
+        }
+      </button>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scaleY: 0.96 }}
+            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+            exit={{ opacity: 0, y: -6, scaleY: 0.96 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            style={{ transformOrigin: "top" }}
+            className="absolute z-50 top-[calc(100%+6px)] left-0 right-0 rounded-xl border border-border bg-card shadow-[0_16px_48px_oklch(0_0_0/0.5)] overflow-hidden"
+          >
+            {/* Search input */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+              <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search your school…"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 text-foreground"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="text-muted-foreground hover:text-foreground transition-colors text-[10px]"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="max-h-56 overflow-y-auto overscroll-contain">
+              {fetching && !schools.length ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading schools…
+                </div>
+              ) : filtered.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-6">
+                  No schools found for &ldquo;{query}&rdquo;
+                </p>
+              ) : (
+                <>
+                  {visible.map(school => {
+                    const active = school.id === value;
+                    return (
+                      <button
+                        key={school.name}
+                        type="button"
+                        onClick={() => { onChange(school.id, school.name); setOpen(false); }}
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
+                          active
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground/80 hover:bg-white/5 hover:text-foreground"
+                        )}
+                      >
+                        <span className="flex-1 truncate">{school.name}</span>
+                        {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                  {overflow > 0 && (
+                    <p className="text-center text-[10px] text-muted-foreground/50 py-2 border-t border-border">
+                      {overflow} more — type to narrow results
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer hint */}
+            {schools.length > 0 && (
+              <div className="border-t border-border px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground/50">
+                  {filtered.length} of {schools.length} schools
+                </span>
+                <span className="text-[10px] text-muted-foreground/40">Esc to close</span>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const [school, setSchool] = useState(DEFAULT_SCHOOL);
+  const [schoolId,   setSchoolId]   = useState(DEFAULT_SCHOOL_ID);
+  const [schoolName, setSchoolName] = useState(DEFAULT_SCHOOL_NAME);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +221,7 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-school": school },
+        headers: { "Content-Type": "application/json", "x-school": schoolId },
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
@@ -170,14 +357,10 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Field label="School" htmlFor="school">
-              <Input
-                id="school"
-                value={school}
-                onChange={e => setSchool(e.target.value)}
-                className="bg-card border-border focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/40 h-10"
-                placeholder="engelska"
-                autoComplete="off"
-                type="text"
+              <SchoolPicker
+                value={schoolId}
+                displayName={schoolName}
+                onChange={(id, name) => { setSchoolId(id); setSchoolName(name); }}
               />
             </Field>
 
