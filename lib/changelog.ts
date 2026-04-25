@@ -23,17 +23,41 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.1",
+    date: "2026-04-25",
+    title: "Changelog Page",
+    summary:
+      "A dedicated changelog page and in-app modal so you can always see what is new in SchoolSoft+ — available on the landing page, inside the dashboard sidebar, and at /changelog for anyone not logged in.",
+    tags: ["feature", "improvement"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.1",
+    sections: [
+      {
+        title: "Changelog",
+        items: [
+          { text: "New /changelog page listing every release with expandable detail cards", tag: "feature" },
+          { text: "In-app changelog modal accessible from the sidebar via the 'What's new' button", tag: "feature" },
+          { text: "Version badge pill in the landing page header nav opens the modal inline", tag: "feature" },
+          { text: "Each release shows a version number, date, summary, and colour-coded tag pills (Feature, Improvement, Fix, Security, Breaking)", tag: "feature" },
+          { text: "Latest release is pinned to the top and highlighted with a gradient border and accent line", tag: "improvement" },
+          { text: "Direct link to the corresponding GitHub release on every entry", tag: "improvement" },
+          { text: "Modal uses a React portal so it renders above all page elements regardless of stacking context", tag: "fix" },
+          { text: "Changelog link added to the landing page footer", tag: "improvement" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-04-25",
-    title: "Messaging & Social Profiles",
+    title: "Messaging and Social Profiles",
     summary:
       "Real-time direct messaging between students, rich social profiles, emoji reactions, reply threads, and push notifications — SchoolSoft+ is now a full school social platform.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.0",
     sections: [
       {
-        title: "✉️ Real-time Messaging",
+        title: "Real-time Messaging",
         items: [
           { text: "Brand-new direct message system — send and receive messages with any student at your school instantly", tag: "feature" },
           { text: "Messages arrive in real-time via Firestore listeners — no page refresh needed", tag: "feature" },
@@ -47,7 +71,7 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
       {
-        title: "👤 Social Profiles",
+        title: "Social Profiles",
         items: [
           { text: "Every student now has a public profile page — show your name, school, a short bio, and profile colour", tag: "feature" },
           { text: "Profile pages are accessible at /profile or by searching for any student in the DM compose screen", tag: "feature" },
@@ -58,7 +82,7 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
       {
-        title: "🔔 Notifications",
+        title: "Notifications",
         items: [
           { text: "New notifications system — in-app bell icon with a live unread count", tag: "feature" },
           { text: "Notification entries for new messages, reactions, and replies", tag: "feature" },
@@ -66,7 +90,7 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
       {
-        title: "🐞 Fixes & Polish",
+        title: "Fixes and Polish",
         items: [
           { text: "Fixed mobile sidebar closing prematurely when navigating to messages", tag: "fix" },
           { text: "Improved loading skeleton in conversation list to prevent layout shift", tag: "fix" },
