@@ -84,11 +84,27 @@ function formatDate(ts: number) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   useIsMobile — true when the primary input is touch / coarse
+───────────────────────────────────────────────────────────── */
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia("(pointer: coarse)");
+        setIsMobile(mq.matches);
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, []);
+    return isMobile;
+}
+
+/* ─────────────────────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────────────────────── */
 export default function MessagesPage() {
     const { session, loading: sessionLoading } = useSession();
     const username = session?.username ?? "";
+    const isMobile = useIsMobile();
 
     // Gate: has the user set up their profile yet?
     const [profileExists, setProfileExists] = useState<boolean | null>(null);
@@ -123,6 +139,7 @@ export default function MessagesPage() {
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+    const [mobileActionMsg, setMobileActionMsg] = useState<Message | null>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -489,6 +506,8 @@ export default function MessagesPage() {
                                                             editContent={editContent}
                                                             editSaving={editSaving}
                                                             username={username}
+                                                            isMobile={isMobile}
+                                                            onMobileTap={() => setMobileActionMsg(msg)}
                                                             onEditStart={() => { setEditingId(msg.id); setEditContent(msg.content); }}
                                                             onEditChange={setEditContent}
                                                             onEditSubmit={() => submitEdit(msg.id)}
@@ -701,6 +720,29 @@ export default function MessagesPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* ═══ Mobile action sheet ════════════════════════════ */}
+            <AnimatePresence>
+                {mobileActionMsg && (
+                    <MobileActionSheet
+                        msg={mobileActionMsg}
+                        isMe={mobileActionMsg.senderUsername === username}
+                        username={username}
+                        onClose={() => setMobileActionMsg(null)}
+                        onEdit={() => {
+                            setEditingId(mobileActionMsg.id);
+                            setEditContent(mobileActionMsg.content);
+                        }}
+                        onDelete={() => deleteMsg(mobileActionMsg.id)}
+                        onPin={() => togglePin(mobileActionMsg.id)}
+                        onReply={() => {
+                            setReplyingTo(mobileActionMsg);
+                            inputRef.current?.focus();
+                        }}
+                        onReact={emoji => toggleReaction(mobileActionMsg.id, emoji)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -864,10 +906,12 @@ function ConvoItem({
 ───────────────────────────────────────────────────────────── */
 function MessageBubble({
     msg, isMe, sameSender, isEditing, editContent, editSaving, username,
+    isMobile, onMobileTap,
     onEditStart, onEditChange, onEditSubmit, onEditCancel, onDelete, onPin, onReply, onReact,
 }: {
     msg: Message; isMe: boolean; sameSender: boolean;
     isEditing: boolean; editContent: string; editSaving: boolean; username: string;
+    isMobile: boolean; onMobileTap: () => void;
     onEditStart: () => void; onEditChange: (v: string) => void;
     onEditSubmit: () => void; onEditCancel: () => void;
     onDelete: () => void; onPin: () => void; onReply: () => void;
@@ -959,18 +1003,20 @@ function MessageBubble({
                         <div
                             className={cn(
                                 "rounded-2xl px-3.5 py-2 text-sm wrap-break-word",
-                                isMe ? "rounded-tr-sm text-white" : "rounded-tl-sm bg-white/8 text-foreground"
+                                isMe ? "rounded-tr-sm text-white" : "rounded-tl-sm bg-white/8 text-foreground",
+                                isMobile && "cursor-pointer active:opacity-75 transition-opacity select-none"
                             )}
                             style={isMe ? { background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" } : undefined}
+                            onClick={() => { if (isMobile) onMobileTap(); }}
                         >
                             {msg.content}
                             {msg.pinned && <Pin className="inline w-2.5 h-2.5 ml-1.5 opacity-60" />}
                         </div>
                     )}
 
-                    {/* Action toolbar */}
+                    {/* Action toolbar — desktop hover only */}
                     <AnimatePresence>
-                        {hover && !isEditing && (
+                        {hover && !isEditing && !isMobile && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.88 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -1121,6 +1167,134 @@ function EmptyChat({ onNew }: { onNew: () => void }) {
                     You can only message users who have a Schoolsoft+ profile. Search by their exact username.
                 </p>
             </div>
+        </motion.div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MobileActionSheet — bottom sheet for message actions on touch
+───────────────────────────────────────────────────────────── */
+interface SheetAction {
+    icon: React.ElementType;
+    label: string;
+    onClick: () => void;
+    danger?: boolean;
+}
+
+function MobileActionSheet({
+    msg, isMe, username, onClose, onEdit, onDelete, onPin, onReply, onReact,
+}: {
+    msg: Message; isMe: boolean; username: string;
+    onClose: () => void; onEdit: () => void; onDelete: () => void;
+    onPin: () => void; onReply: () => void; onReact: (emoji: string) => void;
+}) {
+    const [copied, setCopied] = useState(false);
+
+    const copy = () => {
+        navigator.clipboard.writeText(msg.content);
+        setCopied(true);
+        setTimeout(() => { setCopied(false); onClose(); }, 900);
+    };
+
+    const actions: SheetAction[] = [
+        { icon: CornerUpLeft, label: "Reply",                          onClick: () => { onReply(); onClose(); } },
+        { icon: copied ? Check : Copy, label: copied ? "Copied!" : "Copy", onClick: copy },
+        { icon: msg.pinned ? PinOff : Pin, label: msg.pinned ? "Unpin" : "Pin", onClick: () => { onPin(); onClose(); } },
+        ...(isMe ? [
+            { icon: Pencil, label: "Edit",   onClick: () => { onEdit(); onClose(); } } as SheetAction,
+            { icon: Trash2, label: "Delete", onClick: () => { onDelete(); onClose(); }, danger: true } as SheetAction,
+        ] : []),
+    ];
+
+    return (
+        <motion.div
+            key="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 flex items-end"
+            onClick={onClose}
+        >
+            {/* Scrim */}
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
+
+            <motion.div
+                key="sheet-panel"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 320, mass: 0.8 }}
+                className="relative w-full rounded-t-3xl border-t border-white/10 overflow-hidden"
+                style={{ background: "oklch(0.13 0 0)" }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-1">
+                    <div className="w-9 h-1 rounded-full bg-white/20" />
+                </div>
+
+                {/* Message preview */}
+                <div className="px-4 pb-2 pt-1">
+                    <div
+                        className="rounded-xl px-3.5 py-2.5 border border-white/8"
+                        style={{ background: "oklch(1 0 0 / 4%)" }}
+                    >
+                        <p className="text-[10px] font-semibold mb-1" style={{ color: "oklch(0.72 0.16 263)" }}>
+                            {msg.senderDisplayName}
+                        </p>
+                        <p className="text-sm text-foreground/90 line-clamp-3 wrap-break-word">{msg.content}</p>
+                    </div>
+                </div>
+
+                {/* Quick reactions */}
+                <div
+                    className="flex items-center justify-around px-4 py-3 mx-4 mb-2 rounded-2xl"
+                    style={{ background: "oklch(1 0 0 / 4%)", border: "1px solid oklch(1 0 0 / 7%)" }}
+                >
+                    {QUICK_REACTIONS.map(e => {
+                        const reacted = (msg.reactions?.[e] ?? []).includes(username);
+                        return (
+                            <motion.button
+                                key={e}
+                                whileTap={{ scale: 0.75 }}
+                                onClick={() => { onReact(e); onClose(); }}
+                                className={cn(
+                                    "relative w-11 h-11 flex items-center justify-center rounded-full text-2xl transition-colors",
+                                    reacted ? "bg-primary/20" : "active:bg-white/10"
+                                )}
+                            >
+                                {e}
+                                {reacted && (
+                                    <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-card" />
+                                )}
+                            </motion.button>
+                        );
+                    })}
+                </div>
+
+                {/* Action rows */}
+                <div
+                    className="mx-4 mb-8 rounded-2xl overflow-hidden"
+                    style={{ background: "oklch(1 0 0 / 4%)", border: "1px solid oklch(1 0 0 / 7%)" }}
+                >
+                    {actions.map(({ icon: Icon, label, onClick, danger }, i) => (
+                        <motion.button
+                            key={label}
+                            whileTap={{ backgroundColor: "oklch(1 0 0 / 8%)" }}
+                            onClick={onClick}
+                            className={cn(
+                                "w-full flex items-center gap-4 px-5 py-4 text-sm font-medium text-left transition-colors",
+                                danger ? "text-destructive" : "text-foreground",
+                                i > 0 && "border-t border-white/7"
+                            )}
+                        >
+                            <Icon className="w-4.5 h-4.5 shrink-0" />
+                            {label}
+                        </motion.button>
+                    ))}
+                </div>
+            </motion.div>
         </motion.div>
     );
 }

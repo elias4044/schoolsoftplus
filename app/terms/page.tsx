@@ -16,6 +16,9 @@ import {
   AlertTriangle,
   Scale,
   Mail,
+  MessageCircle,
+  UserCircle,
+  Timer,
 } from "lucide-react";
 
 /* ─── Reveal ───────────────────────────────────────────── */
@@ -133,7 +136,7 @@ export default function TermsPage() {
             style={{ background: "oklch(0.62 0.16 263 / 12%)", color: "oklch(0.75 0.14 263)", border: "1px solid oklch(0.62 0.16 263 / 22%)" }}
           >
             <Shield className="w-3 h-3" />
-            Last updated: April 19, 2026
+            Last updated: April 25, 2026
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">
             Terms of Service{" "}
@@ -158,7 +161,11 @@ export default function TermsPage() {
             { href: "#your-data",   label: "Your data" },
             { href: "#cookies",     label: "Cookies" },
             { href: "#firebase",    label: "Firebase" },
+            { href: "#profiles",    label: "Profiles" },
+            { href: "#messaging",   label: "Messaging" },
             { href: "#ai",          label: "AI" },
+            { href: "#notes",       label: "Notes" },
+            { href: "#countdowns",  label: "Countdowns" },
             { href: "#conduct",     label: "Conduct" },
             { href: "#disclaimers", label: "Disclaimers" },
             { href: "#contact",     label: "Contact" },
@@ -250,24 +257,86 @@ export default function TermsPage() {
         <Section id="firebase" icon={Database} title="4. What we store in Firebase" color="oklch(0.72 0.16 263)" delay={0.12}>
           <p>
             We use <strong className="text-foreground">Google Firebase Firestore</strong> to store data that belongs to you and needs to
-            persist across sessions. The following data is stored per user:
+            persist across sessions. All writes from the browser go through our server-side API (using the Firebase Admin SDK);
+            direct client writes are blocked by Firestore security rules except where explicitly noted.
           </p>
-          <ul className="space-y-2 ml-1">
-            <Bullet><strong className="text-foreground">Username</strong> (lowercase) — used as your unique identifier.</Bullet>
-            <Bullet><strong className="text-foreground">Notes</strong> — any notes you create inside SchoolSoft+.</Bullet>
-            <Bullet><strong className="text-foreground">Dashboard widget layout</strong> — stored locally in your browser, not in Firebase.</Bullet>
-            <Bullet><strong className="text-foreground">First login / last login timestamps</strong> and a login count — used for anonymous aggregate stats only.</Bullet>
-          </ul>
+          <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 8%)" }}>
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ background: "oklch(1 0 0 / 5%)" }}>
+                  <th className="text-left px-4 py-2.5 font-semibold text-foreground/70">Collection</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-foreground/70">What is stored</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
+                {[
+                  ["profiles_v1",       "Display name, bio, location, website, profile picture URL, session snapshot (name, email, school, user type). See §5."],
+                  ["notes_v2",          "Your notes (title, Markdown content, status, optional share token). Server-side only."],
+                  ["conversations_v1",  "DM conversation metadata (participants, last message preview, timestamps). See §6."],
+                  ["messages_v1",       "Individual DM messages (content, sender, timestamps, reactions, reply context). See §6."],
+                  ["countdowns_v1",     "Your personal countdown timers (title, target date, category, theme). Server-side only."],
+                  ["dashboard_layouts", "Your dashboard widget layout and configuration."],
+                  ["stats/loginStats",  "Anonymous aggregate counters — no link to individual users."],
+                ].map(([col, desc]) => (
+                  <tr key={col}>
+                    <td className="px-4 py-2.5 font-mono" style={{ color: "oklch(0.72 0.16 263)" }}>{col}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p>
-            Anonymous, aggregate usage statistics (total logins, feature usage counts, active schools) are stored in
-            a separate Firestore document with no link back to any individual user.
+            Anonymous aggregate statistics (total logins, feature usage counts, login-hour and day-of-week histograms,
+            active schools, peak calendar days, total messages sent, reactions, AI requests, and more) are stored in a
+            separate Firestore document with <strong className="text-foreground">no link back to any individual user</strong>.
+          </p>
+          <p>
+            Firestore security rules enforce strict access control: users can only read conversations and messages
+            they are participants in; profile documents are readable by any authenticated user but writable only
+            by the owner; all other writes are server-only.
           </p>
           <Callout color="oklch(0.72 0.16 263)">
-            You can request deletion of all your stored data by emailing us (see §8). We will process it within 7 days.
+            You can request deletion of all your stored data by emailing us (see §12). We will process it within 7 days.
           </Callout>
         </Section>
 
-        <Section id="ai" icon={Brain} title="5. AI assistant" color="oklch(0.75 0.18 310)" delay={0.16}>
+        <Section id="profiles" icon={UserCircle} title="5. User profiles" color="oklch(0.72 0.18 190)" delay={0.16}>
+          <p>
+            SchoolSoft+ maintains a public profile for each user inside the <code className="text-xs px-1 py-0.5 rounded" style={{ background: "oklch(1 0 0 / 8%)" }}>profiles_v1</code> collection.
+            Profiles are created and updated when you visit the Profile page.
+          </p>
+          <ul className="space-y-2 ml-1">
+            <Bullet><strong className="text-foreground">Editable fields</strong>: display name (max 80 chars), bio (max 300 chars), location (max 80 chars), website URL (max 200 chars), and profile picture URL (max 500 chars).</Bullet>
+            <Bullet><strong className="text-foreground">Session snapshot fields</strong> (read-only, refreshed from SchoolSoft on every profile save): first name, last name, email address, school name, and user type.</Bullet>
+            <Bullet><strong className="text-foreground">Profile visibility</strong>: any authenticated SchoolSoft+ user can read your profile. This is required for the user-search feature and for displaying names in conversations.</Bullet>
+            <Bullet>Profile picture URLs point to externally hosted images. We do not host images ourselves.</Bullet>
+            <Bullet>Your display name is automatically synced to all active conversations when you update it.</Bullet>
+          </ul>
+          <Callout color="oklch(0.72 0.18 190)">
+            Do not put sensitive information (passwords, phone numbers, ID numbers) in your public profile fields.
+          </Callout>
+        </Section>
+
+        <Section id="messaging" icon={MessageCircle} title="6. Direct messaging" color="oklch(0.75 0.18 40)" delay={0.20}>
+          <p>
+            SchoolSoft+ includes a real-time direct messaging system between users. Messages and conversations are
+            stored in Firebase Firestore and delivered to clients via live listeners.
+          </p>
+          <ul className="space-y-2 ml-1">
+            <Bullet><strong className="text-foreground">What is stored</strong>: message content, sender username, sender display name, timestamp, edit history flag, soft-delete flag, pin status, emoji reactions, and reply context.</Bullet>
+            <Bullet><strong className="text-foreground">Conversations</strong> are strictly one-to-one (DMs). Each conversation stores participant usernames, display name snapshots, and a preview of the last message.</Bullet>
+            <Bullet>The client loads up to <strong className="text-foreground">100 most recent messages</strong> per conversation and up to <strong className="text-foreground">50 conversations</strong>.</Bullet>
+            <Bullet>Messages are <strong className="text-foreground">soft-deleted</strong> — when you delete a message the content is hidden but the record remains in the database to preserve conversation integrity. Permanently purging your data requires a deletion request (see §12).</Bullet>
+            <Bullet>You can edit your own messages; edits are flagged with an edited indicator and timestamp.</Bullet>
+            <Bullet>Firestore security rules ensure <strong className="text-foreground">only participants</strong> can read a conversation or its messages. All writes (send, edit, delete, react, pin) go through our server-side API.</Bullet>
+          </ul>
+          <Callout color="oklch(0.75 0.18 40)">
+            Do not send sensitive personal information, passwords, or illegal content via the messaging feature. You are responsible for the content of messages you send.
+          </Callout>
+        </Section>
+
+        <Section id="ai" icon={Brain} title="7. AI assistant" color="oklch(0.75 0.18 310)" delay={0.24}>
           <p>
             SchoolSoft+ includes an AI assistant powered by <strong className="text-foreground">Google Gemini</strong> (via the Google GenAI API).
             When you send a message:
@@ -276,17 +345,23 @@ export default function TermsPage() {
             <Bullet>Your message and relevant context (schedule, assignments) are sent to Google's API to generate a response.</Bullet>
             <Bullet>Messages are subject to <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" className="underline" style={{ color: "oklch(0.72 0.16 263)" }}>Google's privacy policy</a>.</Bullet>
             <Bullet>We do not store your AI conversation history in our database.</Bullet>
-            <Bullet>A rate limit of <strong className="text-foreground">8 messages per minute</strong> applies to prevent abuse.</Bullet>
+            <Bullet>Messages are capped at <strong className="text-foreground">1,000 characters</strong>.</Bullet>
+            <Bullet>A rate limit of <strong className="text-foreground">8 messages per minute</strong> per IP address applies to prevent abuse.</Bullet>
           </ul>
           <Callout color="oklch(0.75 0.18 310)">
             Don't share sensitive personal information (passwords, ID numbers, etc.) with the AI assistant.
           </Callout>
         </Section>
 
-        <Section id="notes" icon={StickyNote} title="6. Notes &amp; shared content" color="oklch(0.72 0.18 190)" delay={0.20}>
+        <Section id="notes" icon={StickyNote} title="8. Notes &amp; shared content" color="oklch(0.72 0.18 148)" delay={0.28}>
           <p>
-            Notes you create are private by default. If you use the share feature, a public link is generated.
-            Anyone with that link can view the note. You are responsible for what you share.
+            Notes you create are private by default and stored server-side in Firebase (the client SDK has no direct
+            access to the notes collection). Notes support Markdown formatting and can have a status of
+            <em> draft</em>, <em>published</em>, or <em>archived</em>.
+          </p>
+          <p>
+            If you use the share feature, a unique public link is generated via a share token.
+            Anyone with that link can view the note — you are responsible for what you share.
           </p>
           <ul className="space-y-2 ml-1">
             <Bullet>Do not share content that is illegal, harmful, or violates SchoolSoft's own acceptable use policy.</Bullet>
@@ -294,21 +369,34 @@ export default function TermsPage() {
           </ul>
         </Section>
 
-        <Section id="conduct" icon={AlertTriangle} title="7. Acceptable use" color="oklch(0.78 0.16 55)" delay={0.24}>
+        <Section id="countdowns" icon={Timer} title="9. Countdowns" color="oklch(0.78 0.16 55)" delay={0.32}>
+          <p>
+            SchoolSoft+ lets you create personal countdown timers (exams, holidays, birthdays, deadlines, and more).
+            Countdowns are stored privately in Firebase under your username and are never visible to other users.
+          </p>
+          <ul className="space-y-2 ml-1">
+            <Bullet>Each countdown stores: title, optional description, target date, category, colour theme, and emoji.</Bullet>
+            <Bullet>Countdowns can be pinned or archived; archived countdowns are kept until you delete them.</Bullet>
+            <Bullet>The client SDK has no direct access to the countdowns collection — all reads and writes go through the server-side API.</Bullet>
+          </ul>
+        </Section>
+
+        <Section id="conduct" icon={AlertTriangle} title="10. Acceptable use" color="oklch(0.78 0.16 55)" delay={0.36}>
           <p>You agree not to:</p>
           <ul className="space-y-2 ml-1">
             <Bullet>Attempt to scrape, crawl, or automate requests to SchoolSoft+ or to SchoolSoft through SchoolSoft+.</Bullet>
             <Bullet>Use the service to access another student's data without their consent.</Bullet>
             <Bullet>Attempt to reverse-engineer, decompile, or tamper with the service.</Bullet>
-            <Bullet>Use the AI assistant to generate harmful, hateful, or illegal content.</Bullet>
+            <Bullet>Use the AI assistant or messaging feature to generate or send harmful, hateful, or illegal content.</Bullet>
             <Bullet>Circumvent rate limits or other technical controls.</Bullet>
+            <Bullet>Upload or link to profile pictures or website URLs containing inappropriate or illegal content.</Bullet>
           </ul>
           <p>
             Violations may result in immediate suspension of access and, where appropriate, reporting to school administration.
           </p>
         </Section>
 
-        <Section id="disclaimers" icon={Eye} title="8. Disclaimers &amp; liability" color="oklch(0.70 0.18 320)" delay={0.28}>
+        <Section id="disclaimers" icon={Eye} title="11. Disclaimers &amp; liability" color="oklch(0.70 0.18 320)" delay={0.40}>
           <p>
             SchoolSoft+ is provided <strong className="text-foreground">"as is"</strong> with no warranty of uptime, accuracy, or fitness for any particular purpose.
             Because this service depends on SchoolSoft's own API, any changes or outages on their end will affect availability here.
@@ -320,7 +408,7 @@ export default function TermsPage() {
           </ul>
         </Section>
 
-        <Section id="contact" icon={Mail} title="9. Contact" color="oklch(0.65 0.22 278)" delay={0.32}>
+        <Section id="contact" icon={Mail} title="12. Contact" color="oklch(0.65 0.22 278)" delay={0.44}>
           <p>Questions, data deletion requests, or bug reports — reach out:</p>
           <ul className="space-y-2 ml-1">
             <Bullet>Email: <a href="mailto:hello@elias4044.com" className="underline" style={{ color: "oklch(0.72 0.16 263)" }}>hello@elias4044.com</a></Bullet>
