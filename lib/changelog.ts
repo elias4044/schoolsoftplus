@@ -23,13 +23,39 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.2",
+    date: "2026-04-25",
+    title: "In-App Feedback",
+    summary:
+      "Submit bug reports, feature requests, and questions directly from inside SchoolSoft+ — no GitHub account required. Issues are created on GitHub and linked to your SSP username automatically.",
+    tags: ["feature", "improvement"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.2",
+    sections: [
+      {
+        title: "Feedback Page",
+        items: [
+          { text: "New /feedback page accessible from the sidebar (Alt+F)", tag: "feature" },
+          { text: "Submit bug reports, feature requests, or questions without a GitHub account", tag: "feature" },
+          { text: "Issues are created server-side using a GitHub token and linked to your SSP username", tag: "feature" },
+          { text: "Three pre-filled markdown templates: Bug Report, Feature Request, Question / Other", tag: "feature" },
+          { text: "In-app form with title field, markdown body editor, and live character counter", tag: "feature" },
+          { text: "Success banner with a direct link to the newly created GitHub issue", tag: "feature" },
+          { text: "Browse open and closed issues directly inside the app", tag: "feature" },
+          { text: "Filter issues by label (bug, feature request, question) and search by title", tag: "improvement" },
+          { text: "Pagination for long issue lists", tag: "improvement" },
+          { text: "Colour-coded label badges matching GitHub label colours", tag: "improvement" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.1",
     date: "2026-04-25",
     title: "Changelog Page",
     summary:
       "A dedicated changelog page and in-app modal so you can always see what is new in SchoolSoft+ — available on the landing page, inside the dashboard sidebar, and at /changelog for anyone not logged in.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.1",
     sections: [
       {

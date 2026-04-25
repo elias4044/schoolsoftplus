@@ -51,9 +51,9 @@ const NAV_ITEMS = [
 const BOTTOM_NAV = [
   { href: "/notes",    label: "Notes",    icon: StickyNote,     shortcut: "Alt+N" },
   { href: "/messages", label: "Messages", icon: MessageSquare,  shortcut: "Alt+M" },
-  { href: "/feedback", label: "Feedback", icon: GitPullRequest, shortcut: "Alt+F" },
   { href: "/profile",  label: "Profile",  icon: UserCircle,     shortcut: "Alt+P" },
   { href: "/settings", label: "Settings", icon: Settings,       shortcut: "Alt+," },
+  { href: "/feedback", label: "Feedback", icon: GitPullRequest, shortcut: "Alt+F" },
 ] as const;
 
 /* -- Keyboard navigation hook ----------------------------- */
