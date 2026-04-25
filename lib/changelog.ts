@@ -23,13 +23,84 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.3",
+    date: "2026-04-25",
+    title: "AI Writing Tools & School Picker",
+    summary:
+      "The AI has been completely reworked — freeform chat is replaced with focused, useful features: inline writing tools built into the Notes editor and a quick-action Insights panel for your schedule, assignments, and lunch. Login now includes a searchable school picker with every SchoolSoft school.",
+    tags: ["feature", "improvement"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.3",
+    sections: [
+      {
+        title: "AI Writing Tools in Notes",
+        items: [
+          { text: "New 'AI Tools' toolbar button in the Notes editor opens an inline action panel", tag: "feature" },
+          { text: "11 focused writing actions: Improve writing, Fix grammar, Expand, Shorten, Make formal, Make casual, Continue writing, Key points, Summarize, Suggest title, Explain", tag: "feature" },
+          { text: "Actions are context-aware — select text to target just that passage, or apply to the whole note", tag: "feature" },
+          { text: "AI suggestions appear in a preview panel before being applied — accept or discard with one click", tag: "feature" },
+          { text: "Undo AI button appears after accepting a suggestion so you can instantly revert", tag: "feature" },
+          { text: "Actions are grouped into Editing, Tone, and Generate categories for quick scanning", tag: "improvement" },
+          { text: "Dedicated /api/ai/note endpoint — returns only what was asked, no preambles or filler", tag: "improvement" },
+        ],
+      },
+      {
+        title: "AI Insights Panel",
+        items: [
+          { text: "The sidebar AI panel is redesigned as a focused Insights panel — freeform chat removed", tag: "improvement" },
+          { text: "Five quick-action cards: This Week's Assignments, Today's Schedule, Lunch This Week, School News, Study Tips", tag: "feature" },
+          { text: "Each card fetches live school data and generates a concise AI summary in one tap", tag: "feature" },
+          { text: "Results are displayed as cards with Refresh and Copy actions", tag: "feature" },
+          { text: "Dedicated /api/ai/insight endpoint fetches all required data sources in parallel before calling the model", tag: "improvement" },
+        ],
+      },
+      {
+        title: "School Selection",
+        items: [
+          { text: "Login page now has a searchable school picker instead of a manual text field", tag: "feature" },
+          { text: "Loads all SchoolSoft schools (3000+) from a new /api/schools endpoint — no auth required", tag: "feature" },
+          { text: "Schools are fetched lazily on first open and cached server-side for one hour", tag: "improvement" },
+          { text: "Live client-side search filters instantly; only 100 items rendered at a time to keep the UI fast", tag: "improvement" },
+          { text: "Default school is Internationella Engelska Skolan - IES Halmstad", tag: "improvement" },
+          { text: "School names are used as unique keys since they are the only guaranteed-unique field", tag: "fix" },
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.4.2",
+    date: "2026-04-25",
+    title: "In-App Feedback",
+    summary:
+      "Submit bug reports, feature requests, and questions directly from inside SchoolSoft+ — no GitHub account required. Issues are created on GitHub and linked to your SSP username automatically.",
+    tags: ["feature", "improvement"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.2",
+    sections: [
+      {
+        title: "Feedback Page",
+        items: [
+          { text: "New /feedback page accessible from the sidebar (Alt+F)", tag: "feature" },
+          { text: "Submit bug reports, feature requests, or questions without a GitHub account", tag: "feature" },
+          { text: "Issues are created server-side using a GitHub token and linked to your SSP username", tag: "feature" },
+          { text: "Three pre-filled markdown templates: Bug Report, Feature Request, Question / Other", tag: "feature" },
+          { text: "In-app form with title field, markdown body editor, and live character counter", tag: "feature" },
+          { text: "Success banner with a direct link to the newly created GitHub issue", tag: "feature" },
+          { text: "Browse open and closed issues directly inside the app", tag: "feature" },
+          { text: "Filter issues by label (bug, feature request, question) and search by title", tag: "improvement" },
+          { text: "Pagination for long issue lists", tag: "improvement" },
+          { text: "Colour-coded label badges matching GitHub label colours", tag: "improvement" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.1",
     date: "2026-04-25",
     title: "Changelog Page",
     summary:
       "A dedicated changelog page and in-app modal so you can always see what is new in SchoolSoft+ — available on the landing page, inside the dashboard sidebar, and at /changelog for anyone not logged in.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.1",
     sections: [
       {
