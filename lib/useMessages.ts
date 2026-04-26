@@ -20,6 +20,30 @@ export interface ReplyTo {
   senderDisplayName: string;
 }
 
+export interface NoteShareCard {
+  type: "note";
+  noteId: string;
+  title: string;
+  preview: string;
+  fullContent?: string;  // full raw markdown stored at share time
+  status: "draft" | "published" | "archived";
+  sharedAt: number;
+}
+
+export interface GradeShareCard {
+  type: "grade";
+  assignmentId: number;
+  assignmentTitle: string;
+  subjectName: string;
+  assignmentType: string;
+  grade: string;
+  confidence: "confirmed" | "estimated";
+  totalPoints: string | null;
+  sharedAt: number;
+}
+
+export type ShareCard = NoteShareCard | GradeShareCard;
+
 export interface RTMessage {
   id: string;
   conversationId: string;
@@ -33,13 +57,18 @@ export interface RTMessage {
   createdAt: number;
   reactions: Record<string, string[]>;
   replyTo: ReplyTo | null;
-  isNew?: boolean; // ephemeral flag for entrance animation
+  shareCard: ShareCard | null;
+  isNew?: boolean;
 }
 
 export interface RTConversation {
   id: string;
+  type: "dm" | "group";
   participants: string[];
   participantNames: Record<string, string>;
+  groupName: string | null;
+  groupDescription: string | null;
+  adminUsername: string | null;
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
@@ -68,8 +97,12 @@ export function useConversations(username: string) {
         const d = doc.data();
         return {
           id:                  doc.id,
+          type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
           participants:        d.participants       ?? [],
           participantNames:    d.participantNames   ?? {},
+          groupName:           d.groupName          ?? null,
+          groupDescription:    d.groupDescription   ?? null,
+          adminUsername:       d.adminUsername       ?? null,
           lastMessage:         d.lastMessage        ?? "",
           lastSenderUsername:  d.lastSenderUsername ?? "",
           lastAt:              d.lastAt             ?? 0,
@@ -151,6 +184,7 @@ export function useMessages(conversationId: string | null) {
           createdAt:           d.createdAt           ?? 0,
           reactions:           d.reactions           ?? {},
           replyTo:             d.replyTo             ?? null,
+          shareCard:           d.shareCard            ?? null,
         };
       });
       applyUpdate(msgs);

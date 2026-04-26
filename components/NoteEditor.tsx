@@ -9,7 +9,7 @@ import {
   Eye, Edit3, CheckCircle, Share2, Check, Copy, X, Loader2,
   ArrowLeft, Sparkles, Wand2, FileText, MessageSquare, ChevronDown,
   AlignLeft, Minimize2, Maximize2, List as ListIcon, Type, Pencil,
-  RotateCcw, ThumbsUp,
+  RotateCcw, ThumbsUp, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
@@ -31,6 +31,7 @@ interface Props {
   onUpdate: (updated: Note) => void;
   onDelete: () => void;
   onBack?: () => void;
+  onShareToMessages?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +135,7 @@ const TOOLBAR: ToolbarAction[] = [
   { icon: Quote,    label: "Blockquote",      action: ta => prependLine(ta, "> ") },
 ];
 
-export default function NoteEditor({ note, onUpdate, onDelete, onBack }: Props) {
+export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareToMessages }: Props) {
   const [title, setTitle]       = useState(note.title);
   const [content, setContent]   = useState(note.content);
   const [status, setStatus]     = useState<NoteStatus>(note.status);
@@ -459,7 +460,20 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack }: Props) 
             </button>
           )}
 
-          {/* Share */}
+          {/* Send to messages */}
+          {onShareToMessages && (
+            <button
+              onClick={onShareToMessages}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+              style={{ background: "oklch(1 0 0 / 5%)" }}
+              title="Send to a conversation"
+            >
+              <Send className="w-2.5 h-2.5" />
+              Send
+            </button>
+          )}
+
+          {/* Share link */}
           {shareToken ? (
             <>
               <button
