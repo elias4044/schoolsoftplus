@@ -72,7 +72,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
   }
 
-  const ok = await deleteMessage(messageId, username);
+  const ok = await deleteMessage(messageId, username, convo.adminUsername ?? undefined);
   if (!ok) return NextResponse.json({ success: false, error: "Not found or forbidden." }, { status: 403 });
   return NextResponse.json({ success: true });
 }

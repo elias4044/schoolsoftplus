@@ -23,6 +23,73 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.4",
+    date: "2026-04-26",
+    title: "Enhanced Profiles, Group Chats & Share Cards",
+    summary:
+      "Profiles are now fully customisable with cover images, profile pictures, social links, accent colours, and privacy controls. A new People discovery page lets you browse and message classmates. Group chats let you create named rooms with multiple members. Notes and grades can now be shared directly into any conversation as rich interactive cards.",
+    tags: ["feature", "improvement"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.4",
+    sections: [
+      {
+        title: "Expanded Profiles",
+        items: [
+          { text: "Upload a profile picture and cover/banner image via ImgBB — click either to replace", tag: "feature" },
+          { text: "New fields: pronouns, bio (500 chars), location, website", tag: "feature" },
+          { text: "Social links section — GitHub, X/Twitter, Instagram, LinkedIn", tag: "feature" },
+          { text: "Accent colour picker with 8 presets and a custom hex input — affects your profile card, buttons, and DM header", tag: "feature" },
+          { text: "Privacy toggle — choose whether anyone or nobody can initiate DMs with you", tag: "feature" },
+          { text: "Member since and last updated timestamps in the read-only account info section", tag: "improvement" },
+          { text: "Cover image and avatar are instantly previewed before saving", tag: "improvement" },
+          { text: "Profile data is now propagated across the app — display name, avatar, and accent reflect everywhere", tag: "improvement" },
+        ],
+      },
+      {
+        title: "People Discovery Page",
+        items: [
+          { text: "New /people page (Alt+U) — search for any SchoolSoft+ user by username", tag: "feature" },
+          { text: "Search results show avatar, display name, pronouns, bio snippet, school, location, and role badge", tag: "feature" },
+          { text: "Click a result card to view the full public profile modal", tag: "feature" },
+          { text: "Quick Message button on each card opens or creates a DM conversation instantly", tag: "feature" },
+          { text: "Clicking the avatar or name in a DM conversation header also opens the profile modal", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Public Profile Modal",
+        items: [
+          { text: "Reusable profile modal shows cover banner, avatar, name, pronouns, bio, location, website, and social links", tag: "feature" },
+          { text: "Accent colour is applied throughout the modal — header strip, Message button, links", tag: "improvement" },
+          { text: "Available from the People page, DM conversation header, and anywhere else a username appears", tag: "feature" },
+        ],
+      },
+      {
+        title: "Group Chats",
+        items: [
+          { text: "Create named group conversations with any number of SchoolSoft+ users", tag: "feature" },
+          { text: "Group info panel — edit group name and description, view and manage members", tag: "feature" },
+          { text: "Admins can add or remove members and transfer admin rights", tag: "feature" },
+          { text: "Members can leave a group at any time", tag: "feature" },
+          { text: "Group avatar uses a distinct icon and the group name appears in the conversation list", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Note & Grade Share Cards",
+        items: [
+          { text: "Share any note directly to a conversation using the Send button in the Notes editor toolbar or the message icon in the note list", tag: "feature" },
+          { text: "Share a grade estimate from any assignment detail page using the animated Share button", tag: "feature" },
+          { text: "Share picker is a bottom-sheet modal with a preview panel — see exactly what will be sent before selecting a conversation", tag: "feature" },
+          { text: "Multi-send support — send the same card to multiple conversations without closing the picker", tag: "feature" },
+          { text: "Note cards in messages show title, status badge (Draft / Published / Archived), and a two-line preview", tag: "feature" },
+          { text: "Click a note card to open the full note content in a markdown-rendered modal — no ownership required", tag: "feature" },
+          { text: "Full note markdown is stored in the message at send time so both sender and recipient can always read it", tag: "improvement" },
+          { text: "Grade cards show the letter grade square (colour-coded A–F), assignment title, subject, and point total", tag: "feature" },
+          { text: "Per-conversation error and success state in the share picker", tag: "improvement" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.3",
     date: "2026-04-25",
     title: "AI Writing Tools & School Picker",

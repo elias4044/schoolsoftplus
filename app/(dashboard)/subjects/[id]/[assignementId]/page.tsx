@@ -19,10 +19,12 @@ import {
   CalendarDays,
   User,
   Tag,
+  Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { staggerContainer, fadeUp } from "@/components/dashboard-card";
 import { apiFetch } from "@/lib/api-client";
+import ShareConversationPicker from "@/components/ShareConversationPicker";
 
 /* -------------------------------------------------------------------------
    Types
@@ -345,7 +347,12 @@ export default function AssignmentDetailPage() {
         {/* Assessment */}
         {hasAssessment && (
           <motion.div variants={fadeUp}>
-            <AssessmentCard assessment={assessment} />
+            <AssessmentCard
+              assessment={assessment}
+              assignmentId={assignment.id}
+              assignmentTitle={assignment.title}
+              subjectName={assignment.subjectNames}
+            />
           </motion.div>
         )}
 
@@ -775,7 +782,12 @@ function CriteriaTabSection({ tab, tabIndex }: { tab: AssessedCriteriaTab; tabIn
    AssessmentCard — cinematic results section
 -------------------------------------------------------------------------- */
 
-function AssessmentCard({ assessment }: { assessment: Assessment }) {
+function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName }: {
+  assessment: Assessment;
+  assignmentId: number;
+  assignmentTitle?: string;
+  subjectName?: string;
+}) {
   const moments = (assessment.partialMoments as PartialMoment[]).filter(
     m => typeof m.points === "number" && typeof m.max === "number"
   );
@@ -783,6 +795,8 @@ function AssessmentCard({ assessment }: { assessment: Assessment }) {
 
   const inference = inferGrade(moments, tabs);
   const gradeStyle = inference ? (OVERALL_GRADE_STYLE[inference.grade] ?? OVERALL_GRADE_STYLE.F) : null;
+
+  const [showSharePicker, setShowSharePicker] = useState(false);
 
   const hasReview   = Boolean(assessment.review);
   const hasComments = assessment.teacherComment || assessment.studentComment;
@@ -852,10 +866,42 @@ function AssessmentCard({ assessment }: { assessment: Assessment }) {
                   {inference.source === "criteria" ? "from criteria" : "from points"}
                 </span>
               )}
+              <motion.button
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                onClick={() => setShowSharePicker(true)}
+                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: gradeStyle.bg,
+                  color: gradeStyle.color,
+                  border: `1px solid ${gradeStyle.border}`,
+                }}
+                title="Share grade to messages"
+              >
+                <Share2 className="w-3 h-3" />
+                Share
+              </motion.button>
             </div>
           )}
         </div>
       )}
+
+      {/* Share picker (renders as portal-style overlay) */}
+      <AnimatePresence>
+        {showSharePicker && (
+          <ShareConversationPicker
+            card={{
+              type: "grade",
+              assignmentId,
+              assignmentTitle,
+              subjectName,
+              grade: inference?.grade,
+            }}
+            onClose={() => setShowSharePicker(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Point bars */}
       {hasPoints && (

@@ -1,16 +1,17 @@
-"use client";
+      "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   StickyNote, Plus, Search, X, Loader2,
-  FileText, Archive, Globe,
+  FileText, Archive, Globe, MessageSquare,
 } from "lucide-react";
 import NoteEditor, { type Note } from "@/components/NoteEditor";
 import { apiFetch } from "@/lib/api-client";
 import type { NoteStatus } from "@/app/api/lib/notesDb";
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
+import ShareConversationPicker, { type ShareCardRef } from "@/components/ShareConversationPicker";
 
 const STATUS_ICON: Record<NoteStatus, React.ElementType> = {
   draft:     FileText,
@@ -38,7 +39,18 @@ export default function NotesPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch]     = useState("");
   const [mobileView, setMobileView] = useState<"list" | "editor">("list");
+  const [shareCard, setShareCard] = useState<ShareCardRef | null>(null);
   const searchRef               = useRef<HTMLInputElement>(null);
+
+  function openSharePicker(note: Note) {
+    setShareCard({
+      type: "note",
+      noteId: note.id,
+      noteTitle: note.title || "Untitled",
+      notePreview: stripMd(note.content).slice(0, 200) || undefined,
+      noteStatus: note.status,
+    });
+  }
 
   useEffect(() => {
     apiFetch<{ notes: Note[] }>("/api/notes")
@@ -89,6 +101,7 @@ export default function NotesPage() {
   const activeNote = notes.find(n => n.id === selected) ?? null;
 
   return (
+    <>
     <div className="flex h-full overflow-hidden">
       {/* ===== Note list panel ===== */}
       <div
@@ -177,6 +190,14 @@ export default function NotesPage() {
                       )}>
                         {note.title || "Untitled"}
                       </span>
+                      {/* Share to messages button */}
+                      <button
+                        onClick={e => { e.stopPropagation(); openSharePicker(note); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-primary"
+                        title="Share to messages"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5" />
+                      </button>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate leading-snug pl-4">
                       {stripMd(note.content) || "Empty"}
@@ -219,6 +240,7 @@ export default function NotesPage() {
                 onUpdate={handleUpdate}
                 onDelete={() => handleDelete(activeNote.id)}
                 onBack={() => setMobileView("list")}
+                onShareToMessages={() => openSharePicker(activeNote)}
               />
             </motion.div>
           ) : (
@@ -243,5 +265,16 @@ export default function NotesPage() {
         </AnimatePresence>
       </div>
     </div>
+
+    {/* Share to messages picker */}
+    <AnimatePresence>
+      {shareCard && (
+        <ShareConversationPicker
+          card={shareCard}
+          onClose={() => setShareCard(null)}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }

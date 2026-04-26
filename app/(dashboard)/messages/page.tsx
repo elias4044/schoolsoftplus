@@ -31,17 +31,28 @@ import {
     ArrowRight,
     User,
     Sparkles,
+    Users,
+    Settings2,
+    Crown,
+    LogOut,
+    UserMinus,
+    StickyNote,
+    BarChart2,
+    BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo } from "@/lib/useMessages";
+import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard } from "@/lib/useMessages";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/useSession";
 import { useUnread } from "@/lib/unread-context";
 import { useNotifications } from "@/lib/useNotifications";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { UserProfileModal } from "@/components/UserProfileModal";
 
 /* ─────────────────────────────────────────────────────────────
    Types
@@ -130,6 +141,18 @@ export default function MessagesPage() {
     const [editContent, setEditContent] = useState("");
     const [editSaving, setEditSaving] = useState(false);
     const [showNewDM, setShowNewDM] = useState(false);
+    const [showNewGroup, setShowNewGroup] = useState(false);
+    const [groupName, setGroupName] = useState("");
+    const [groupDesc, setGroupDesc] = useState("");
+    const [groupMembers, setGroupMembers] = useState<UserSearchResult[]>([]);
+    const [groupCreating, setGroupCreating] = useState(false);
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
+    const [groupEditName, setGroupEditName] = useState("");
+    const [groupEditDesc, setGroupEditDesc] = useState("");
+    const [groupEditSaving, setGroupEditSaving] = useState(false);
+    const [groupAddSearch, setGroupAddSearch] = useState("");
+    const [groupAddResults, setGroupAddResults] = useState<UserSearchResult[]>([]);
+    const [groupAddSearching, setGroupAddSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [searching, setSearching] = useState(false);
@@ -140,11 +163,13 @@ export default function MessagesPage() {
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
     const [mobileActionMsg, setMobileActionMsg] = useState<Message | null>(null);
+    const [viewProfileUsername, setViewProfileUsername] = useState<string | null>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const groupAddSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     /* Notifications */
     const { requestPermission } = useNotifications(conversations, messages, activeConvo?.id ?? null, username);
@@ -205,6 +230,7 @@ export default function MessagesPage() {
         setEditingId(null);
         setReplyingTo(null);
         setShowScrollBtn(false);
+        setShowGroupInfo(false);
     }, [activeConvo?.id]);
 
     /* User search debounce */
@@ -234,6 +260,85 @@ export default function MessagesPage() {
         } finally {
             setDmCreating(false); setShowNewDM(false); setSearchQuery(""); setSearchResults([]);
         }
+    };
+
+    /* Group add-member search debounce */
+    useEffect(() => {
+        if (groupAddSearchRef.current) clearTimeout(groupAddSearchRef.current);
+        if (groupAddSearch.length < 2) { setGroupAddResults([]); return; }
+        groupAddSearchRef.current = setTimeout(async () => {
+            setGroupAddSearching(true);
+            try {
+                const res = await fetch(`/api/users/search?q=${encodeURIComponent(groupAddSearch)}`);
+                const data = await res.json();
+                if (data.success) setGroupAddResults(data.users);
+            } finally { setGroupAddSearching(false); }
+        }, 350);
+    }, [groupAddSearch]);
+
+    const createGroup = async () => {
+        if (!groupName.trim() || groupMembers.length === 0 || groupCreating) return;
+        setGroupCreating(true);
+        try {
+            const res = await fetch("/api/conversations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "group",
+                    groupName: groupName.trim(),
+                    groupDescription: groupDesc.trim() || undefined,
+                    members: groupMembers.map(m => m.username),
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setActiveConvo(data.conversation);
+                setMobileShowChat(true);
+                setShowNewGroup(false);
+                setGroupName(""); setGroupDesc(""); setGroupMembers([]);
+            }
+        } finally { setGroupCreating(false); }
+    };
+
+    const groupInfoAction = async (action: string, payload?: Record<string, string>) => {
+        if (!activeConvo) return;
+        const res = await fetch(`/api/conversations/${activeConvo.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, ...payload }),
+        });
+        const data = await res.json();
+        if (data.success) setActiveConvo(data.conversation);
+        return data;
+    };
+
+    const saveGroupEdit = async () => {
+        if (!activeConvo || !groupEditName.trim()) return;
+        setGroupEditSaving(true);
+        try {
+            await groupInfoAction("rename", { groupName: groupEditName, groupDescription: groupEditDesc });
+        } finally { setGroupEditSaving(false); }
+    };
+
+    const addMemberToGroup = async (user: UserSearchResult) => {
+        await groupInfoAction("add_member", { targetUsername: user.username });
+        setGroupAddSearch(""); setGroupAddResults([]);
+    };
+
+    const removeMemberFromGroup = async (targetUsername: string) => {
+        await groupInfoAction("remove_member", { targetUsername });
+    };
+
+    const leaveGroup = async () => {
+        if (!activeConvo) return;
+        await groupInfoAction("leave");
+        setActiveConvo(null);
+        setShowGroupInfo(false);
+        setMobileShowChat(false);
+    };
+
+    const transferAdmin = async (targetUsername: string) => {
+        await groupInfoAction("transfer_admin", { targetUsername });
     };
 
     const sendMessage = async (e: FormEvent) => {
@@ -302,8 +407,14 @@ export default function MessagesPage() {
     };
 
     const partnerName = (c: Conversation) => {
+        if (c.type === "group") return c.groupName ?? "Group";
         const other = c.participants.find(p => p !== username) ?? "";
         return c.participantNames[other] || other;
+    };
+
+    const partnerSubtitle = (c: Conversation) => {
+        if (c.type === "group") return `${c.participants.length} members`;
+        return c.participants.find(p => p !== username) ?? "";
     };
 
     const visibleMessages = messages.filter(m => m.deletedAt === null);
@@ -372,6 +483,16 @@ export default function MessagesPage() {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button size="icon" variant="ghost" className="w-7 h-7 rounded-lg hover:bg-white/8"
+                                        onClick={() => setShowNewGroup(true)}
+                                    >
+                                        <Users className="w-3.5 h-3.5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="text-xs">New group chat</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" className="w-7 h-7 rounded-lg hover:bg-white/8"
                                         onClick={() => setShowNewDM(true)}
                                     >
                                         <UserPlus className="w-3.5 h-3.5" />
@@ -413,6 +534,7 @@ export default function MessagesPage() {
                                         key={convo.id}
                                         convo={convo}
                                         name={partnerName(convo)}
+                                        subtitle={partnerSubtitle(convo)}
                                         active={activeConvo?.id === convo.id}
                                         username={username}
                                         index={i}
@@ -445,20 +567,58 @@ export default function MessagesPage() {
                                     onClick={() => setMobileShowChat(false)}>
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
-                                <Avatar className="w-8 h-8 shrink-0">
+                                <Avatar
+                                    className={cn("w-8 h-8 shrink-0", activeConvo.type === "dm" && "cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all")}
+                                    onClick={() => {
+                                        if (activeConvo.type === "dm") {
+                                            const partner = activeConvo.participants.find(p => p !== username);
+                                            if (partner) setViewProfileUsername(partner);
+                                        }
+                                    }}
+                                >
                                     <AvatarFallback className="text-xs font-bold" style={{
                                         background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))",
                                         color: "oklch(0.78 0.15 278)",
                                     }}>
-                                        {initials(partnerName(activeConvo))}
+                                        {activeConvo.type === "group"
+                                            ? <Users className="w-4 h-4" />
+                                            : initials(partnerName(activeConvo))}
                                     </AvatarFallback>
                                 </Avatar>
-                                <div className="min-w-0 flex-1">
+                                <div
+                                    className={cn("min-w-0 flex-1", activeConvo.type === "dm" && "cursor-pointer")}
+                                    onClick={() => {
+                                        if (activeConvo.type === "dm") {
+                                            const partner = activeConvo.participants.find(p => p !== username);
+                                            if (partner) setViewProfileUsername(partner);
+                                        }
+                                    }}
+                                >
                                     <p className="text-sm font-semibold truncate">{partnerName(activeConvo)}</p>
                                     <p className="text-[10px] text-muted-foreground truncate">
-                                        {activeConvo.participants.find(p => p !== username)}
+                                        {partnerSubtitle(activeConvo)}
                                     </p>
                                 </div>
+                                {activeConvo.type === "group" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button size="icon" variant="ghost"
+                                                className={cn("w-8 h-8 rounded-lg", showGroupInfo && "bg-primary/15 text-primary")}
+                                                onClick={() => {
+                                                    setShowGroupInfo(v => !v);
+                                                    setShowPinned(false);
+                                                    if (!showGroupInfo) {
+                                                        setGroupEditName(activeConvo.groupName ?? "");
+                                                        setGroupEditDesc(activeConvo.groupDescription ?? "");
+                                                    }
+                                                }}
+                                            >
+                                                <Settings2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-xs">Group info</TooltipContent>
+                                    </Tooltip>
+                                )}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button size="icon" variant="ghost"
@@ -506,6 +666,8 @@ export default function MessagesPage() {
                                                             editContent={editContent}
                                                             editSaving={editSaving}
                                                             username={username}
+                                                            isGroup={activeConvo?.type === "group"}
+                                                            canDelete={msg.senderUsername === username || activeConvo?.adminUsername === username}
                                                             isMobile={isMobile}
                                                             onMobileTap={() => setMobileActionMsg(msg)}
                                                             onEditStart={() => { setEditingId(msg.id); setEditContent(msg.content); }}
@@ -578,7 +740,7 @@ export default function MessagesPage() {
                                                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(e as unknown as FormEvent); }
                                                 if (e.key === "Escape") setReplyingTo(null);
                                             }}
-                                            placeholder={`Message ${partnerName(activeConvo)}…`}
+                                            placeholder={activeConvo.type === "group" ? `Message ${activeConvo.groupName ?? "group"}…` : `Message ${partnerName(activeConvo)}…`}
                                             className="flex-1 bg-white/5 border-white/10 focus:border-primary/50 text-sm"
                                             autoComplete="off"
                                             disabled={sending}
@@ -636,6 +798,152 @@ export default function MessagesPage() {
                                                         ))}
                                                     </AnimatePresence>
                                                 )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Group info panel */}
+                                <AnimatePresence>
+                                    {showGroupInfo && activeConvo?.type === "group" && (
+                                        <motion.div
+                                            key="group-info"
+                                            initial={{ width: 0, opacity: 0 }}
+                                            animate={{ width: 280, opacity: 1 }}
+                                            exit={{ width: 0, opacity: 0 }}
+                                            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                                            className="border-l border-white/7 bg-card overflow-hidden shrink-0 hidden md:flex flex-col"
+                                        >
+                                            <div className="flex items-center justify-between px-4 h-14 border-b border-white/7 shrink-0">
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="w-3.5 h-3.5 text-primary" />
+                                                    <span className="text-xs font-semibold">Group Info</span>
+                                                </div>
+                                                <Button size="icon" variant="ghost" className="w-6 h-6" onClick={() => setShowGroupInfo(false)}>
+                                                    <X className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                                                {/* Edit name/desc — admin only */}
+                                                {activeConvo.adminUsername === username && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">Edit Group</p>
+                                                        <Input
+                                                            value={groupEditName}
+                                                            onChange={e => setGroupEditName(e.target.value)}
+                                                            placeholder="Group name…"
+                                                            className="h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
+                                                        />
+                                                        <Input
+                                                            value={groupEditDesc}
+                                                            onChange={e => setGroupEditDesc(e.target.value)}
+                                                            placeholder="Description (optional)…"
+                                                            className="h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
+                                                        />
+                                                        <Button
+                                                            size="sm"
+                                                            className="w-full h-7 text-xs"
+                                                            disabled={!groupEditName.trim() || groupEditSaving}
+                                                            onClick={saveGroupEdit}
+                                                        >
+                                                            {groupEditSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                                                        </Button>
+                                                    </div>
+                                                )}
+
+                                                {/* Members list */}
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">
+                                                        Members ({activeConvo.participants.length})
+                                                    </p>
+                                                    {activeConvo.participants.map(p => (
+                                                        <div key={p} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5">
+                                                            <Avatar className="w-6 h-6 shrink-0">
+                                                                <AvatarFallback className="text-[9px] font-bold" style={{
+                                                                    background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                                    color: "oklch(0.78 0.15 278)",
+                                                                }}>
+                                                                    {initials(activeConvo.participantNames[p] || p)}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-xs truncate">{activeConvo.participantNames[p] || p}</p>
+                                                                {activeConvo.adminUsername === p && (
+                                                                    <p className="text-[9px] text-primary/70 flex items-center gap-0.5">
+                                                                        <Crown className="w-2.5 h-2.5" /> Admin
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            {/* Admin actions on members */}
+                                                            {activeConvo.adminUsername === username && p !== username && (
+                                                                <div className="flex gap-0.5">
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <button
+                                                                                className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                                                onClick={() => transferAdmin(p)}
+                                                                            >
+                                                                                <Crown className="w-3 h-3" />
+                                                                            </button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent side="left" className="text-[10px]">Make admin</TooltipContent>
+                                                                    </Tooltip>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <button
+                                                                                className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                                                onClick={() => removeMemberFromGroup(p)}
+                                                                            >
+                                                                                <UserMinus className="w-3 h-3" />
+                                                                            </button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent side="left" className="text-[10px]">Remove</TooltipContent>
+                                                                    </Tooltip>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Add member — admin only */}
+                                                {activeConvo.adminUsername === username && (
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">Add Member</p>
+                                                        <div className="relative">
+                                                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                                                            <Input
+                                                                value={groupAddSearch}
+                                                                onChange={e => setGroupAddSearch(e.target.value)}
+                                                                placeholder="Search…"
+                                                                className="pl-7 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
+                                                            />
+                                                        </div>
+                                                        {groupAddSearching && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground mx-auto" />}
+                                                        {groupAddResults.filter(u => !activeConvo.participants.includes(u.username)).map(u => (
+                                                            <button key={u.username}
+                                                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/8 text-left text-xs"
+                                                                onClick={() => addMemberToGroup(u)}
+                                                            >
+                                                                <Avatar className="w-5 h-5 shrink-0">
+                                                                    <AvatarFallback className="text-[8px]" style={{
+                                                                        background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                                        color: "oklch(0.78 0.15 278)",
+                                                                    }}>{initials(u.displayName)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="truncate">{u.displayName}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Leave group */}
+                                                <button
+                                                    onClick={leaveGroup}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors text-xs"
+                                                >
+                                                    <LogOut className="w-3.5 h-3.5" />
+                                                    Leave group
+                                                </button>
                                             </div>
                                         </motion.div>
                                     )}
@@ -719,6 +1027,123 @@ export default function MessagesPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* ═══ New Group modal ═════════════════════════════════ */}
+                <AnimatePresence>
+                    {showNewGroup && (
+                        <motion.div key="group-overlay"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+                            onClick={() => { setShowNewGroup(false); setGroupName(""); setGroupDesc(""); setGroupMembers([]); }}
+                        >
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                                transition={{ duration: 0.18 }}
+                                className="w-full max-w-sm rounded-xl border border-white/10 bg-card shadow-2xl p-5 space-y-4"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-primary" />
+                                        <h2 className="text-sm font-semibold">New Group Chat</h2>
+                                    </div>
+                                    <Button size="icon" variant="ghost" className="w-7 h-7"
+                                        onClick={() => { setShowNewGroup(false); setGroupName(""); setGroupDesc(""); setGroupMembers([]); }}>
+                                        <X className="w-3.5 h-3.5" />
+                                    </Button>
+                                </div>
+                                <Separator className="bg-white/7" />
+
+                                {/* Group name & description */}
+                                <div className="space-y-2">
+                                    <Input
+                                        autoFocus
+                                        value={groupName}
+                                        onChange={e => setGroupName(e.target.value)}
+                                        placeholder="Group name…"
+                                        maxLength={80}
+                                        className="bg-white/5 border-white/10 focus:border-primary/50 text-sm"
+                                    />
+                                    <Input
+                                        value={groupDesc}
+                                        onChange={e => setGroupDesc(e.target.value)}
+                                        placeholder="Description (optional)…"
+                                        maxLength={200}
+                                        className="bg-white/5 border-white/10 focus:border-primary/50 text-sm"
+                                    />
+                                </div>
+
+                                {/* Member search */}
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">Add members</p>
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                        <Input
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Search by username…"
+                                            className="pl-8 bg-white/5 border-white/10 focus:border-primary/50 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1 max-h-36 overflow-y-auto">
+                                        {searching && (
+                                            <div className="flex items-center justify-center py-4">
+                                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                            </div>
+                                        )}
+                                        {!searching && searchQuery.length >= 2 && searchResults.filter(u => !groupMembers.find(m => m.username === u.username)).length === 0 && (
+                                            <p className="text-xs text-muted-foreground text-center py-3">No more users found.</p>
+                                        )}
+                                        {searchResults.filter(u => !groupMembers.find(m => m.username === u.username)).map(user => (
+                                            <button key={user.username}
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors text-left"
+                                                onClick={() => { setGroupMembers(prev => [...prev, user]); setSearchQuery(""); setSearchResults([]); }}
+                                            >
+                                                <Avatar className="w-7 h-7 shrink-0">
+                                                    <AvatarFallback className="text-[10px] font-bold" style={{
+                                                        background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                        color: "oklch(0.78 0.15 278)",
+                                                    }}>{initials(user.displayName)}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-medium truncate">{user.displayName}</p>
+                                                    <p className="text-[10px] text-muted-foreground">@{user.username}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Selected members chips */}
+                                {groupMembers.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {groupMembers.map(m => (
+                                            <span key={m.username} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border border-white/10 bg-primary/10 text-primary">
+                                                {m.displayName}
+                                                <button onClick={() => setGroupMembers(prev => prev.filter(x => x.username !== m.username))}>
+                                                    <X className="w-2.5 h-2.5" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <Button
+                                    className="w-full"
+                                    disabled={!groupName.trim() || groupMembers.length === 0 || groupCreating}
+                                    onClick={createGroup}
+                                    style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                                >
+                                    {groupCreating
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <><Users className="w-3.5 h-3.5 mr-2" />Create Group ({groupMembers.length + 1} members)</>}
+                                </Button>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* ═══ Mobile action sheet ════════════════════════════ */}
@@ -727,6 +1152,7 @@ export default function MessagesPage() {
                     <MobileActionSheet
                         msg={mobileActionMsg}
                         isMe={mobileActionMsg.senderUsername === username}
+                        canDelete={mobileActionMsg.senderUsername === username || activeConvo?.adminUsername === username}
                         username={username}
                         onClose={() => setMobileActionMsg(null)}
                         onEdit={() => {
@@ -740,6 +1166,17 @@ export default function MessagesPage() {
                             inputRef.current?.focus();
                         }}
                         onReact={emoji => toggleReaction(mobileActionMsg.id, emoji)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* User profile modal */}
+            <AnimatePresence>
+                {viewProfileUsername && (
+                    <UserProfileModal
+                        username={viewProfileUsername}
+                        onClose={() => setViewProfileUsername(null)}
+                        onMessage={() => setViewProfileUsername(null)}
                     />
                 )}
             </AnimatePresence>
@@ -843,9 +1280,9 @@ function ProfileGate() {
    ConvoItem
 ───────────────────────────────────────────────────────────── */
 function ConvoItem({
-    convo, name, active, username, index, onClick,
+    convo, name, subtitle, active, username, index, onClick,
 }: {
-    convo: Conversation; name: string; active: boolean;
+    convo: Conversation; name: string; subtitle: string; active: boolean;
     username: string; index: number; onClick: () => void;
 }) {
     const { unreadByConvo } = useUnread();
@@ -869,7 +1306,7 @@ function ConvoItem({
                         background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 35%), oklch(0.55 0.25 295 / 35%))",
                         color: "oklch(0.78 0.15 278)",
                     }}>
-                        {initials(name)}
+                        {convo.type === "group" ? <Users className="w-4 h-4" /> : initials(name)}
                     </AvatarFallback>
                 </Avatar>
                 {unread > 0 && (
@@ -893,8 +1330,8 @@ function ConvoItem({
                 </div>
                 <p className={cn("text-[11px] truncate", unread > 0 ? "text-foreground/80" : "text-muted-foreground")}>
                     {convo.lastMessage
-                        ? (convo.lastSenderUsername === username ? "You: " : "") + convo.lastMessage
-                        : "No messages yet"}
+                        ? (convo.lastSenderUsername === username ? "You: " : (convo.type === "group" ? (convo.participantNames[convo.lastSenderUsername]?.split(" ")[0] ?? convo.lastSenderUsername) + ": " : "")) + convo.lastMessage
+                        : subtitle}
                 </p>
             </div>
         </motion.button>
@@ -902,15 +1339,218 @@ function ConvoItem({
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Share Card Bubble — rendered inside a MessageBubble
+───────────────────────────────────────────────────────────── */
+
+// Grade colours matching OVERALL_GRADE_STYLE in the assignment page
+const SHARE_GRADE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+    A: { bg: "oklch(0.65 0.22 278 / 22%)", color: "oklch(0.80 0.18 278)", border: "oklch(0.65 0.22 278 / 40%)" },
+    B: { bg: "oklch(0.65 0.20 245 / 22%)", color: "oklch(0.78 0.17 245)", border: "oklch(0.65 0.20 245 / 40%)" },
+    C: { bg: "oklch(0.65 0.18 210 / 22%)", color: "oklch(0.78 0.16 210)", border: "oklch(0.65 0.18 210 / 40%)" },
+    D: { bg: "oklch(0.65 0.20 175 / 22%)", color: "oklch(0.75 0.18 175)", border: "oklch(0.65 0.20 175 / 40%)" },
+    E: { bg: "oklch(0.65 0.22 148 / 22%)", color: "oklch(0.72 0.18 148)", border: "oklch(0.65 0.22 148 / 40%)" },
+    F: { bg: "oklch(1 0 0 / 8%)",           color: "oklch(0.55 0 0)",      border: "oklch(1 0 0 / 15%)"          },
+    "—": { bg: "oklch(1 0 0 / 6%)",         color: "oklch(0.50 0 0)",      border: "oklch(1 0 0 / 12%)"          },
+};
+
+const STATUS_DOT: Record<string, string> = {
+    draft:     "oklch(0.75 0.10 80)",
+    published: "oklch(0.72 0.18 148)",
+    archived:  "oklch(0.55 0.02 260)",
+};
+
+function NoteFullModal({ card, onClose }: { card: NoteShareCard; onClose: () => void }) {
+    const dotColor = STATUS_DOT[card.status] ?? STATUS_DOT.draft;
+    // Close on Escape
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [onClose]);
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl border border-white/10 bg-card shadow-2xl flex flex-col overflow-hidden"
+                style={{ maxHeight: "88dvh" }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center gap-2.5 px-4 py-3 border-b shrink-0"
+                    style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <StickyNote className="w-3.5 h-3.5 shrink-0 opacity-50" />
+                    <span className="font-semibold text-sm flex-1 truncate">{card.title || "Untitled"}</span>
+                    <span className="flex items-center gap-1 text-[10px] font-medium mr-1"
+                        style={{ color: dotColor }}>
+                        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: dotColor }} />
+                        {card.status}
+                    </span>
+                    <button onClick={onClose}
+                        className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                    {card.fullContent ? (
+                        <div className="prose prose-invert prose-sm max-w-none
+                            prose-headings:font-semibold prose-headings:text-foreground
+                            prose-p:text-foreground/80 prose-p:leading-relaxed
+                            prose-code:bg-white/8 prose-code:px-1 prose-code:rounded prose-code:text-xs
+                            prose-pre:bg-white/6 prose-pre:rounded-xl prose-pre:p-3
+                            prose-blockquote:border-l-primary/40 prose-blockquote:text-foreground/60
+                            prose-a:text-primary prose-strong:text-foreground
+                            prose-li:text-foreground/80">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {card.fullContent}
+                            </ReactMarkdown>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">{card.preview || "No content."}</p>
+                    )}
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function NoteCardBubble({ card, isMe }: { card: NoteShareCard; isMe: boolean }) {
+    const [open, setOpen] = useState(false);
+    const dotColor = STATUS_DOT[card.status] ?? STATUS_DOT.draft;
+    return (
+        <>
+        <div
+            className="mt-1.5 rounded-2xl overflow-hidden cursor-pointer group/notecard"
+            style={{
+                background: isMe ? "oklch(0 0 0 / 22%)" : "oklch(1 0 0 / 6%)",
+                border: `1px solid ${isMe ? "oklch(1 0 0 / 14%)" : "oklch(1 0 0 / 10%)"}`,
+                minWidth: 230,
+                maxWidth: 310,
+            }}
+            onClick={() => setOpen(true)}
+        >
+            {/* Header row */}
+            <div
+                className="flex items-center gap-2 px-3 py-2 border-b"
+                style={{ borderColor: isMe ? "oklch(1 0 0 / 12%)" : "oklch(1 0 0 / 7%)" }}
+            >
+                <StickyNote className="w-3 h-3 shrink-0 opacity-60" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-55 flex-1">Note</span>
+                <span
+                    className="flex items-center gap-1 text-[9px] font-medium"
+                    style={{ color: dotColor }}
+                >
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: dotColor }} />
+                    {card.status}
+                </span>
+            </div>
+            {/* Body */}
+            <div className="px-3 py-2.5">
+                <p className="text-sm font-semibold leading-snug mb-1 truncate">
+                    {card.title || "Untitled"}
+                </p>
+                {card.preview && (
+                    <p className="text-[11px] opacity-55 line-clamp-2 leading-relaxed">
+                        {card.preview}
+                    </p>
+                )}
+                <div className="flex items-center gap-1 mt-2 text-[10px] opacity-0 group-hover/notecard:opacity-60 transition-opacity"
+                    style={{ color: "oklch(0.72 0.18 148)" }}>
+                    <BookOpen className="w-2.5 h-2.5" />
+                    <span>View full note</span>
+                </div>
+            </div>
+        </div>
+        <AnimatePresence>
+            {open && <NoteFullModal card={card} onClose={() => setOpen(false)} />}
+        </AnimatePresence>
+        </>
+    );
+}
+
+function GradeCardBubble({ card, isMe }: { card: GradeShareCard; isMe: boolean }) {
+    const gs = SHARE_GRADE_STYLE[card.grade] ?? SHARE_GRADE_STYLE["—"];
+    return (
+        <div
+            className="mt-1.5 rounded-2xl overflow-hidden"
+            style={{
+                background: isMe ? "oklch(0 0 0 / 22%)" : "oklch(1 0 0 / 6%)",
+                border: `1px solid ${isMe ? "oklch(1 0 0 / 14%)" : "oklch(1 0 0 / 10%)"}`,
+                minWidth: 230,
+                maxWidth: 310,
+            }}
+        >
+            {/* Header row */}
+            <div
+                className="flex items-center gap-2 px-3 py-2 border-b"
+                style={{ borderColor: isMe ? "oklch(1 0 0 / 12%)" : "oklch(1 0 0 / 7%)" }}
+            >
+                <BarChart2 className="w-3 h-3 shrink-0 opacity-60" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-55 flex-1">Grade</span>
+                {card.confidence === "estimated" && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+                        style={{ background: "oklch(0.75 0.16 82 / 18%)", color: "oklch(0.78 0.14 82)" }}>
+                        est.
+                    </span>
+                )}
+            </div>
+            {/* Body */}
+            <div className="flex items-center gap-3 px-3 py-2.5">
+                <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center font-black shrink-0"
+                    style={{
+                        background: gs.bg,
+                        color: gs.color,
+                        border: `1.5px solid ${gs.border}`,
+                        fontSize: "1.4rem",
+                    }}
+                >
+                    {card.grade}
+                </div>
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate leading-snug">
+                        {card.assignmentTitle}
+                    </p>
+                    <p className="text-[10px] opacity-55 truncate mt-0.5">
+                        {card.subjectName}
+                    </p>
+                    {card.totalPoints && (
+                        <p className="text-[9px] opacity-40 mt-0.5 font-mono">
+                            {card.totalPoints} pts
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
+    if (card.type === "note") return <NoteCardBubble card={card} isMe={isMe} />;
+    return <GradeCardBubble card={card} isMe={isMe} />;
+}
+
+/* ─────────────────────────────────────────────────────────────
    MessageBubble
 ───────────────────────────────────────────────────────────── */
 function MessageBubble({
-    msg, isMe, sameSender, isEditing, editContent, editSaving, username,
+    msg, isMe, sameSender, isEditing, editContent, editSaving, username, isGroup, canDelete,
     isMobile, onMobileTap,
     onEditStart, onEditChange, onEditSubmit, onEditCancel, onDelete, onPin, onReply, onReact,
 }: {
     msg: Message; isMe: boolean; sameSender: boolean;
     isEditing: boolean; editContent: string; editSaving: boolean; username: string;
+    isGroup: boolean; canDelete: boolean;
     isMobile: boolean; onMobileTap: () => void;
     onEditStart: () => void; onEditChange: (v: string) => void;
     onEditSubmit: () => void; onEditCancel: () => void;
@@ -961,7 +1601,7 @@ function MessageBubble({
 
             {/* Content column */}
             <div className={cn("flex flex-col max-w-[70%] min-w-0", isMe ? "items-end" : "items-start")}>
-                {!sameSender && (
+                {(!sameSender || (isGroup && !isMe)) && (
                     <span className="text-[10px] text-muted-foreground mb-0.5 px-1">
                         {msg.senderDisplayName}
                     </span>
@@ -1009,8 +1649,14 @@ function MessageBubble({
                             style={isMe ? { background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" } : undefined}
                             onClick={() => { if (isMobile) onMobileTap(); }}
                         >
-                            {msg.content}
-                            {msg.pinned && <Pin className="inline w-2.5 h-2.5 ml-1.5 opacity-60" />}
+                            {msg.shareCard ? (
+                                <ShareCardBubble card={msg.shareCard} isMe={isMe} />
+                            ) : (
+                                <>
+                                    {msg.content}
+                                    {msg.pinned && <Pin className="inline w-2.5 h-2.5 ml-1.5 opacity-60" />}
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -1057,12 +1703,8 @@ function MessageBubble({
                                 <ActionBtn icon={CornerUpLeft} label="Reply" onClick={onReply} />
                                 <ActionBtn icon={copied ? Check : Copy} label={copied ? "Copied!" : "Copy"} onClick={copy} />
                                 <ActionBtn icon={msg.pinned ? PinOff : Pin} label={msg.pinned ? "Unpin" : "Pin"} onClick={onPin} />
-                                {isMe && (
-                                    <>
-                                        <ActionBtn icon={Pencil} label="Edit" onClick={onEditStart} />
-                                        <ActionBtn icon={Trash2} label="Delete" onClick={onDelete} danger />
-                                    </>
-                                )}
+                                {isMe && <ActionBtn icon={Pencil} label="Edit" onClick={onEditStart} />}
+                                {canDelete && <ActionBtn icon={Trash2} label="Delete" onClick={onDelete} danger />}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -1182,9 +1824,9 @@ interface SheetAction {
 }
 
 function MobileActionSheet({
-    msg, isMe, username, onClose, onEdit, onDelete, onPin, onReply, onReact,
+    msg, isMe, canDelete, username, onClose, onEdit, onDelete, onPin, onReply, onReact,
 }: {
-    msg: Message; isMe: boolean; username: string;
+    msg: Message; isMe: boolean; canDelete: boolean; username: string;
     onClose: () => void; onEdit: () => void; onDelete: () => void;
     onPin: () => void; onReply: () => void; onReact: (emoji: string) => void;
 }) {
@@ -1200,10 +1842,8 @@ function MobileActionSheet({
         { icon: CornerUpLeft, label: "Reply",                          onClick: () => { onReply(); onClose(); } },
         { icon: copied ? Check : Copy, label: copied ? "Copied!" : "Copy", onClick: copy },
         { icon: msg.pinned ? PinOff : Pin, label: msg.pinned ? "Unpin" : "Pin", onClick: () => { onPin(); onClose(); } },
-        ...(isMe ? [
-            { icon: Pencil, label: "Edit",   onClick: () => { onEdit(); onClose(); } } as SheetAction,
-            { icon: Trash2, label: "Delete", onClick: () => { onDelete(); onClose(); }, danger: true } as SheetAction,
-        ] : []),
+        ...(isMe ? [{ icon: Pencil, label: "Edit", onClick: () => { onEdit(); onClose(); } } as SheetAction] : []),
+        ...(canDelete ? [{ icon: Trash2, label: "Delete", onClick: () => { onDelete(); onClose(); }, danger: true } as SheetAction] : []),
     ];
 
     return (

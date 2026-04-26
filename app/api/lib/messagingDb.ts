@@ -10,6 +10,34 @@ export interface ReplyTo {
   senderDisplayName: string;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Share cards — generated server-side, never trusted from client
+───────────────────────────────────────────────────────────── */
+
+export interface NoteShareCard {
+  type: "note";
+  noteId: string;
+  title: string;
+  preview: string;       // first 220 chars of stripped content
+  fullContent?: string;  // full raw markdown (stored at share time so recipient can read it)
+  status: "draft" | "published" | "archived";
+  sharedAt: number;
+}
+
+export interface GradeShareCard {
+  type: "grade";
+  assignmentId: number;
+  assignmentTitle: string;
+  subjectName: string;
+  assignmentType: string;
+  grade: string;
+  confidence: "confirmed" | "estimated";
+  totalPoints: string | null; // e.g. "45 / 50"
+  sharedAt: number;
+}
+
+export type ShareCard = NoteShareCard | GradeShareCard;
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -23,12 +51,17 @@ export interface Message {
   createdAt: number;
   reactions: Record<string, string[]>; // emoji → list of usernames
   replyTo: ReplyTo | null;
+  shareCard: ShareCard | null;
 }
 
 export interface Conversation {
   id: string;
-  participants: string[];        // usernames (exactly 2 for DMs)
+  type: "dm" | "group";
+  participants: string[];        // usernames
   participantNames: Record<string, string>; // username → displayName
+  groupName: string | null;       // null for DMs
+  groupDescription: string | null;
+  adminUsername: string | null;   // null for DMs
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
@@ -52,8 +85,12 @@ function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conver
   const d = doc.data()!;
   return {
     id: doc.id,
+    type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
     participants:        d.participants ?? [],
     participantNames:    d.participantNames ?? {},
+    groupName:           d.groupName           ?? null,
+    groupDescription:    d.groupDescription    ?? null,
+    adminUsername:       d.adminUsername        ?? null,
     lastMessage:         d.lastMessage ?? "",
     lastSenderUsername:  d.lastSenderUsername ?? "",
     lastAt:              typeof d.lastAt    === "number" ? d.lastAt    : 0,
@@ -77,6 +114,7 @@ function docToMessage(doc: FirebaseFirestore.DocumentSnapshot<any>): Message {
     createdAt:           typeof d.createdAt === "number" ? d.createdAt : 0,
     reactions:           d.reactions           ?? {},
     replyTo:             d.replyTo             ?? null,
+    shareCard:           d.shareCard            ?? null,
   };
 }
 
@@ -121,8 +159,12 @@ export async function findOrCreateDM(
   const now = Date.now();
   const ref  = db.collection(CONV_COL).doc();
   const data = {
+    type: "dm",
     participants,
     participantNames: { [usernameA]: displayNameA, [usernameB]: displayNameB },
+    groupName:        null,
+    groupDescription: null,
+    adminUsername:    null,
     lastMessage:        "",
     lastSenderUsername: "",
     lastAt:    now,
@@ -175,7 +217,8 @@ export async function createMessage(
   senderUsername: string,
   senderDisplayName: string,
   content: string,
-  replyTo?: ReplyTo | null
+  replyTo?: ReplyTo | null,
+  shareCard?: ShareCard | null
 ): Promise<Message> {
   const now = Date.now();
   const ref  = db.collection(MSG_COL).doc();
@@ -191,12 +234,13 @@ export async function createMessage(
     createdAt: now,
     reactions: {},
     replyTo:   replyTo ?? null,
+    shareCard: shareCard ?? null,
   };
   await ref.set(data);
 
   // Update conversation meta
   await db.collection(CONV_COL).doc(conversationId).update({
-    lastMessage:        content.slice(0, 120),
+    lastMessage:        shareCard ? (shareCard.type === "note" ? `📎 Shared a note` : `📊 Shared a grade`) : content.slice(0, 120),
     lastSenderUsername: senderUsername,
     lastAt:             now,
   });
@@ -223,13 +267,15 @@ export async function editMessage(
 
 export async function deleteMessage(
   messageId: string,
-  senderUsername: string
+  senderUsername: string,
+  conversationAdminUsername?: string
 ): Promise<boolean> {
   const ref = db.collection(MSG_COL).doc(messageId);
   const doc = await ref.get();
   if (!doc.exists) return false;
   const msg = docToMessage(doc);
-  if (msg.senderUsername !== senderUsername) return false;
+  // Allow sender OR group admin to delete
+  if (msg.senderUsername !== senderUsername && conversationAdminUsername !== senderUsername) return false;
 
   await ref.update({ deletedAt: Date.now(), pinned: false });
   return true;
@@ -284,6 +330,10 @@ export async function toggleReaction(
 export interface UserSearchResult {
   username: string;
   displayName: string;
+  bio: string;
+  location: string;
+  pfpUrl: string;
+  pronouns: string;
   schoolName: string;
   userType: string;
 }
@@ -292,7 +342,6 @@ export async function searchUsers(
   query: string,
   excludeUsername: string
 ): Promise<UserSearchResult[]> {
-  // Firestore doesn't support full-text — do a prefix scan on username field
   const q = query.toLowerCase().trim();
   if (!q) return [];
 
@@ -311,9 +360,135 @@ export async function searchUsers(
     results.push({
       username:    doc.id,
       displayName: d.displayName || `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || doc.id,
+      bio:         d.bio         ?? "",
+      location:    d.location    ?? "",
+      pfpUrl:      d.pfpUrl      ?? "",
+      pronouns:    d.pronouns    ?? "",
       schoolName:  d.schoolName  ?? "",
       userType:    d.userType    ?? "",
     });
   }
   return results;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Group Chat
+───────────────────────────────────────────────────────────── */
+
+export interface CreateGroupInput {
+  creatorUsername: string;
+  creatorDisplayName: string;
+  groupName: string;
+  groupDescription?: string;
+  members: { username: string; displayName: string }[];
+}
+
+export async function createGroupChat(input: CreateGroupInput): Promise<Conversation> {
+  const now = Date.now();
+  const participants = [
+    input.creatorUsername,
+    ...input.members.map(m => m.username).filter(u => u !== input.creatorUsername),
+  ];
+  const participantNames: Record<string, string> = {
+    [input.creatorUsername]: input.creatorDisplayName,
+  };
+  for (const m of input.members) participantNames[m.username] = m.displayName;
+
+  const ref = db.collection(CONV_COL).doc();
+  await ref.set({
+    type:             "group",
+    participants,
+    participantNames,
+    groupName:        input.groupName.slice(0, 80),
+    groupDescription: (input.groupDescription ?? "").slice(0, 200) || null,
+    adminUsername:    input.creatorUsername,
+    lastMessage:      "",
+    lastSenderUsername: "",
+    lastAt:    now,
+    createdAt: now,
+  });
+  const doc = await ref.get();
+  return docToConversation(doc);
+}
+
+export async function updateGroupInfo(
+  conversationId: string,
+  requestingUsername: string,
+  patch: { groupName?: string; groupDescription?: string }
+): Promise<Conversation | null> {
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) return null;
+  const convo = docToConversation(doc);
+  if (convo.type !== "group") return null;
+  if (convo.adminUsername !== requestingUsername) return null;
+
+  const update: Record<string, string> = {};
+  if (patch.groupName !== undefined)       update.groupName        = patch.groupName.slice(0, 80);
+  if (patch.groupDescription !== undefined) update.groupDescription = patch.groupDescription.slice(0, 200);
+  await ref.update(update);
+  const updated = await ref.get();
+  return docToConversation(updated);
+}
+
+export async function addGroupMember(
+  conversationId: string,
+  requestingUsername: string,
+  newUsername: string,
+  newDisplayName: string
+): Promise<Conversation | null> {
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) return null;
+  const convo = docToConversation(doc);
+  if (convo.type !== "group") return null;
+  if (convo.adminUsername !== requestingUsername) return null;
+  if (convo.participants.includes(newUsername)) return convo; // already a member
+
+  const { FieldValue } = await import("firebase-admin/firestore");
+  await ref.update({
+    participants: FieldValue.arrayUnion(newUsername),
+    [`participantNames.${newUsername}`]: newDisplayName,
+  });
+  const updated = await ref.get();
+  return docToConversation(updated);
+}
+
+export async function removeGroupMember(
+  conversationId: string,
+  requestingUsername: string,
+  targetUsername: string
+): Promise<Conversation | null> {
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) return null;
+  const convo = docToConversation(doc);
+  if (convo.type !== "group") return null;
+  // Admin can remove anyone; members can remove themselves (leave)
+  if (convo.adminUsername !== requestingUsername && requestingUsername !== targetUsername) return null;
+
+  const { FieldValue } = await import("firebase-admin/firestore");
+  await ref.update({
+    participants: FieldValue.arrayRemove(targetUsername),
+  });
+  const updated = await ref.get();
+  return docToConversation(updated);
+}
+
+export async function transferGroupAdmin(
+  conversationId: string,
+  requestingUsername: string,
+  newAdminUsername: string
+): Promise<Conversation | null> {
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) return null;
+  const convo = docToConversation(doc);
+  if (convo.type !== "group") return null;
+  if (convo.adminUsername !== requestingUsername) return null;
+  if (!convo.participants.includes(newAdminUsername)) return null;
+
+  await ref.update({ adminUsername: newAdminUsername });
+  const updated = await ref.get();
+  return docToConversation(updated);
 }
