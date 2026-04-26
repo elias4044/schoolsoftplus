@@ -129,7 +129,7 @@ export function UserProfileModal({ username, onClose, onMessage }: Props) {
               </div>
 
               {/* Avatar row */}
-              <div className="px-5 -mt-9 flex items-end justify-between mb-3">
+              <div className="z-20 px-5 -mt-9 flex items-end justify-between mb-3">
                 <div className="relative">
                   <Avatar className="w-18 h-18 border-4"
                     style={{ borderColor: "var(--card)", width: 72, height: 72 }}>
@@ -148,7 +148,7 @@ export function UserProfileModal({ username, onClose, onMessage }: Props) {
                 {onMessage && (
                   <button
                     onClick={onMessage}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                    className="flex items-center mt-10 gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-lg hover:opacity-90 active:scale-95 transition-all"
                     style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
                   >
                     <MessageSquare className="w-3.5 h-3.5" />

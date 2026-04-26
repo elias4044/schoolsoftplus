@@ -2,6 +2,7 @@
 import { authUser } from "@/app/api/lib/auth";
 import { createSchoolsoftClient, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { getProfile, upsertProfile } from "@/app/api/lib/profileDb";
+import { updateParticipantName, updateParticipantPfp } from "@/app/api/lib/messagingDb";
 
 // -- GET /api/profile  -------------------------------------------------------
 export async function GET(req: NextRequest) {
@@ -66,5 +67,12 @@ export async function PUT(req: NextRequest) {
   if (update.dmPrivacy && !["everyone", "nobody"].includes(update.dmPrivacy)) delete update.dmPrivacy;
 
   const profile = await upsertProfile(username, { ...update, ...sessionSnap });
+
+  // Propagate display name and pfp changes to all conversations (fire-and-forget)
+  const propagations: Promise<void>[] = [];
+  if (update.displayName) propagations.push(updateParticipantName(username, update.displayName));
+  if (update.pfpUrl !== undefined) propagations.push(updateParticipantPfp(username, update.pfpUrl));
+  await Promise.all(propagations);
+
   return NextResponse.json({ success: true, profile });
 }

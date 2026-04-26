@@ -59,6 +59,7 @@ export interface Conversation {
   type: "dm" | "group";
   participants: string[];        // usernames
   participantNames: Record<string, string>; // username → displayName
+  participantPfpUrls: Record<string, string>; // username → pfp URL
   groupName: string | null;       // null for DMs
   groupDescription: string | null;
   adminUsername: string | null;   // null for DMs
@@ -88,6 +89,7 @@ function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conver
     type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
     participants:        d.participants ?? [],
     participantNames:    d.participantNames ?? {},
+    participantPfpUrls:  d.participantPfpUrls ?? {},
     groupName:           d.groupName           ?? null,
     groupDescription:    d.groupDescription    ?? null,
     adminUsername:       d.adminUsername        ?? null,
@@ -143,7 +145,9 @@ export async function findOrCreateDM(
   usernameA: string,
   displayNameA: string,
   usernameB: string,
-  displayNameB: string
+  displayNameB: string,
+  pfpUrlA = "",
+  pfpUrlB = ""
 ): Promise<{ conversation: Conversation; created: boolean }> {
   // Canonical participant order so duplicate DMs can't be created
   const participants = [usernameA, usernameB].sort();
@@ -162,6 +166,7 @@ export async function findOrCreateDM(
     type: "dm",
     participants,
     participantNames: { [usernameA]: displayNameA, [usernameB]: displayNameB },
+    participantPfpUrls: { [usernameA]: pfpUrlA, [usernameB]: pfpUrlB },
     groupName:        null,
     groupDescription: null,
     adminUsername:    null,
@@ -184,6 +189,19 @@ export async function updateParticipantName(username: string, displayName: strin
   const batch = db.batch();
   for (const doc of snap.docs) {
     batch.update(doc.ref, { [`participantNames.${username}`]: displayName });
+  }
+  await batch.commit();
+}
+
+/* Update participant pfp URL snapshot if the user changes their avatar */
+export async function updateParticipantPfp(username: string, pfpUrl: string) {
+  const snap = await db
+    .collection(CONV_COL)
+    .where("participants", "array-contains", username)
+    .get();
+  const batch = db.batch();
+  for (const doc of snap.docs) {
+    batch.update(doc.ref, { [`participantPfpUrls.${username}`]: pfpUrl });
   }
   await batch.commit();
 }
@@ -378,9 +396,10 @@ export async function searchUsers(
 export interface CreateGroupInput {
   creatorUsername: string;
   creatorDisplayName: string;
+  creatorPfpUrl?: string;
   groupName: string;
   groupDescription?: string;
-  members: { username: string; displayName: string }[];
+  members: { username: string; displayName: string; pfpUrl?: string }[];
 }
 
 export async function createGroupChat(input: CreateGroupInput): Promise<Conversation> {
@@ -392,13 +411,20 @@ export async function createGroupChat(input: CreateGroupInput): Promise<Conversa
   const participantNames: Record<string, string> = {
     [input.creatorUsername]: input.creatorDisplayName,
   };
-  for (const m of input.members) participantNames[m.username] = m.displayName;
+  const participantPfpUrls: Record<string, string> = {
+    [input.creatorUsername]: input.creatorPfpUrl ?? "",
+  };
+  for (const m of input.members) {
+    participantNames[m.username] = m.displayName;
+    participantPfpUrls[m.username] = m.pfpUrl ?? "";
+  }
 
   const ref = db.collection(CONV_COL).doc();
   await ref.set({
     type:             "group",
     participants,
     participantNames,
+    participantPfpUrls,
     groupName:        input.groupName.slice(0, 80),
     groupDescription: (input.groupDescription ?? "").slice(0, 200) || null,
     adminUsername:    input.creatorUsername,

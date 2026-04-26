@@ -100,6 +100,8 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState("");
   const [pfpUploading, setPfpUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const hasLoadedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const displayNameRef = useRef<HTMLInputElement>(null);
   const pfpInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +130,7 @@ export default function ProfilePage() {
           setDmPrivacy(p.dmPrivacy === "nobody" ? "nobody" : "everyone");
           setPfpUrl(p.pfpUrl ?? "");
           setCoverUrl(p.coverUrl ?? "");
+          hasLoadedRef.current = true;
         } else {
           setIsFirstSetup(true);
         }
@@ -143,19 +146,61 @@ export default function ProfilePage() {
     }
   }, [isFirstSetup, profileLoading, sessionLoading]);
 
+  // Auto-save: debounce 1.5s after any field change, only for existing profiles
+  useEffect(() => {
+    if (!hasLoadedRef.current || isFirstSetup) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      save();
+    }, 1500);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayName, bio, pronouns, location, website, github, twitter, instagram, linkedin, accentColor, dmPrivacy]);
+
   const handleImageUpload = useCallback(async (file: File, field: "pfp" | "cover") => {
     const setter = field === "pfp" ? setPfpUploading : setCoverUploading;
     setter(true);
     try {
       const url = await uploadImage(file);
-      if (field === "pfp") setPfpUrl(url);
-      else setCoverUrl(url);
+      if (field === "pfp") {
+        setPfpUrl(url);
+        // Save immediately with the new pfp URL (don't wait for debounce)
+        if (hasLoadedRef.current && !isFirstSetup) {
+          await fetch("/api/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              displayName, bio, pronouns, location, website,
+              github, twitter, instagram, linkedin,
+              accentColor, dmPrivacy, pfpUrl: url, coverUrl,
+            }),
+          });
+          setSaveStatus("success");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        }
+      } else {
+        setCoverUrl(url);
+        if (hasLoadedRef.current && !isFirstSetup) {
+          await fetch("/api/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              displayName, bio, pronouns, location, website,
+              github, twitter, instagram, linkedin,
+              accentColor, dmPrivacy, pfpUrl, coverUrl: url,
+            }),
+          });
+          setSaveStatus("success");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        }
+      }
     } catch (e) {
       setSaveError((e as Error).message);
     } finally {
       setter(false);
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayName, bio, pronouns, location, website, github, twitter, instagram, linkedin, accentColor, dmPrivacy, pfpUrl, coverUrl, isFirstSetup]);
 
   const save = async () => {
     setSaveStatus("saving");
@@ -519,29 +564,54 @@ export default function ProfilePage() {
 
         {/* ── Save button ── */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={save}
-              disabled={saveStatus === "saving" || pfpUploading || coverUploading || (isFirstSetup && !displayName.trim())}
-              size="sm"
-              style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
-            >
-              {saveStatus === "saving"
-                ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
-                : isFirstSetup
-                ? <><MessageSquare className="w-3.5 h-3.5 mr-2" />Create profile &amp; start messaging</>
-                : <><Save className="w-3.5 h-3.5 mr-2" />Save profile</>
-              }
-            </Button>
-            {saveStatus === "success" && !isFirstSetup && (
-              <span className="text-xs text-green-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Saved!
+          <div className="flex items-center gap-3 flex-wrap">
+            {isFirstSetup ? (
+              <Button
+                onClick={save}
+                disabled={saveStatus === "saving" || pfpUploading || coverUploading || !displayName.trim()}
+                size="sm"
+                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
+              >
+                {saveStatus === "saving"
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
+                  : <><MessageSquare className="w-3.5 h-3.5 mr-2" />Create profile &amp; start messaging</>
+                }
+              </Button>
+            ) : (
+              <Button
+                onClick={save}
+                disabled={saveStatus === "saving" || pfpUploading || coverUploading}
+                size="sm"
+                variant="outline"
+                className="border-white/10 bg-white/5 hover:bg-white/10"
+              >
+                {saveStatus === "saving"
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
+                  : <><Save className="w-3.5 h-3.5 mr-2" />Save now</>
+                }
+              </Button>
+            )}
+            {saveStatus === "success" && (
+              <motion.span
+                initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                className="text-xs text-green-400 flex items-center gap-1"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {isFirstSetup ? "Saved!" : "Auto-saved"}
+              </motion.span>
+            )}
+            {saveStatus === "saving" && !isFirstSetup && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
               </span>
             )}
             {saveStatus === "error" && (
               <span className="text-xs text-destructive flex items-center gap-1">
                 <XCircle className="w-3.5 h-3.5" /> {saveError}
               </span>
+            )}
+            {saveStatus === "idle" && !isFirstSetup && (
+              <span className="text-xs text-muted-foreground">Changes save automatically</span>
             )}
           </div>
         </motion.div>

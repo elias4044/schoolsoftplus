@@ -66,6 +66,7 @@ export interface RTConversation {
   type: "dm" | "group";
   participants: string[];
   participantNames: Record<string, string>;
+  participantPfpUrls: Record<string, string>;
   groupName: string | null;
   groupDescription: string | null;
   adminUsername: string | null;
@@ -100,6 +101,7 @@ export function useConversations(username: string) {
           type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
           participants:        d.participants       ?? [],
           participantNames:    d.participantNames   ?? {},
+          participantPfpUrls:  d.participantPfpUrls ?? {},
           groupName:           d.groupName          ?? null,
           groupDescription:    d.groupDescription   ?? null,
           adminUsername:       d.adminUsername       ?? null,

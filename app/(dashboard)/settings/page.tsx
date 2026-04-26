@@ -35,38 +35,7 @@ export default function SettingsPage() {
         animate="show"
         className="space-y-4"
       >
-        {/* School */}
-        <motion.div
-          variants={fadeUp}
-          className="rounded-xl border border-white/7 bg-card p-5 space-y-4"
-        >
-          <div className="flex items-center gap-2">
-            <School className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">School</h2>
-          </div>
-          <Separator className="bg-white/7" />
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              School slug
-            </Label>
-            <Input
-              value={school}
-              onChange={e => setSchool(e.target.value)}
-              className="bg-white/5 border-white/10 focus:border-primary/50"
-              placeholder="engelska"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              This is the school identifier used in Schoolsoft URLs.
-            </p>
-          </div>
-          <Button
-            onClick={save}
-            size="sm"
-            style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
-          >
-            Save changes
-          </Button>
-        </motion.div>
+  
 
         {/* Account */}
         <motion.div

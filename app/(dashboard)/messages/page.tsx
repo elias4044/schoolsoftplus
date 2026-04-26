@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard } from "@/lib/useMessages";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -164,6 +164,36 @@ export default function MessagesPage() {
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
     const [mobileActionMsg, setMobileActionMsg] = useState<Message | null>(null);
     const [viewProfileUsername, setViewProfileUsername] = useState<string | null>(null);
+
+    // pfp cache: username → pfp URL, fetched from /api/profile/[username]
+    const [pfpCache, setPfpCache] = useState<Record<string, string>>({});
+    const pfpFetchingRef = useRef<Set<string>>(new Set());
+
+    const fetchPfp = useCallback(async (u: string) => {
+        if (!u || pfpFetchingRef.current.has(u)) return;
+        pfpFetchingRef.current.add(u);
+        try {
+            const res = await fetch(`/api/profile/${encodeURIComponent(u)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.profile?.pfpUrl) {
+                    setPfpCache(prev => ({ ...prev, [u]: data.profile.pfpUrl }));
+                }
+            }
+        } catch { /* ignore */ }
+    }, []);
+
+    /* Fetch pfp for all conversation participants whenever conversations change */
+    useEffect(() => {
+        if (!username) return;
+        const toFetch = new Set<string>();
+        for (const c of conversations) {
+            for (const p of c.participants) {
+                if (p !== username) toFetch.add(p);
+            }
+        }
+        toFetch.forEach(fetchPfp);
+    }, [conversations, username, fetchPfp]);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -538,6 +568,7 @@ export default function MessagesPage() {
                                         active={activeConvo?.id === convo.id}
                                         username={username}
                                         index={i}
+                                        pfpCache={pfpCache}
                                         onClick={() => {
                                             setActiveConvo(convo);
                                             setMobileShowChat(true);
@@ -576,6 +607,11 @@ export default function MessagesPage() {
                                         }
                                     }}
                                 >
+                                    {activeConvo.type === "dm" && (() => {
+                                        const partner = activeConvo.participants.find(p => p !== username);
+                                        const pfp = partner ? (pfpCache[partner] || activeConvo.participantPfpUrls[partner] || "") : "";
+                                        return pfp ? <AvatarImage src={pfp} alt={partnerName(activeConvo)} /> : null;
+                                    })()}
                                     <AvatarFallback className="text-xs font-bold" style={{
                                         background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))",
                                         color: "oklch(0.78 0.15 278)",
@@ -669,6 +705,10 @@ export default function MessagesPage() {
                                                             isGroup={activeConvo?.type === "group"}
                                                             canDelete={msg.senderUsername === username || activeConvo?.adminUsername === username}
                                                             isMobile={isMobile}
+                                                            pfpUrl={pfpCache[msg.senderUsername] || activeConvo?.participantPfpUrls[msg.senderUsername] || ""}
+                                                            onAvatarClick={() => {
+                                                                if (msg.senderUsername !== username) setViewProfileUsername(msg.senderUsername);
+                                                            }}
                                                             onMobileTap={() => setMobileActionMsg(msg)}
                                                             onEditStart={() => { setEditingId(msg.id); setEditContent(msg.content); }}
                                                             onEditChange={setEditContent}
@@ -1280,10 +1320,10 @@ function ProfileGate() {
    ConvoItem
 ───────────────────────────────────────────────────────────── */
 function ConvoItem({
-    convo, name, subtitle, active, username, index, onClick,
+    convo, name, subtitle, active, username, index, pfpCache, onClick,
 }: {
     convo: Conversation; name: string; subtitle: string; active: boolean;
-    username: string; index: number; onClick: () => void;
+    username: string; index: number; pfpCache: Record<string, string>; onClick: () => void;
 }) {
     const { unreadByConvo } = useUnread();
     const unread = unreadByConvo[convo.id] ?? 0;
@@ -1302,6 +1342,11 @@ function ConvoItem({
         >
             <div className="relative shrink-0">
                 <Avatar className="w-9 h-9">
+                    {convo.type === "dm" && (() => {
+                        const partner = convo.participants.find(p => p !== username);
+                        const pfp = partner ? (pfpCache[partner] || convo.participantPfpUrls[partner] || "") : "";
+                        return pfp ? <AvatarImage src={pfp} alt={name} /> : null;
+                    })()}
                     <AvatarFallback className="text-xs font-bold" style={{
                         background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 35%), oklch(0.55 0.25 295 / 35%))",
                         color: "oklch(0.78 0.15 278)",
@@ -1545,13 +1590,14 @@ function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
 ───────────────────────────────────────────────────────────── */
 function MessageBubble({
     msg, isMe, sameSender, isEditing, editContent, editSaving, username, isGroup, canDelete,
-    isMobile, onMobileTap,
+    isMobile, onMobileTap, pfpUrl, onAvatarClick,
     onEditStart, onEditChange, onEditSubmit, onEditCancel, onDelete, onPin, onReply, onReact,
 }: {
     msg: Message; isMe: boolean; sameSender: boolean;
     isEditing: boolean; editContent: string; editSaving: boolean; username: string;
     isGroup: boolean; canDelete: boolean;
     isMobile: boolean; onMobileTap: () => void;
+    pfpUrl?: string; onAvatarClick?: () => void;
     onEditStart: () => void; onEditChange: (v: string) => void;
     onEditSubmit: () => void; onEditCancel: () => void;
     onDelete: () => void; onPin: () => void; onReply: () => void;
@@ -1586,7 +1632,11 @@ function MessageBubble({
             {/* Avatar */}
             <div className="w-7 shrink-0 mt-0.5">
                 {!sameSender && (
-                    <Avatar className="w-7 h-7">
+                    <Avatar
+                        className={cn("w-7 h-7", !isMe && onAvatarClick && "cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all")}
+                        onClick={() => { if (!isMe && onAvatarClick) onAvatarClick(); }}
+                    >
+                        {pfpUrl && <AvatarImage src={pfpUrl} alt={msg.senderDisplayName} />}
                         <AvatarFallback className="text-[10px] font-bold" style={{
                             background: isMe
                                 ? "linear-gradient(135deg, oklch(0.65 0.22 278 / 50%), oklch(0.55 0.25 295 / 50%))"

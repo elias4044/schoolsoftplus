@@ -68,12 +68,14 @@ export async function POST(req: NextRequest) {
       return {
         username: u,
         displayName: p?.displayName || `${p?.firstName ?? ""} ${p?.lastName ?? ""}`.trim() || u,
+        pfpUrl: p?.pfpUrl ?? "",
       };
     });
 
     const conversation = await createGroupChat({
       creatorUsername: username,
       creatorDisplayName: myDisplayName,
+      creatorPfpUrl: myProfile?.pfpUrl ?? "",
       groupName,
       groupDescription: body.groupDescription,
       members,
@@ -110,7 +112,9 @@ export async function POST(req: NextRequest) {
 
   const { conversation, created } = await findOrCreateDM(
     username, myDisplayName,
-    targetUsername, theirDisplayName
+    targetUsername, theirDisplayName,
+    myProfile?.pfpUrl ?? "",
+    theirProfile?.pfpUrl ?? ""
   );
   if (created) trackConversationCreated();
   return NextResponse.json({ success: true, conversation });
