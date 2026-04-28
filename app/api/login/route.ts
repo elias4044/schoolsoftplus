@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
       response.cookies.set("ssp_hash",       hashVal,       cookieOpts);
       if (usertypeVal) response.cookies.set("ssp_usertype", usertypeVal, cookieOpts);
       response.cookies.set("ssp_school",   school,     { ...cookieOpts, httpOnly: false });
-      response.cookies.set("ssp_username", username!,  { ...cookieOpts, httpOnly: false });
+      response.cookies.set("ssp_username", username!.toLowerCase(),  { ...cookieOpts, httpOnly: false });
 
       return response;
     }
