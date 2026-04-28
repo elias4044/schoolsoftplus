@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     targetUsername?: string;
     groupName?: string;
     groupDescription?: string;
+    encrypted?: boolean;
     members?: string[];
   } = {};
   try { body = await req.json(); } catch { /* empty */ }
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       creatorPfpUrl: myProfile?.pfpUrl ?? "",
       groupName,
       groupDescription: body.groupDescription,
+      encrypted: body.encrypted === true,
       members,
     });
 

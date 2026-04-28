@@ -23,13 +23,66 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.5",
+    date: "2026-04-28",
+    title: "Messaging Overhaul — Encryption, Images, GIFs & More",
+    summary:
+      "A major upgrade to the messaging system. Group chats can now be end-to-end encrypted using AES-GCM-256 with a shared password. Image and GIF sending is fully integrated with an inline picker, clipboard paste, and live preview. Emoji reactions got a built-in picker with recent tracking, and the whole compose experience was polished with draft persistence, message search, and smarter message grouping.",
+    tags: ["feature", "improvement", "security"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.5",
+    sections: [
+      {
+        title: "End-to-End Encryption",
+        items: [
+          { text: "Optional E2EE when creating a group chat — toggle encryption and set a shared password", tag: "feature" },
+          { text: "Keys are derived in-browser using PBKDF2 with 310,000 iterations — the password never reaches the server", tag: "security" },
+          { text: "Messages are encrypted with AES-GCM-256 before leaving your device; only ciphertext is stored", tag: "security" },
+          { text: "Encrypted groups enforce a 100-character message limit (plaintext only, images are not encrypted)", tag: "feature" },
+          { text: "Lock icon and 'Encrypted' badge shown throughout the UI for encrypted conversations", tag: "improvement" },
+          { text: "Password prompt on first open of an encrypted group — key is cached in memory for the session", tag: "feature" },
+        ],
+      },
+      {
+        title: "Image & GIF Sending",
+        items: [
+          { text: "Attach images from your device using the paperclip button — up to 10 MB, JPEG/PNG/GIF/WebP/AVIF/BMP", tag: "feature" },
+          { text: "Paste an image directly from the clipboard into the compose box to upload instantly", tag: "feature" },
+          { text: "Animated image preview strip shows before sending — remove with one click", tag: "feature" },
+          { text: "Built-in GIF picker powered by Giphy — search or browse trending GIFs in a compact grid", tag: "feature" },
+          { text: "Images and GIFs render inline in the message thread at up to 300 px width — click to open full size", tag: "feature" },
+          { text: "Images are hosted via ImgBB; the raw URL is hidden — only the image is shown", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Emoji Picker",
+        items: [
+          { text: "New built-in emoji picker — no external library, zero extra bundle weight", tag: "feature" },
+          { text: "Nine categories: Smileys, Gestures, Hearts, Animals, Food, Activities, Travel, Objects, Symbols", tag: "feature" },
+          { text: "Recently used emojis are tracked in localStorage and surfaced as a 'Recent' category", tag: "feature" },
+          { text: "Search field filters across all categories instantly", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Compose & UX Improvements",
+        items: [
+          { text: "Character counter — amber warning at 180 chars, red block at 200 (unless using standard non-encrypted mode which allows up to 2000)", tag: "improvement" },
+          { text: "Draft persistence per conversation — switching convos and coming back restores your unsent text", tag: "feature" },
+          { text: "Message search panel — toggle from the conversation header to find any message by keyword, click to jump to it", tag: "feature" },
+          { text: "Timestamps now only appear on the last message of a consecutive group, not on every bubble", tag: "improvement" },
+          { text: "Sender name in group chats only appears on the first message in a run — cleaner reading flow", tag: "improvement" },
+          { text: "Link rendering — URLs in messages become clickable links automatically", tag: "improvement" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.4",
     date: "2026-04-26",
     title: "Enhanced Profiles, Group Chats & Share Cards",
     summary:
       "Profiles are now fully customisable with cover images, profile pictures, social links, accent colours, and privacy controls. A new People discovery page lets you browse and message classmates. Group chats let you create named rooms with multiple members. Notes and grades can now be shared directly into any conversation as rich interactive cards.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.4",
     sections: [
       {
@@ -96,7 +149,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     summary:
       "The AI has been completely reworked — freeform chat is replaced with focused, useful features: inline writing tools built into the Notes editor and a quick-action Insights panel for your schedule, assignments, and lunch. Login now includes a searchable school picker with every SchoolSoft school.",
     tags: ["feature", "improvement"],
-    highlight: true,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.3",
     sections: [
       {
