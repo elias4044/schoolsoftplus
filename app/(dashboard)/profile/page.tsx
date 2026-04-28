@@ -298,15 +298,63 @@ export default function ProfilePage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <User className="w-6 h-6 text-primary" />
-          {isFirstSetup ? "Create your profile" : "Profile"}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isFirstSetup
-            ? "Choose a display name to get started — everything else is optional."
-            : "Customize how you appear in SchoolSoft+"}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <User className="w-6 h-6 text-primary" />
+              {isFirstSetup ? "Create your profile" : "Profile"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isFirstSetup
+                ? "Choose a display name to get started — everything else is optional."
+                : "Customize how you appear in SchoolSoft+"}
+            </p>
+          </div>
+
+          {/* Save / status — always visible at the top */}
+          <div className="flex items-center gap-2 shrink-0 mt-0.5">
+            {saveStatus === "success" && (
+              <motion.span
+                initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                className="text-xs text-green-400 flex items-center gap-1"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {isFirstSetup ? "Saved!" : "Saved"}
+              </motion.span>
+            )}
+            {saveStatus === "error" && (
+              <span className="text-xs text-destructive flex items-center gap-1">
+                <XCircle className="w-3.5 h-3.5" /> {saveError}
+              </span>
+            )}
+            {isFirstSetup ? (
+              <Button
+                onClick={save}
+                disabled={saveStatus === "saving" || pfpUploading || coverUploading || !displayName.trim()}
+                size="sm"
+                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
+              >
+                {saveStatus === "saving"
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
+                  : <><MessageSquare className="w-3.5 h-3.5 mr-2" />Create profile</>
+                }
+              </Button>
+            ) : (
+              <Button
+                onClick={save}
+                disabled={saveStatus === "saving" || pfpUploading || coverUploading}
+                size="sm"
+                variant="outline"
+                className="border-white/10 bg-white/5 hover:bg-white/10"
+              >
+                {saveStatus === "saving"
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
+                  : <><Save className="w-3.5 h-3.5 mr-2" />Save</>
+                }
+              </Button>
+            )}
+          </div>
+        </div>
       </motion.div>
 
       {/* First-setup banner */}
@@ -562,59 +610,15 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Save button ── */}
-        <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5">
-          <div className="flex items-center gap-3 flex-wrap">
-            {isFirstSetup ? (
-              <Button
-                onClick={save}
-                disabled={saveStatus === "saving" || pfpUploading || coverUploading || !displayName.trim()}
-                size="sm"
-                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
-              >
-                {saveStatus === "saving"
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
-                  : <><MessageSquare className="w-3.5 h-3.5 mr-2" />Create profile &amp; start messaging</>
-                }
-              </Button>
-            ) : (
-              <Button
-                onClick={save}
-                disabled={saveStatus === "saving" || pfpUploading || coverUploading}
-                size="sm"
-                variant="outline"
-                className="border-white/10 bg-white/5 hover:bg-white/10"
-              >
-                {saveStatus === "saving"
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving…</>
-                  : <><Save className="w-3.5 h-3.5 mr-2" />Save now</>
-                }
-              </Button>
-            )}
-            {saveStatus === "success" && (
-              <motion.span
-                initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                className="text-xs text-green-400 flex items-center gap-1"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {isFirstSetup ? "Saved!" : "Auto-saved"}
-              </motion.span>
-            )}
-            {saveStatus === "saving" && !isFirstSetup && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
-              </span>
-            )}
-            {saveStatus === "error" && (
-              <span className="text-xs text-destructive flex items-center gap-1">
-                <XCircle className="w-3.5 h-3.5" /> {saveError}
-              </span>
-            )}
-            {saveStatus === "idle" && !isFirstSetup && (
-              <span className="text-xs text-muted-foreground">Changes save automatically</span>
-            )}
-          </div>
-        </motion.div>
+        {/* ── Save hint ── */}
+        {!isFirstSetup && (
+          <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card px-5 py-3">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="w-3 h-3 text-green-400/60" />
+              Changes save automatically — or use the <strong>Save</strong> button at the top.
+            </p>
+          </motion.div>
+        )}
 
         {/* ── Read-only Account Info ── */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">

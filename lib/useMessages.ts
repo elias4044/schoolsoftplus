@@ -70,6 +70,7 @@ export interface RTConversation {
   groupName: string | null;
   groupDescription: string | null;
   adminUsername: string | null;
+  encrypted: boolean;
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
@@ -105,6 +106,7 @@ export function useConversations(username: string) {
           groupName:           d.groupName          ?? null,
           groupDescription:    d.groupDescription   ?? null,
           adminUsername:       d.adminUsername       ?? null,
+          encrypted:           d.encrypted          ?? false,
           lastMessage:         d.lastMessage        ?? "",
           lastSenderUsername:  d.lastSenderUsername ?? "",
           lastAt:              d.lastAt             ?? 0,

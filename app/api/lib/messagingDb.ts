@@ -63,6 +63,7 @@ export interface Conversation {
   groupName: string | null;       // null for DMs
   groupDescription: string | null;
   adminUsername: string | null;   // null for DMs
+  encrypted: boolean;             // E2EE group
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
@@ -93,6 +94,7 @@ function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conver
     groupName:           d.groupName           ?? null,
     groupDescription:    d.groupDescription    ?? null,
     adminUsername:       d.adminUsername        ?? null,
+    encrypted:           d.encrypted           ?? false,
     lastMessage:         d.lastMessage ?? "",
     lastSenderUsername:  d.lastSenderUsername ?? "",
     lastAt:              typeof d.lastAt    === "number" ? d.lastAt    : 0,
@@ -399,6 +401,7 @@ export interface CreateGroupInput {
   creatorPfpUrl?: string;
   groupName: string;
   groupDescription?: string;
+  encrypted?: boolean;
   members: { username: string; displayName: string; pfpUrl?: string }[];
 }
 
@@ -428,6 +431,7 @@ export async function createGroupChat(input: CreateGroupInput): Promise<Conversa
     groupName:        input.groupName.slice(0, 80),
     groupDescription: (input.groupDescription ?? "").slice(0, 200) || null,
     adminUsername:    input.creatorUsername,
+    encrypted:        input.encrypted ?? false,
     lastMessage:      "",
     lastSenderUsername: "",
     lastAt:    now,
