@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
+   allowedDevOrigins: ['192.168.1.144'],
+
   // Compress responses
   compress: true,
 
