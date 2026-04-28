@@ -58,7 +58,7 @@ function docToProfile(doc: FirebaseFirestore.DocumentSnapshot<any>): UserProfile
 }
 
 export async function getProfile(username: string): Promise<UserProfile | null> {
-  const doc = await db.collection(COL).doc(username).get();
+  const doc = await db.collection(COL).doc(username.toLowerCase()).get();
   if (!doc.exists) return null;
   return docToProfile(doc);
 }
@@ -89,7 +89,7 @@ export async function upsertProfile(
   username: string,
   update: ProfileUpdate
 ): Promise<UserProfile> {
-  const ref = db.collection(COL).doc(username);
+  const ref = db.collection(COL).doc(username.toLowerCase());
   const existing = await ref.get();
   const payload: Record<string, unknown> = { ...update, updatedAt: Date.now() };
   // Set joinedAt only on first creation

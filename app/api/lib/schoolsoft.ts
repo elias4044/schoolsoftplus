@@ -51,7 +51,7 @@ export function getSessionCookies(req: NextRequest): {
   const hash       = req.cookies.get("ssp_hash")?.value;       // raw value, e.g. "d85914fa..."
   const usertype   = req.cookies.get("ssp_usertype")?.value;   // raw value, e.g. "1"
   const school     = req.cookies.get("ssp_school")?.value ?? "engelska";
-  const username   = req.cookies.get("ssp_username")?.value ?? "";
+  const username   = (req.cookies.get("ssp_username")?.value ?? "").toLowerCase();
 
   if (!jsessionid) return null;
 
