@@ -26,6 +26,7 @@ import {
   GitPullRequest,
   Megaphone,
   Users,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -41,12 +42,13 @@ const comfortaa = Comfortaa({ subsets: ["latin"] });
 
 /* -- Nav item config -------------------------------------- */
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, shortcut: "Alt+1" },
-  { href: "/schedule",  label: "Schedule",  icon: CalendarDays,    shortcut: "Alt+2" },
-  { href: "/lunch",     label: "Lunch Menu", icon: UtensilsCrossed, shortcut: "Alt+3" },
-  { href: "/news",      label: "News",       icon: Newspaper,       shortcut: "Alt+4" },
-  { href: "/subjects",  label: "Subjects",   icon: BookOpen,        shortcut: "Alt+5" },
-  { href: "/countdown", label: "Countdown",  icon: Timer,           shortcut: "Alt+6" },
+  { href: "/dashboard", label: "Dashboard",   icon: LayoutDashboard, shortcut: "Alt+1" },
+  { href: "/schedule",  label: "Schedule",    icon: CalendarDays,    shortcut: "Alt+2" },
+  { href: "/lunch",     label: "Lunch Menu",  icon: UtensilsCrossed, shortcut: "Alt+3" },
+  { href: "/news",      label: "News",        icon: Newspaper,       shortcut: "Alt+4" },
+  { href: "/subjects",  label: "Subjects",    icon: BookOpen,        shortcut: "Alt+5" },
+  { href: "/countdown", label: "Countdown",   icon: Timer,           shortcut: "Alt+6" },
+  { href: "/class",     label: "Class & Staff", icon: GraduationCap, shortcut: "Alt+7" },
 ] as const;
 
 const BOTTOM_NAV = [
@@ -78,6 +80,7 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "4": e.preventDefault(); router.push("/news");      break;
         case "5": e.preventDefault(); router.push("/subjects");  break;
         case "6": e.preventDefault(); router.push("/countdown"); break;
+        case "7": e.preventDefault(); router.push("/class");     break;
         case "n":
         case "N": e.preventDefault(); router.push("/notes");     break;
         case "m":
