@@ -7,6 +7,7 @@ import {
     FormEvent,
     useCallback,
     KeyboardEvent,
+    useMemo,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -71,6 +72,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { UserProfileModal } from "@/components/UserProfileModal";
 import { deriveKey, encryptMessage, decryptMessage } from "@/lib/crypto";
+import { useFriends } from "@/lib/useFriends";
+import { useMyPresence, usePresenceMap, statusColor, statusLabel, type UserStatus } from "@/lib/usePresence";
 
 /* ─────────────────────────────────────────────────────────────
    Types
@@ -83,6 +86,17 @@ interface UserSearchResult {
     displayName: string;
     schoolName: string;
     userType: string;
+}
+
+interface GroupInvite {
+    id: string;
+    conversationId: string;
+    groupName: string;
+    invitedUsername: string;
+    invitedBy: string;
+    invitedByDisplayName: string;
+    status: "pending" | "accepted" | "declined";
+    invitedAt: number;
 }
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
@@ -437,6 +451,32 @@ export default function MessagesPage() {
     const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
     const { messages, loading: msgLoading } = useMessages(activeConvo?.id ?? null);
 
+    // Friends
+    const { friends, received: friendRequests, sent: sentFriendRequests, profileMap: friendProfileMap, isFriend, pendingFrom, sentTo } = useFriends(username);
+    // Group invites
+    const [groupInvites, setGroupInvites] = useState<GroupInvite[]>([]);
+    const [loadingGroupInvites, setLoadingGroupInvites] = useState(false);
+
+    // Presence — track own + participants
+    useMyPresence(username);
+    const presenceUsernames = useMemo(() => {
+        const all = new Set<string>();
+        for (const c of conversations) {
+            for (const p of c.participants) if (p !== username) all.add(p);
+        }
+        for (const f of friends) all.add(f.userA === username ? f.userB : f.userA);
+        return [...all];
+    }, [conversations, friends, username]);
+    const statusMap = usePresenceMap(presenceUsernames);
+
+    // Sidebar tab: "messages" | "friends"
+    const [sidebarTab, setSidebarTab] = useState<"messages" | "friends">("messages");
+    // Friend search
+    const [friendSearchQuery, setFriendSearchQuery] = useState("");
+    const [friendSearchResults, setFriendSearchResults] = useState<UserSearchResult[]>([]);
+    const [friendSearching, setFriendSearching] = useState(false);
+    const [friendRequestSending, setFriendRequestSending] = useState<string | null>(null);
+
     const { setUnread, markRead } = useUnread();
 
     const [showPinned, setShowPinned] = useState(false);
@@ -650,6 +690,70 @@ export default function MessagesPage() {
         setShowGroupInfo(false);
     }, [activeConvo?.id]);
 
+    /* Load group invites */
+    const loadGroupInvites = useCallback(async () => {
+        if (!username) return;
+        setLoadingGroupInvites(true);
+        try {
+            const res = await fetch("/api/group-invites");
+            const data = await res.json();
+            if (data.success) setGroupInvites(data.invites);
+        } finally { setLoadingGroupInvites(false); }
+    }, [username]);
+
+    useEffect(() => { loadGroupInvites(); }, [loadGroupInvites]);
+
+    /* Friend search debounce */
+    const friendSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (friendSearchRef.current) clearTimeout(friendSearchRef.current);
+        if (friendSearchQuery.length < 2) { setFriendSearchResults([]); return; }
+        friendSearchRef.current = setTimeout(async () => {
+            setFriendSearching(true);
+            try {
+                const res = await fetch(`/api/users/search?q=${encodeURIComponent(friendSearchQuery)}`);
+                const data = await res.json();
+                if (data.success) setFriendSearchResults(data.users);
+            } finally { setFriendSearching(false); }
+        }, 350);
+    }, [friendSearchQuery]);
+
+    const sendFriendReq = async (targetUsername: string) => {
+        setFriendRequestSending(targetUsername);
+        try {
+            await fetch("/api/friends", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ targetUsername }),
+            });
+        } finally { setFriendRequestSending(null); }
+    };
+
+    const respondFriendReq = async (fromUsername: string, accept: boolean) => {
+        await fetch("/api/friends", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fromUsername, accept }),
+        });
+    };
+
+    const acceptGroupInvite = async (inviteId: string, accept: boolean) => {
+        const res = await fetch("/api/group-invites", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ inviteId, accept }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            setGroupInvites(prev => prev.filter(inv => inv.id !== inviteId));
+            if (accept && data.invite?.conversationId) {
+                // Switch to the joined conversation
+                const convo = conversations.find(c => c.id === data.invite.conversationId);
+                if (convo) { setActiveConvo(convo); setMobileShowChat(true); }
+            }
+        }
+    };
+
     /* User search debounce */
     useEffect(() => {
         if (searchRef.current) clearTimeout(searchRef.current);
@@ -673,9 +777,18 @@ export default function MessagesPage() {
                 body: JSON.stringify({ targetUsername: target.username }),
             });
             const data = await res.json();
-            if (data.success) { setActiveConvo(data.conversation); setMobileShowChat(true); }
+            if (data.success) {
+                setActiveConvo(data.conversation);
+                setMobileShowChat(true);
+                setShowNewDM(false);
+                setSearchQuery(""); setSearchResults([]);
+            } else if (data.needsFriend) {
+                // Auto-send a friend request and inform the user
+                await sendFriendReq(target.username);
+                alert(`You are not friends with ${target.displayName} yet. A friend request has been sent!`);
+            }
         } finally {
-            setDmCreating(false); setShowNewDM(false); setSearchQuery(""); setSearchResults([]);
+            setDmCreating(false);
         }
     };
 
@@ -822,7 +935,17 @@ export default function MessagesPage() {
     };
 
     const addMemberToGroup = async (user: UserSearchResult) => {
-        await groupInfoAction("add_member", { targetUsername: user.username });
+        if (!activeConvo) return;
+        // Send a group invite instead of directly adding
+        const res = await fetch("/api/group-invites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversationId: activeConvo.id, targetUsername: user.username }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            alert(data.error ?? "Could not send invite.");
+        }
         setGroupAddSearch(""); setGroupAddResults([]);
     };
 
@@ -903,7 +1026,11 @@ export default function MessagesPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ content, replyTo: reply }),
             });
-        } finally { setSending(false); inputRef.current?.focus(); }
+        } finally {
+            setSending(false);
+            // Use rAF to refocus after React re-render
+            requestAnimationFrame(() => { inputRef.current?.focus(); });
+        }
     };
 
     const submitEdit = async (messageId: string) => {
@@ -1050,50 +1177,146 @@ export default function MessagesPage() {
                         </div>
                     </div>
 
-                    <div className="px-3 py-2.5 border-b border-white/7 shrink-0">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                            <Input
-                                value={convoFilter}
-                                onChange={e => setConvoFilter(e.target.value)}
-                                placeholder="Search conversations…"
-                                className="pl-8 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
-                            />
-                        </div>
+                    {/* Tab bar */}
+                    <div className="flex border-b border-white/7 shrink-0">
+                        <button
+                            onClick={() => setSidebarTab("messages")}
+                            className={cn(
+                                "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                                sidebarTab === "messages" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            Chats
+                        </button>
+                        <button
+                            onClick={() => setSidebarTab("friends")}
+                            className={cn(
+                                "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors relative",
+                                sidebarTab === "friends" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Users className="w-3.5 h-3.5" />
+                            Friends
+                            {(friendRequests.length + groupInvites.length) > 0 && (
+                                <span className="absolute top-1 right-3 min-w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center px-1"
+                                    style={{ background: "oklch(0.65 0.22 278)", color: "white" }}>
+                                    {friendRequests.length + groupInvites.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
-                        {convoLoading ? (
-                            <div className="flex items-center justify-center h-24">
-                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : filteredConvos.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center">
-                                <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
-                                <p className="text-xs text-muted-foreground">
-                                    {convoFilter ? "No conversations match." : "No conversations yet. Start one!"}
-                                </p>
-                            </div>
-                        ) : (
-                            <AnimatePresence initial={false}>
-                                {filteredConvos.map((convo, i) => (
-                                    <ConvoItem
-                                        key={convo.id}
-                                        convo={convo}
-                                        name={partnerName(convo)}
-                                        subtitle={partnerSubtitle(convo)}
-                                        active={activeConvo?.id === convo.id}
-                                        username={username}
-                                        index={i}
-                                        pfpCache={pfpCache}
-                                        onClick={() => {
-                                            setActiveConvo(convo);
-                                            setMobileShowChat(true);
-                                            setEditingId(null);
-                                        }}
+                        {sidebarTab === "messages" ? (
+                          <>
+                            {/* Group invite banner */}
+                            {groupInvites.length > 0 && (
+                                <div className="px-3 py-2 border-b border-white/7 space-y-1.5">
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+                                        Group Invites ({groupInvites.length})
+                                    </p>
+                                    {groupInvites.map(inv => (
+                                        <div key={inv.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/15">
+                                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                                                style={{ background: "oklch(0.65 0.22 278 / 15%)" }}>
+                                                <Users className="w-3.5 h-3.5 text-primary" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs font-medium truncate">{inv.groupName}</p>
+                                                <p className="text-[9px] text-muted-foreground truncate">from {inv.invitedByDisplayName}</p>
+                                            </div>
+                                            <div className="flex gap-0.5">
+                                                <button onClick={() => acceptGroupInvite(inv.id, true)}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-green-400 hover:bg-green-500/15 transition-colors">
+                                                    <Check className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => acceptGroupInvite(inv.id, false)}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="px-3 py-2.5 border-b border-white/7 shrink-0">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                    <Input
+                                        value={convoFilter}
+                                        onChange={e => setConvoFilter(e.target.value)}
+                                        placeholder="Search conversations…"
+                                        className="pl-8 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
                                     />
-                                ))}
-                            </AnimatePresence>
+                                </div>
+                            </div>
+
+                            {convoLoading ? (
+                                <div className="flex items-center justify-center h-24">
+                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : filteredConvos.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center">
+                                    <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
+                                    <p className="text-xs text-muted-foreground">
+                                        {convoFilter ? "No conversations match." : "No conversations yet. Start one!"}
+                                    </p>
+                                </div>
+                            ) : (
+                                <AnimatePresence initial={false}>
+                                    {filteredConvos.map((convo, i) => (
+                                        <ConvoItem
+                                            key={convo.id}
+                                            convo={convo}
+                                            name={partnerName(convo)}
+                                            subtitle={partnerSubtitle(convo)}
+                                            active={activeConvo?.id === convo.id}
+                                            username={username}
+                                            index={i}
+                                            pfpCache={pfpCache}
+                                            statusMap={statusMap}
+                                            onClick={() => {
+                                                setActiveConvo(convo);
+                                                setMobileShowChat(true);
+                                                setEditingId(null);
+                                            }}
+                                        />
+                                    ))}
+                                </AnimatePresence>
+                            )}
+                          </>
+                        ) : (
+                          /* ── Friends tab ── */
+                          <FriendsPanel
+                              username={username}
+                              friends={friends}
+                              received={friendRequests}
+                              sent={sentFriendRequests}
+                              profileMap={friendProfileMap}
+                              statusMap={statusMap}
+                              friendSearchQuery={friendSearchQuery}
+                              friendSearchResults={friendSearchResults}
+                              friendSearching={friendSearching}
+                              friendRequestSending={friendRequestSending}
+                              isFriend={isFriend}
+                              pendingFrom={pendingFrom}
+                              sentTo={sentTo}
+                              onSearchChange={setFriendSearchQuery}
+                              onSendRequest={sendFriendReq}
+                              onRespond={respondFriendReq}
+                              onOpenDM={(targetUsername: string) => {
+                                  const u: UserSearchResult = {
+                                      username: targetUsername,
+                                      displayName: friendProfileMap[targetUsername]?.displayName ?? targetUsername,
+                                      schoolName: friendProfileMap[targetUsername]?.schoolName ?? "",
+                                      userType: "",
+                                  };
+                                  openDM(u);
+                                  setSidebarTab("messages");
+                              }}
+                          />
                         )}
                     </div>
                 </motion.div>
@@ -1160,9 +1383,23 @@ export default function MessagesPage() {
                                             </Tooltip>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground truncate">
-                                        {partnerSubtitle(activeConvo)}
-                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        {activeConvo.type === "dm" && (() => {
+                                            const partner = activeConvo.participants.find(p => p !== username);
+                                            const st = partner ? (statusMap[partner] ?? "offline") : "offline";
+                                            return (
+                                                <span className="flex items-center gap-1 text-[10px]" style={{ color: statusColor(st) }}>
+                                                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: statusColor(st) }} />
+                                                    {statusLabel(st)}
+                                                </span>
+                                            );
+                                        })()}
+                                        {activeConvo.type === "group" && (
+                                            <p className="text-[10px] text-muted-foreground truncate">
+                                                {partnerSubtitle(activeConvo)}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                                 {activeConvo.type === "group" && (
                                     <Tooltip>
@@ -1479,16 +1716,15 @@ export default function MessagesPage() {
                                                 }
                                             </Button>
 
-                                            {/* GIF button — hidden in encrypted mode */}
-                                            {!activeConvo.encrypted && (
-                                                <Button type="button" size="icon" variant="ghost"
-                                                    className={cn("w-8 h-8 shrink-0 text-muted-foreground hover:text-foreground", showGifPicker && "text-primary")}
-                                                    onClick={() => { setShowGifPicker(v => !v); setShowEmojiPicker(false); }}
-                                                    title="GIFs"
-                                                >
-                                                    <Gift className="w-4 h-4" />
-                                                </Button>
-                                            )}
+                                            {/* GIF button */}
+                                            <Button type="button" size="icon" variant="ghost"
+                                                className={cn("w-8 h-8 shrink-0 text-muted-foreground hover:text-foreground", showGifPicker && "text-primary")}
+                                                onClick={() => { setShowGifPicker(v => !v); setShowEmojiPicker(false); }}
+                                                disabled={activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)}
+                                                title="GIFs"
+                                            >
+                                                <Gift className="w-4 h-4" />
+                                            </Button>
 
                                             {/* Emoji button */}
                                             <Button type="button" size="icon" variant="ghost"
@@ -1564,6 +1800,27 @@ export default function MessagesPage() {
                                             <div className="flex items-center gap-1 text-[10px] text-primary/60 px-1">
                                                 <ShieldCheck className="w-2.5 h-2.5" />
                                                 End-to-end encrypted · images are not encrypted
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        sessionStorage.removeItem(`e2ee_${activeConvo.id}`);
+                                                        encKeysRef.current.delete(activeConvo.id);
+                                                        setEncUnlockedIds(prev => {
+                                                            const next = new Set(prev);
+                                                            next.delete(activeConvo.id);
+                                                            return next;
+                                                        });
+                                                        setDecryptedCache({});
+                                                        setEncPromptConvoId(activeConvo.id);
+                                                        setEncPromptPassword("");
+                                                        setEncPromptError("");
+                                                    }}
+                                                    className="ml-auto flex items-center gap-0.5 text-[10px] text-muted-foreground/50 hover:text-destructive/70 transition-colors"
+                                                    title="Forget stored password"
+                                                >
+                                                    <Trash2 className="w-2.5 h-2.5" />
+                                                    Forget password
+                                                </button>
                                             </div>
                                         )}
                                     </form>
@@ -1723,7 +1980,8 @@ export default function MessagesPage() {
                                                 {/* Add member — admin only */}
                                                 {activeConvo.adminUsername === username && (
                                                     <div className="space-y-1">
-                                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">Add Member</p>
+                                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">Invite Member</p>
+                                                        <p className="text-[9px] text-muted-foreground/60 px-1">Sends an invite they can accept or decline.</p>
                                                         <div className="relative">
                                                             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                                                             <Input
@@ -1746,6 +2004,7 @@ export default function MessagesPage() {
                                                                     }}>{initials(u.displayName)}</AvatarFallback>
                                                                 </Avatar>
                                                                 <span className="truncate">{u.displayName}</span>
+                                                                <AtSign className="w-3 h-3 ml-auto text-muted-foreground/40 shrink-0" />
                                                             </button>
                                                         ))}
                                                     </div>
@@ -1794,6 +2053,47 @@ export default function MessagesPage() {
                                     </Button>
                                 </div>
                                 <Separator className="bg-white/7" />
+
+                                {/* Friends quick-select */}
+                                {friends.length > 0 && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Your Friends</p>
+                                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                                            {friends.map(f => {
+                                                const other = f.userA === username ? f.userB : f.userA;
+                                                const p = friendProfileMap[other];
+                                                const st = statusMap[other] ?? "offline";
+                                                return (
+                                                    <button key={other}
+                                                        disabled={dmCreating}
+                                                        onClick={() => openDM({ username: other, displayName: p?.displayName ?? other, schoolName: p?.schoolName ?? "", userType: "" })}
+                                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors text-left"
+                                                    >
+                                                        <div className="relative shrink-0">
+                                                            <Avatar className="w-8 h-8">
+                                                                {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
+                                                                <AvatarFallback className="text-xs font-bold" style={{
+                                                                    background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                                    color: "oklch(0.78 0.15 278)",
+                                                                }}>{initials(p?.displayName ?? other)}</AvatarFallback>
+                                                            </Avatar>
+                                                            {st !== "offline" && (
+                                                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                                                                    style={{ background: statusColor(st), borderColor: "var(--card)" }} />
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-medium truncate">{p?.displayName ?? other}</p>
+                                                            <p className="text-[9px]" style={{ color: statusColor(st) }}>{statusLabel(st)}</p>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <Separator className="bg-white/7" />
+                                    </div>
+                                )}
+
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                     <Input autoFocus value={searchQuery}
@@ -1827,14 +2127,20 @@ export default function MessagesPage() {
                                                 <p className="text-sm font-medium truncate">{user.displayName}</p>
                                                 <p className="text-[10px] text-muted-foreground truncate">
                                                     @{user.username}{user.schoolName ? ` · ${user.schoolName}` : ""}
+                                                    {isFriend(user.username) ? " · Friend" : ""}
                                                 </p>
                                             </div>
                                             {dmCreating && <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto shrink-0" />}
                                         </button>
                                     ))}
-                                    {!searching && searchQuery.length < 2 && (
+                                    {!searching && searchQuery.length < 2 && friends.length === 0 && (
                                         <p className="text-xs text-muted-foreground text-center py-4">
-                                            Type at least 2 characters to search.
+                                            Add friends first to start conversations. Type to search users.
+                                        </p>
+                                    )}
+                                    {!searching && searchQuery.length < 2 && friends.length > 0 && (
+                                        <p className="text-xs text-muted-foreground text-center py-2">
+                                            Or search for anyone above.
                                         </p>
                                     )}
                                 </div>
@@ -2103,7 +2409,25 @@ export default function MessagesPage() {
                     <UserProfileModal
                         username={viewProfileUsername}
                         onClose={() => setViewProfileUsername(null)}
-                        onMessage={() => setViewProfileUsername(null)}
+                        onMessage={() => {
+                            // Open DM with this user
+                            const u: UserSearchResult = {
+                                username: viewProfileUsername,
+                                displayName: friendProfileMap[viewProfileUsername]?.displayName ?? viewProfileUsername,
+                                schoolName: friendProfileMap[viewProfileUsername]?.schoolName ?? "",
+                                userType: "",
+                            };
+                            openDM(u);
+                            setViewProfileUsername(null);
+                        }}
+                        friendStatus={
+                            isFriend(viewProfileUsername) ? "friends"
+                            : sentTo(viewProfileUsername) ? "pending_sent"
+                            : pendingFrom(viewProfileUsername) ? "pending_received"
+                            : "none"
+                        }
+                        onAddFriend={() => sendFriendReq(viewProfileUsername)}
+                        onRespondFriend={(accept) => respondFriendReq(viewProfileUsername, accept)}
                     />
                 )}
             </AnimatePresence>
@@ -2280,16 +2604,213 @@ function ProfileGate() {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   FriendsPanel
+───────────────────────────────────────────────────────────── */
+function FriendsPanel({
+    username, friends, received, sent, profileMap, statusMap,
+    friendSearchQuery, friendSearchResults, friendSearching, friendRequestSending,
+    isFriend, pendingFrom, sentTo,
+    onSearchChange, onSendRequest, onRespond, onOpenDM,
+}: {
+    username: string;
+    friends: import("@/lib/useFriends").RTFriendship[];
+    received: import("@/lib/useFriends").RTFriendship[];
+    sent: import("@/lib/useFriends").RTFriendship[];
+    profileMap: Record<string, import("@/lib/useFriends").FriendProfile>;
+    statusMap: Record<string, UserStatus>;
+    friendSearchQuery: string;
+    friendSearchResults: UserSearchResult[];
+    friendSearching: boolean;
+    friendRequestSending: string | null;
+    isFriend: (u: string) => boolean;
+    pendingFrom: (u: string) => import("@/lib/useFriends").RTFriendship | undefined;
+    sentTo: (u: string) => import("@/lib/useFriends").RTFriendship | undefined;
+    onSearchChange: (q: string) => void;
+    onSendRequest: (u: string) => void;
+    onRespond: (from: string, accept: boolean) => void;
+    onOpenDM: (u: string) => void;
+}) {
+    return (
+        <div className="flex flex-col h-full">
+            {/* Search bar */}
+            <div className="px-3 py-2.5 border-b border-white/7 shrink-0">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                        value={friendSearchQuery}
+                        onChange={e => onSearchChange(e.target.value)}
+                        placeholder="Add friend by username…"
+                        className="pl-8 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
+                    />
+                </div>
+                {/* Search results */}
+                {friendSearchQuery.length >= 2 && (
+                    <div className="mt-2 space-y-1">
+                        {friendSearching ? (
+                            <div className="flex items-center justify-center py-3">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : friendSearchResults.length === 0 ? (
+                            <p className="text-[11px] text-muted-foreground text-center py-2">No users found.</p>
+                        ) : (
+                            friendSearchResults.filter(u => u.username !== username).map(u => {
+                                const alreadyFriend = isFriend(u.username);
+                                const hasSent       = !!sentTo(u.username);
+                                const hasIncoming   = !!pendingFrom(u.username);
+                                return (
+                                    <div key={u.username} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5">
+                                        <Avatar className="w-7 h-7 shrink-0">
+                                            <AvatarFallback className="text-[10px] font-bold" style={{
+                                                background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                color: "oklch(0.78 0.15 278)",
+                                            }}>{initials(u.displayName)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium truncate">{u.displayName}</p>
+                                            <p className="text-[9px] text-muted-foreground">@{u.username}</p>
+                                        </div>
+                                        {alreadyFriend ? (
+                                            <span className="text-[10px] text-green-400 shrink-0">Friends</span>
+                                        ) : hasIncoming ? (
+                                            <button onClick={() => onRespond(u.username, true)}
+                                                className="text-[10px] text-primary shrink-0 hover:underline">Accept</button>
+                                        ) : hasSent ? (
+                                            <span className="text-[10px] text-muted-foreground shrink-0">Sent</span>
+                                        ) : (
+                                            <button
+                                                onClick={() => onSendRequest(u.username)}
+                                                disabled={friendRequestSending === u.username}
+                                                className="flex items-center gap-1 text-[10px] text-primary shrink-0 hover:underline"
+                                            >
+                                                {friendRequestSending === u.username
+                                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                                    : <UserPlus className="w-3 h-3" />}
+                                                Add
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+                {/* Pending requests */}
+                {received.length > 0 && (
+                    <div className="px-3 py-2 border-b border-white/7">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                            Pending ({received.length})
+                        </p>
+                        {received.map(f => {
+                            const other = f.requestedBy;
+                            const p = profileMap[other];
+                            return (
+                                <div key={f.id} className="flex items-center gap-2 py-1.5">
+                                    <Avatar className="w-8 h-8 shrink-0">
+                                        {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
+                                        <AvatarFallback className="text-[10px] font-bold" style={{
+                                            background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                            color: "oklch(0.78 0.15 278)",
+                                        }}>{initials(p?.displayName ?? other)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-medium truncate">{p?.displayName ?? other}</p>
+                                        <p className="text-[9px] text-muted-foreground">@{other}</p>
+                                    </div>
+                                    <div className="flex gap-0.5">
+                                        <button onClick={() => onRespond(other, true)}
+                                            className="w-6 h-6 rounded-md flex items-center justify-center text-green-400 hover:bg-green-500/15 transition-colors">
+                                            <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button onClick={() => onRespond(other, false)}
+                                            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Friends list */}
+                <div className="px-3 py-2">
+                    {friends.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+                            <Users className="w-8 h-8 text-muted-foreground/25" />
+                            <p className="text-xs text-muted-foreground">No friends yet.</p>
+                            <p className="text-[10px] text-muted-foreground/60">Search above to add friends.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                                Friends — {friends.filter(f => {
+                                    const other = f.userA === username ? f.userB : f.userA;
+                                    return (statusMap[other] ?? "offline") !== "offline";
+                                }).length} online
+                            </p>
+                            {friends.map(f => {
+                                const other = f.userA === username ? f.userB : f.userA;
+                                const p = profileMap[other];
+                                const st = statusMap[other] ?? "offline";
+                                return (
+                                    <div key={f.id} className="flex items-center gap-2 py-1.5 group">
+                                        <div className="relative shrink-0">
+                                            <Avatar className="w-8 h-8">
+                                                {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
+                                                <AvatarFallback className="text-[10px] font-bold" style={{
+                                                    background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))",
+                                                    color: "oklch(0.78 0.15 278)",
+                                                }}>{initials(p?.displayName ?? other)}</AvatarFallback>
+                                            </Avatar>
+                                            {st !== "offline" && (
+                                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                                                    style={{ background: statusColor(st), borderColor: "var(--card)" }} />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium truncate">{p?.displayName ?? other}</p>
+                                            <p className="text-[9px]" style={{ color: statusColor(st) }}>{statusLabel(st)}</p>
+                                        </div>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    onClick={() => onOpenDM(other)}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <MessageSquare className="w-3.5 h-3.5" />
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left" className="text-[10px]">Message</TooltipContent>
+                                        </Tooltip>
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────
    ConvoItem
 ───────────────────────────────────────────────────────────── */
 function ConvoItem({
-    convo, name, subtitle, active, username, index, pfpCache, onClick,
+    convo, name, subtitle, active, username, index, pfpCache, statusMap, onClick,
 }: {
     convo: Conversation; name: string; subtitle: string; active: boolean;
-    username: string; index: number; pfpCache: Record<string, string>; onClick: () => void;
+    username: string; index: number; pfpCache: Record<string, string>;
+    statusMap: Record<string, UserStatus>; onClick: () => void;
 }) {
     const { unreadByConvo } = useUnread();
     const unread = unreadByConvo[convo.id] ?? 0;
+
+    const dmPartner = convo.type === "dm" ? convo.participants.find(p => p !== username) : null;
+    const partnerStatus: UserStatus = dmPartner ? (statusMap[dmPartner] ?? "offline") : "offline";
 
     return (
         <motion.button
@@ -2317,6 +2838,13 @@ function ConvoItem({
                         {convo.type === "group" ? <Users className="w-4 h-4" /> : initials(name)}
                     </AvatarFallback>
                 </Avatar>
+                {/* Status dot for DMs */}
+                {convo.type === "dm" && partnerStatus !== "offline" && (
+                    <span
+                        className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                        style={{ background: statusColor(partnerStatus), borderColor: "var(--card)" }}
+                    />
+                )}
                 {unread > 0 && (
                     <motion.span
                         initial={{ scale: 0 }} animate={{ scale: 1 }}

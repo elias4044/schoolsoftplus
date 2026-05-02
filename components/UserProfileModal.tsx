@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, MapPin, Globe,
   MessageSquare, Loader2, School, BadgeInfo, ExternalLink,
+  UserPlus, UserCheck, Clock,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,10 @@ interface Props {
   onClose: () => void;
   /** If provided, shows a "Message" button */
   onMessage?: () => void;
+  /** If provided, shows a friend request button with the given state */
+  friendStatus?: "none" | "friends" | "pending_sent" | "pending_received";
+  onAddFriend?: () => void;
+  onRespondFriend?: (accept: boolean) => void;
 }
 
 function initials(profile: PublicProfile) {
@@ -48,7 +53,7 @@ function capitalize(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 }
 
-export function UserProfileModal({ username, onClose, onMessage }: Props) {
+export function UserProfileModal({ username, onClose, onMessage, friendStatus, onAddFriend, onRespondFriend }: Props) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -154,6 +159,42 @@ export function UserProfileModal({ username, onClose, onMessage }: Props) {
                     <MessageSquare className="w-3.5 h-3.5" />
                     Message
                   </button>
+                )}
+                {!onMessage && friendStatus === undefined && <div className="mt-10" />}
+                {friendStatus !== undefined && (
+                  <div className="flex gap-2 mt-10">
+                    {onMessage && null /* already shown above */}
+                    {friendStatus === "none" && (
+                      <button onClick={onAddFriend}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white shadow-lg hover:opacity-90 transition-all"
+                        style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}>
+                        <UserPlus className="w-3.5 h-3.5" /> Add Friend
+                      </button>
+                    )}
+                    {friendStatus === "friends" && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/15 text-muted-foreground">
+                        <UserCheck className="w-3.5 h-3.5 text-green-400" /> Friends
+                      </span>
+                    )}
+                    {friendStatus === "pending_sent" && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/15 text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5" /> Request Sent
+                      </span>
+                    )}
+                    {friendStatus === "pending_received" && onRespondFriend && (
+                      <div className="flex gap-1.5">
+                        <button onClick={() => onRespondFriend(true)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
+                          style={{ background: "oklch(0.55 0.18 148)" }}>
+                          <UserCheck className="w-3.5 h-3.5" /> Accept
+                        </button>
+                        <button onClick={() => onRespondFriend(false)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/15 text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors">
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

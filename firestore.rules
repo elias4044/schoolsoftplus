@@ -70,6 +70,35 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Friendships ───────────────────────────────────────
+    // A friendship document has userA and userB fields (both set to the username/uid).
+    // Only the two parties involved can read their friendship doc.
+    // All writes go through the server-side API (Admin SDK bypasses rules).
+    match /friendships_v1/{friendshipId} {
+      allow read: if isAuthed() &&
+        (request.auth.uid == resource.data.userA ||
+         request.auth.uid == resource.data.userB);
+      allow write: if false;
+    }
+
+    // ── Presence ──────────────────────────────────────────
+    // Any authenticated user can read presence (needed for status dots).
+    // Only the owner can write their own presence document.
+    match /presence_v1/{username} {
+      allow read:  if isAuthed();
+      allow write: if isOwner(username);
+    }
+
+    // ── Group Invites ─────────────────────────────────────
+    // The invited user and the inviter can read an invite document.
+    // All writes go through the server-side API.
+    match /group_invites_v1/{inviteId} {
+      allow read: if isAuthed() &&
+        (request.auth.uid == resource.data.invitedUsername ||
+         request.auth.uid == resource.data.invitedBy);
+      allow write: if false;
+    }
+
     // ── Default deny ──────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

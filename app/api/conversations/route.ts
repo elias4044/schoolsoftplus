@@ -4,6 +4,7 @@ import { getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { getConversationsForUser, findOrCreateDM, createGroupChat } from "@/app/api/lib/messagingDb";
 import { getProfile } from "@/app/api/lib/profileDb";
 import { trackConversationCreated } from "@/app/api/lib/statsHelper";
+import { areFriends } from "@/app/api/lib/friendsDb";
 
 // GET /api/conversations  – list all conversations for the current user
 export async function GET(req: NextRequest) {
@@ -110,6 +111,26 @@ export async function POST(req: NextRequest) {
 
   if (!theirProfile) {
     return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
+  }
+
+  // Check if a DM already exists — if so, allow opening it regardless of friend status
+  const { db } = await import("@/app/api/lib/firebaseAdmin");
+  const participants = [username, targetUsername].sort();
+  const existingSnap = await db.collection("conversations_v1")
+    .where("participants", "==", participants)
+    .limit(1)
+    .get();
+
+  if (existingSnap.empty) {
+    // New DM: require friendship
+    const friends = await areFriends(username, targetUsername);
+    if (!friends) {
+      return NextResponse.json({
+        success: false,
+        error: "You must be friends to start a new direct message. Send them a friend request first.",
+        needsFriend: true,
+      }, { status: 403 });
+    }
   }
 
   const { conversation, created } = await findOrCreateDM(
