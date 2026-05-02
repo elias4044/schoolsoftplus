@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Search, X, Loader2, MapPin, School, MessageSquare, ArrowRight } from "lucide-react";
+import { Users, Search, X, Loader2, MapPin, School, MessageSquare, ArrowRight, UserPlus, UserCheck, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { AnimatePresence as AP } from "framer-motion";
 import { UserProfileModal } from "@/components/UserProfileModal";
 import { cn } from "@/lib/utils";
+import { useFriends } from "@/lib/useFriends";
+import { useSession } from "@/lib/useSession";
 
 interface UserSearchResult {
   username: string;
@@ -30,12 +32,17 @@ function initials(u: UserSearchResult) {
 }
 
 export default function PeoplePage() {
+  const { session } = useSession();
+  const username = session?.username ?? "";
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [viewProfile, setViewProfile] = useState<string | null>(null);
+  const [requestSending, setRequestSending] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
+
+  const { isFriend, pendingFrom, sentTo } = useFriends(username);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -50,15 +57,45 @@ export default function PeoplePage() {
     }, 350);
   }, [query]);
 
-  const openDM = async (username: string) => {
+  const openDM = async (targetUsername: string) => {
     const res = await fetch("/api/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUsername: username }),
+      body: JSON.stringify({ targetUsername }),
     });
     const data = await res.json();
     if (data.success) router.push("/messages");
+    else if (data.needsFriend) {
+      await sendFriendRequest(targetUsername);
+      alert("Friend request sent! You must be friends to message.");
+    }
   };
+
+  const sendFriendRequest = async (targetUsername: string) => {
+    setRequestSending(targetUsername);
+    try {
+      await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUsername }),
+      });
+    } finally { setRequestSending(null); }
+  };
+
+  const respondFriendRequest = async (fromUsername: string, accept: boolean) => {
+    await fetch("/api/friends", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromUsername, accept }),
+    });
+  };
+
+  function getFriendStatus(u: UserSearchResult): "friends" | "pending_sent" | "pending_received" | "none" {
+    if (isFriend(u.username)) return "friends";
+    if (sentTo(u.username)) return "pending_sent";
+    if (pendingFrom(u.username)) return "pending_received";
+    return "none";
+  }
 
   return (
     <>
@@ -69,7 +106,7 @@ export default function PeoplePage() {
           People
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Search for other SchoolSoft+ users to view their profile or start a conversation.
+          Search for other SchoolSoft+ users to view their profile or add them as friends.
         </p>
       </motion.div>
 
@@ -127,75 +164,111 @@ export default function PeoplePage() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="space-y-2"
           >
-            {results.map((user, i) => (
-              <motion.div
-                key={user.username}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className={cn(
-                  "group flex items-center gap-3 rounded-xl border border-white/7 bg-card p-4",
-                  "hover:border-white/15 transition-all cursor-pointer"
-                )}
-                onClick={() => setViewProfile(user.username)}
-              >
-                <Avatar className="w-12 h-12 shrink-0">
-                  <AvatarImage src={user.pfpUrl || undefined} />
-                  <AvatarFallback
-                    className="text-sm font-bold"
-                    style={{
-                      background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))",
-                      color: "oklch(0.75 0.15 278)",
-                    }}
-                  >
-                    {initials(user)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-sm font-semibold">{user.displayName}</span>
-                    {user.pronouns && <span className="text-[10px] text-muted-foreground">({user.pronouns})</span>}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">@{user.username}</p>
-                  {user.bio && (
-                    <p className="text-xs text-foreground/60 truncate mt-0.5">{user.bio}</p>
+            {results.map((user, i) => {
+              const fs = getFriendStatus(user);
+              return (
+                <motion.div
+                  key={user.username}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-xl border border-white/7 bg-card p-4",
+                    "hover:border-white/15 transition-all cursor-pointer"
                   )}
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {user.schoolName && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                        <School className="w-2.5 h-2.5" /> {user.schoolName}
-                      </span>
-                    )}
-                    {user.location && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                        <MapPin className="w-2.5 h-2.5" /> {user.location}
-                      </span>
-                    )}
-                    {user.userType && (
-                      <Badge variant="secondary" className="text-[9px] py-0">{capitalize(user.userType)}</Badge>
-                    )}
-                  </div>
-                </div>
+                  onClick={() => setViewProfile(user.username)}
+                >
+                  <Avatar className="w-12 h-12 shrink-0">
+                    <AvatarImage src={user.pfpUrl || undefined} />
+                    <AvatarFallback
+                      className="text-sm font-bold"
+                      style={{
+                        background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))",
+                        color: "oklch(0.75 0.15 278)",
+                      }}
+                    >
+                      {initials(user)}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={e => { e.stopPropagation(); openDM(user.username); }}
-                    className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105 active:scale-95"
-                    style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
-                    title="Send message"
-                  >
-                    <MessageSquare className="w-3 h-3" />
-                  </button>
-                  <button
-                    className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground transition-all"
-                    title="View profile"
-                  >
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-sm font-semibold">{user.displayName}</span>
+                      {user.pronouns && <span className="text-[10px] text-muted-foreground">({user.pronouns})</span>}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">@{user.username}</p>
+                    {user.bio && (
+                      <p className="text-xs text-foreground/60 truncate mt-0.5">{user.bio}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {user.schoolName && (
+                        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                          <School className="w-2.5 h-2.5" /> {user.schoolName}
+                        </span>
+                      )}
+                      {user.location && (
+                        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                          <MapPin className="w-2.5 h-2.5" /> {user.location}
+                        </span>
+                      )}
+                      {user.userType && (
+                        <Badge variant="secondary" className="text-[9px] py-0">{capitalize(user.userType)}</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {fs === "friends" && (
+                      <span className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-green-400">
+                        <UserCheck className="w-3 h-3" /> Friends
+                      </span>
+                    )}
+                    {fs === "pending_sent" && (
+                      <span className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground">
+                        <Clock className="w-3 h-3" /> Sent
+                      </span>
+                    )}
+                    {fs === "pending_received" && (
+                      <button
+                        onClick={e => { e.stopPropagation(); respondFriendRequest(user.username, true); }}
+                        className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg text-white"
+                        style={{ background: "oklch(0.55 0.18 148)" }}
+                      >
+                        <UserCheck className="w-3 h-3" /> Accept
+                      </button>
+                    )}
+                    {fs === "none" && (
+                      <button
+                        onClick={e => { e.stopPropagation(); sendFriendRequest(user.username); }}
+                        disabled={requestSending === user.username}
+                        className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg text-white transition-all hover:scale-105 active:scale-95"
+                        style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                      >
+                        {requestSending === user.username
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <UserPlus className="w-3 h-3" />}
+                        Add
+                      </button>
+                    )}
+                    {fs === "friends" && (
+                      <button
+                        onClick={e => { e.stopPropagation(); openDM(user.username); }}
+                        className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground transition-all"
+                        title="Send message"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                      </button>
+                    )}
+                    <button
+                      className="flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground transition-all"
+                      title="View profile"
+                    >
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
@@ -207,7 +280,19 @@ export default function PeoplePage() {
         <UserProfileModal
           username={viewProfile}
           onClose={() => setViewProfile(null)}
-          onMessage={() => { openDM(viewProfile); setViewProfile(null); }}
+          onMessage={
+            isFriend(viewProfile)
+              ? () => { openDM(viewProfile); setViewProfile(null); }
+              : undefined
+          }
+          friendStatus={
+            isFriend(viewProfile) ? "friends"
+            : sentTo(viewProfile) ? "pending_sent"
+            : pendingFrom(viewProfile) ? "pending_received"
+            : "none"
+          }
+          onAddFriend={() => sendFriendRequest(viewProfile)}
+          onRespondFriend={(accept) => respondFriendRequest(viewProfile, accept)}
         />
       )}
     </AP>
