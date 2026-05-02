@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import axios from "axios";
 
 const DEFAULT_USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36";
+  "Schoolsoft+/1.0 (https://ssp.elias4044.com; +)";
 
 /**
  * Creates a configured Axios instance that targets a specific school's
