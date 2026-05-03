@@ -10,6 +10,7 @@
 
   <p>
     <a href="https://ssp.elias4044.com"><img src="https://img.shields.io/badge/live-ssp.elias4044.com-6366f1?style=flat-square&logo=vercel" alt="Live" /></a>
+    <a href="https://developer.ssp.elias4044.com"><img src="https://img.shields.io/badge/docs-developer.ssp.elias4044.com-0ea5e9?style=flat-square&logo=readthedocs" alt="Developer Docs" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License" /></a>
     <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" alt="Next.js" />
     <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript" alt="TypeScript" />
@@ -244,6 +245,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on the development wo
 - [Report a bug](https://github.com/elias4044/schoolsoftplus/issues/new?template=bug_report.md)
 - [Request a feature](https://github.com/elias4044/schoolsoftplus/issues/new?template=feature_request.md)
 - Improve documentation
+- Browse the [Developer Portal](https://developer.ssp.elias4044.com) for API docs and integration guides ([elias4044/ssp-developer](https://github.com/elias4044/ssp-developer))
 - Star the repo ⭐
 
 ---
@@ -272,6 +274,7 @@ You're free to use, modify, and distribute this code. A credit or link back is a
   <p>Built by <a href="https://github.com/elias4044">Elias</a></p>
   <p>
     <a href="https://ssp.elias4044.com">Live site</a> ·
+    <a href="https://developer.ssp.elias4044.com">Developer docs</a> ·
     <a href="https://ssp.elias4044.com/stats">Stats</a> ·
     <a href="https://ssp.elias4044.com/open-source">Open Source</a>
   </p>

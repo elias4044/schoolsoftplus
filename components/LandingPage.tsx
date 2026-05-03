@@ -182,6 +182,7 @@ export default function LandingPage() {
             <ChangelogButton variant="badge" />
             <Link href="/stats" className="hover:text-foreground transition-colors">Stats</Link>
             <Link href="/open-source" className="hover:text-foreground transition-colors">Open source</Link>
+            <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Developers</a>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
           </nav>
           <Link
@@ -435,7 +436,8 @@ export default function LandingPage() {
                 </div>
                 <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
                   All the code is on GitHub under the MIT licence. Read it, fork it, report a bug, or submit a pull request.
-                  We welcome contributions of any size.
+                  We welcome contributions of any size. Developer documentation and API references are available at{" "}
+                  <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">developer.ssp.elias4044.com</a>.
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -445,6 +447,14 @@ export default function LandingPage() {
                 >
                   <GitPullRequest className="w-3.5 h-3.5" /> Contribute
                 </Link>
+                <a
+                  href="https://developer.ssp.elias4044.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" /> Docs
+                </a>
                 <a
                   href="https://github.com/elias4044/schoolsoftplus"
                   target="_blank"
@@ -490,6 +500,7 @@ export default function LandingPage() {
             <Link href="/stats"       className="hover:text-foreground transition-colors">Stats</Link>
             <Link href="/changelog"   className="hover:text-foreground transition-colors">Changelog</Link>
             <Link href="/open-source" className="hover:text-foreground transition-colors">Open source</Link>
+            <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Developers</a>
             <a href="https://github.com/elias4044/schoolsoftplus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           </div>
           <p className="text-xs text-muted-foreground opacity-60">Not affiliated with SchoolSoft AB.</p>
