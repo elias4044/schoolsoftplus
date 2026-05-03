@@ -229,7 +229,6 @@ export default function LoginPage() {
         setError(body?.message ?? "Invalid credentials.");
         return;
       }
-      // The server set the session cookies — just redirect.
       router.replace("/dashboard");
     } catch {
       setError("Network error. Please try again.");
@@ -241,121 +240,133 @@ export default function LoginPage() {
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* -- Left panel: decorative ------------------------- */}
-      <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-card border-r border-border flex-col justify-between p-12">
-        {/* Subtle line grid */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(oklch(1 0 0) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
-        {/* Top-right fade */}
-        <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-background/60 pointer-events-none" />
+    <div className="min-h-screen flex overflow-hidden" style={{ background: "var(--background)" }}>
+
+      {/* ── Left panel: immersive dark hero ─────────────── */}
+      <div className="hidden lg:flex lg:w-[54%] relative overflow-hidden flex-col justify-between p-12"
+        style={{ background: "var(--card)", borderRight: "1px solid oklch(1 0 0 / 6%)" }}>
+
+        {/* dot grid */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        {/* ambient top-left orb */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, var(--brand-dim) 0%, transparent 70%)" }} />
+        {/* ambient bottom-right orb */}
+        <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, oklch(0.55 0.25 295 / 8%) 0%, transparent 70%)" }} />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-xs font-bold">S+</span>
+        <div className="relative flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}>
+            <span className="text-white text-xs font-bold">S+</span>
           </div>
-          <span className="text-sm font-medium text-foreground/70 tracking-wide">SchoolSoft+</span>
+          <span className="text-sm font-semibold text-foreground/80">SchoolSoft+</span>
         </div>
 
-        {/* 3-D mockup */}
-        <div className="relative flex flex-col items-start gap-8">
+        {/* Hero copy + App mockup */}
+        <div className="relative flex flex-col items-start gap-10">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground leading-snug">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground leading-tight">
               Your school,<br />streamlined.
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground max-w-xs leading-relaxed">
-              Schedule, assignments, grades, and AI — in one place.
+            <p className="mt-3 text-sm leading-relaxed max-w-xs" style={{ color: "oklch(1 0 0 / 45%)" }}>
+              Schedule, assignments, grades, and AI — in one clean dashboard.
             </p>
           </div>
 
-          {/* Fixed-tilt app card */}
+          {/* 3-D app card */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            style={{ perspective: "900px" }}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            style={{ perspective: "1000px" }}
           >
             <motion.div
-              style={{ rotateX: 8, rotateY: -12, transformStyle: "preserve-3d" }}
-              className="rounded-xl border border-border bg-background overflow-hidden w-64 shadow-[0_24px_60px_oklch(0_0_0/0.5)]"
+              style={{ rotateX: 6, rotateY: -10, transformStyle: "preserve-3d" }}
+              className="w-72"
+              whileHover={{ rotateX: 4, rotateY: -7 }}
+              transition={{ type: "spring", stiffness: 160, damping: 22 }}
             >
-              {/* chrome */}
-              <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-border bg-card/60">
-                <div className="w-2 h-2 rounded-full bg-border" />
-                <div className="w-2 h-2 rounded-full bg-border" />
-                <div className="w-2 h-2 rounded-full bg-border" />
-                <span className="ml-auto text-[9px] text-muted-foreground">Wednesday</span>
-              </div>
-              {/* rows */}
-              <div className="p-2.5 space-y-1.5">
-                {[
-                  { icon: CalendarDays, label: "Mathematics · 08:15", color: "oklch(0.72 0.18 263)" },
-                  { icon: BookOpen,     label: "English · 10:00",     color: "oklch(0.72 0.18 148)" },
-                  { icon: StickyNote,   label: "2 notes · updated",   color: "oklch(0.75 0.18 310)" },
-                ].map(({ icon: Icon, label, color }, i) => (
-                  <motion.div
-                    key={label}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35, delay: 0.35 + i * 0.07 }}
-                    className="flex items-center gap-2.5 rounded-md bg-card border border-border px-2.5 py-2"
-                  >
-                    <div className="w-5 h-5 rounded flex items-center justify-center shrink-0" style={{ background: `oklch(from ${color} l c h / 18%)`, color }}>
-                      <Icon className="w-3 h-3" />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate">{label}</span>
-                  </motion.div>
-                ))}
-              </div>
-              {/* footer */}
-              <div className="border-t border-border px-3 py-2 bg-card/40 flex items-center justify-between">
-                <span className="text-[9px] text-muted-foreground">3 lessons today</span>
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === 0 ? "oklch(0.62 0.16 263)" : "oklch(1 0 0 / 10%)" }} />
+              {/* card background */}
+              <div style={{ background: "var(--background)", border: "1px solid oklch(1 0 0 / 10%)", boxShadow: "0 32px 80px oklch(0 0 0 / 60%)", borderRadius: "1rem", overflow: "hidden" }}>
+                {/* chrome */}
+                <div className="flex items-center gap-1.5 px-3 py-2.5 border-b" style={{ borderColor: "oklch(1 0 0 / 6%)", background: "oklch(1 0 0 / 3%)" }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.68 0.18 20)" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.78 0.16 70)" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.68 0.18 148)" }} />
+                  <span className="ml-auto text-[9px]" style={{ color: "oklch(1 0 0 / 35%)" }}>Today</span>
+                </div>
+                {/* rows */}
+                <div className="p-3 space-y-2">
+                  {[
+                    { icon: CalendarDays, label: "Mathematics · 08:15",   color: "oklch(0.65 0.22 278)" },
+                    { icon: BookOpen,     label: "English · 10:00",        color: "oklch(0.72 0.18 148)" },
+                    { icon: StickyNote,   label: "2 notes · updated",      color: "oklch(0.75 0.18 310)" },
+                  ].map(({ icon: Icon, label, color }, i) => (
+                    <motion.div
+                      key={label}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.35, delay: 0.4 + i * 0.08 }}
+                      className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 border"
+                      style={{ background: "oklch(1 0 0 / 3%)", borderColor: "oklch(1 0 0 / 6%)" }}
+                    >
+                      <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                        style={{ background: `${color.replace("oklch(", "oklch(").replace(")", " / 18%)")}`, color }}>
+                        <Icon className="w-3 h-3" />
+                      </div>
+                      <span className="text-[10px] truncate" style={{ color: "oklch(1 0 0 / 55%)" }}>{label}</span>
+                    </motion.div>
                   ))}
+                </div>
+                {/* footer */}
+                <div className="px-3 py-2 border-t flex items-center justify-between"
+                  style={{ borderColor: "oklch(1 0 0 / 6%)", background: "oklch(1 0 0 / 2%)" }}>
+                  <span className="text-[9px]" style={{ color: "oklch(1 0 0 / 30%)" }}>3 lessons today</span>
+                  <div className="flex gap-1">
+                    {[0,1,2].map(i => (
+                      <div key={i} className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: i === 0 ? "var(--primary)" : "oklch(1 0 0 / 10%)" }} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </motion.div>
           </motion.div>
         </div>
 
-        <p className="relative text-xs text-muted-foreground/40">
-          Not affiliated with SchoolSoft AB
+        <p className="relative text-[10px]" style={{ color: "oklch(1 0 0 / 25%)" }}>
+          Not affiliated with SchoolSoft AB · MIT Licensed
         </p>
       </div>
 
-      {/* -- Right panel: form ------------------------------ */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+      {/* ── Right panel: form ──────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-8">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="w-full max-w-sm"
         >
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-10">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">S+</span>
+          <div className="lg:hidden flex items-center gap-3 mb-10">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}>
+              <span className="text-white text-xs font-bold">S+</span>
             </div>
-            <span className="text-sm font-medium text-foreground/70">SchoolSoft+</span>
+            <span className="text-sm font-semibold text-foreground/80">SchoolSoft+</span>
           </div>
 
           <div className="mb-8">
-            <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-            <p className="text-sm text-muted-foreground mt-1.5">
+            <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
+            <p className="text-sm mt-1.5" style={{ color: "oklch(1 0 0 / 45%)" }}>
               Use your SchoolSoft credentials.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Field label="School" htmlFor="school">
               <SchoolPicker
                 value={schoolId}
@@ -369,10 +380,11 @@ export default function LoginPage() {
                 id="username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="bg-card border-border focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/40 h-10"
+                className="h-10 text-sm"
+                style={{ background: "var(--card)", borderColor: "oklch(1 0 0 / 8%)" }}
                 placeholder="firstname.lastname"
                 autoComplete="username"
-                type="username"
+                type="text"
                 required
               />
             </Field>
@@ -384,7 +396,8 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="pr-9 bg-card border-border focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/40 h-10"
+                  className="pr-9 h-10 text-sm"
+                  style={{ background: "var(--card)", borderColor: "oklch(1 0 0 / 8%)" }}
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
@@ -392,7 +405,8 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: "oklch(1 0 0 / 35%)" }}
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -402,37 +416,40 @@ export default function LoginPage() {
 
             <AnimatePresence>
               {error && (
-                <motion.p
+                <motion.div
                   key="err"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="text-xs text-destructive overflow-hidden"
+                  className="overflow-hidden"
                 >
-                  {error}
-                </motion.p>
+                  <p className="text-xs px-3 py-2.5 rounded-lg border"
+                    style={{ color: "oklch(0.68 0.19 24)", background: "oklch(0.58 0.19 24 / 8%)", borderColor: "oklch(0.58 0.19 24 / 20%)" }}>
+                    {error}
+                  </p>
+                </motion.div>
               )}
             </AnimatePresence>
 
-            <Button
+            <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors mt-1 font-medium"
+              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}
             >
               {isLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <span className="flex items-center gap-2">
-                  Sign in <ArrowRight className="w-3.5 h-3.5" />
-                </span>
+                <>Sign in <ArrowRight className="w-3.5 h-3.5" /></>
               )}
-            </Button>
+            </button>
           </form>
 
           {/* Help links */}
-          <div className="mt-6 pt-5 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="mt-6 pt-5 border-t flex items-center justify-between text-[11px]"
+            style={{ borderColor: "oklch(1 0 0 / 6%)", color: "oklch(1 0 0 / 35%)" }}>
             <Link href="/login-help" className="hover:text-foreground transition-colors">
-              Can't sign in?
+              Can&apos;t sign in?
             </Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">
               Terms &amp; Privacy
@@ -455,7 +472,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
+      <Label htmlFor={htmlFor} className="text-xs font-medium" style={{ color: "oklch(1 0 0 / 45%)" }}>
         {label}
       </Label>
       {children}

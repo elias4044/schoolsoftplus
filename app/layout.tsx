@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppThemeProvider } from "@/lib/theme-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -111,7 +112,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} dark h-full`}
     >
       <body className="min-h-full antialiased">
-        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        <AppThemeProvider>
+          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        </AppThemeProvider>
       </body>
     </html>
   );

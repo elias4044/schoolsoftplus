@@ -8,7 +8,8 @@ export type WidgetId =
   | 'lunch'
   | 'news'
   | 'weather'
-  | 'countdown';
+  | 'countdown'
+  | 'messages';
 
 export interface WidgetInstance {
   instanceId: string;

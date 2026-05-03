@@ -21,6 +21,7 @@ import LunchWidget     from "./LunchWidget";
 import NewsWidget      from "./NewsWidget";
 import WeatherWidget   from "./WeatherWidget";
 import CountdownWidget from "./CountdownWidget";
+import MessagesWidget  from "./MessagesWidget";
 import type { WidgetInstance, WidgetId, WidgetSize } from "@/lib/widgets/types";
 
 // Map widgetId → component
@@ -32,6 +33,7 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<{ size: WidgetSize
   news:      NewsWidget,
   weather:   WeatherWidget,
   countdown: CountdownWidget,
+  messages:  MessagesWidget,
 };
 
 interface Props {

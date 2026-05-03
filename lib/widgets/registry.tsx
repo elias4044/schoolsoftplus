@@ -5,9 +5,9 @@ import {
   StickyNote,
   UtensilsCrossed,
   Newspaper,
-  BarChart2,
   CloudSun,
   Timer,
+  MessageSquare,
 } from "lucide-react";
 import type { WidgetId, WidgetSize } from "./types";
 
@@ -76,6 +76,14 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
     icon: Timer,
     defaultSize: "2x1",
     allowedSizes: ["1x1", "2x1", "4x1", "2x2", "4x2"],
+  },
+  messages: {
+    id: "messages",
+    label: "Messages",
+    description: "Latest conversations and unread messages.",
+    icon: MessageSquare,
+    defaultSize: "2x2",
+    allowedSizes: ["2x1", "2x2", "4x2"],
   },
 };
 
