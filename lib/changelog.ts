@@ -23,6 +23,54 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.6",
+    date: "2026-05-03",
+    title: "Class & Staff Pages, Design Overhaul & Developer Portal",
+    summary:
+      "A packed release: new Class and Staff pages give you a full view of your classmates and teachers. The entire app got a theming overhaul with 6 background themes and 6 accent colours, all configurable from Settings. A brand-new SchoolSoft+ Developer portal lets third-party developers explore the public API. Several bug fixes are also included.",
+    tags: ["feature", "improvement", "fix"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.6",
+    sections: [
+      {
+        title: "Class & Staff Pages",
+        items: [
+          { text: "New /class page — view all students in your class with names, usernames, and profile pictures", tag: "feature" },
+          { text: "New /staff route — browse all teachers and staff at your school with roles and contact info", tag: "feature" },
+          { text: "Both pages are accessible from the sidebar with keyboard shortcuts", tag: "feature" },
+          { text: "Clicking a student or staff card opens their full public profile modal", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Design System & Theming",
+        items: [
+          { text: "6 new background themes: Midnight, Abyss, Dim, Warm, Forest, Ocean", tag: "feature" },
+          { text: "6 accent colour options: Violet, Blue, Cyan, Green, Rose, Amber", tag: "feature" },
+          { text: "Theme and accent are persisted in localStorage and applied before first paint — no flash", tag: "improvement" },
+          { text: "Theme and accent pickers with visual previews added to the Settings → Appearance section", tag: "feature" },
+          { text: "All CSS variables are now scoped via data-theme and data-accent attributes on <html>", tag: "improvement" },
+          { text: "Login page fully redesigned — immersive split-panel layout with ambient orbs and a 3-D app mockup", tag: "improvement" },
+        ],
+      },
+      {
+        title: "SchoolSoft+ Developer Portal",
+        items: [
+          { text: "New public developer portal at /developer — explore the SchoolSoft+ public API", tag: "feature" },
+          { text: "Interactive API reference with endpoint docs, request/response examples, and authentication guide", tag: "feature" },
+          { text: "Dark, immersive design consistent with the rest of the app", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Bug Fixes",
+        items: [
+          { text: "Fixed open-source page being horizontally cut off due to fixed-positioned ambient orbs", tag: "fix" },
+          { text: "Fixed several layout and spacing issues across dashboard widgets", tag: "fix" },
+          { text: "Fixed theme not persisting correctly on hard reload in some browsers", tag: "fix" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.5",
     date: "2026-04-28",
     title: "Messaging Overhaul — Encryption, Images, GIFs & More",
