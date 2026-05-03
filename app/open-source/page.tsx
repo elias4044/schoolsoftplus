@@ -108,6 +108,12 @@ const CONTRIB = [
     href: "https://github.com/elias4044/schoolsoftplus/fork",
     cta: "Fork repo", color: "oklch(0.75 0.18 310)",
   },
+  {
+    icon: BookOpen, title: "Developer docs",
+    desc: "SchoolSoft+ Developer has documentation for the SchoolSoft and SchoolSoft+ APIs, plus integration guides.",
+    href: "https://developer.ssp.elias4044.com",
+    cta: "Open developer portal", color: "oklch(0.72 0.16 263)",
+  },
 ];
 
 /* ─── Page ─────────────────────────────────────────────── */
@@ -153,6 +159,13 @@ export default function OpenSourcePage() {
               The full source code is on GitHub. Read it, run it locally, report bugs, suggest features, or submit pull requests.
             </p>
             <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href="https://developer.ssp.elias4044.com"
+                target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Developer docs
+              </a>
               <a
                 href="https://github.com/elias4044/schoolsoftplus"
                 target="_blank" rel="noopener noreferrer"
@@ -255,6 +268,47 @@ export default function OpenSourcePage() {
           </Reveal>
         </section>
 
+        {/* Developer portal */}
+        <section className="py-10 border-b border-border">
+          <Reveal>
+            <div className="rounded-xl border border-border bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <p className="font-medium text-sm">SchoolSoft+ Developer</p>
+                </div>
+                <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
+                  Documentation for the SchoolSoft and SchoolSoft+ APIs, integration guides, and reference material.
+                  Source code for the developer portal is available at{" "}
+                  <a
+                    href="https://github.com/elias4044/ssp-developer"
+                    target="_blank" rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-foreground transition-colors"
+                  >
+                    elias4044/ssp-developer
+                  </a>{" "}on GitHub.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <a
+                  href="https://developer.ssp.elias4044.com"
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" /> Open docs
+                </a>
+                <a
+                  href="https://github.com/elias4044/ssp-developer"
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Code2 className="w-3.5 h-3.5" /> GitHub
+                </a>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
         {/* License + CoC */}
         <section className="py-10 border-b border-border">
           <div className="grid sm:grid-cols-2 gap-3">
@@ -342,6 +396,7 @@ export default function OpenSourcePage() {
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms &amp; Privacy</Link>
             <Link href="/stats" className="hover:text-foreground transition-colors">Stats</Link>
             <Link href="/login-help" className="hover:text-foreground transition-colors">Login help</Link>
+            <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Developers</a>
             <a href="https://github.com/elias4044/schoolsoftplus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           </div>
           <p className="text-xs text-muted-foreground opacity-50">Not affiliated with SchoolSoft AB. MIT Licensed.</p>
