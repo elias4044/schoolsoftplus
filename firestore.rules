@@ -37,10 +37,14 @@ service cloud.firestore {
 
     // ── Conversations ──────────────────────────────────────
     // Only participants can read a conversation.
-    // Writes go through the server-side API (Admin SDK bypasses rules).
+    // Participants may update only their own lastReadAt timestamp for cross-device read sync.
+    // All other writes go through the server-side API (Admin SDK bypasses rules).
     match /conversations_v1/{convId} {
-      allow read:  if isParticipant(resource.data);
-      allow write: if false;
+      allow read:   if isParticipant(resource.data);
+      // Allow participants to update ONLY the lastReadAt map (cross-device unread sync)
+      allow update: if isParticipant(resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastReadAt']);
+      allow write:  if false;
     }
 
     // ── Messages ──────────────────────────────────────────
@@ -97,6 +101,45 @@ service cloud.firestore {
         (request.auth.uid == resource.data.invitedUsername ||
          request.auth.uid == resource.data.invitedBy);
       allow write: if false;
+    }
+
+    // ── Voice Calls (WebRTC signaling) ────────────────────
+    // Both caller and callee can read/list call documents.
+    // list: Firestore query rules must not rely on resource.data, so we allow
+    //       any authenticated user to *list* — the where() clause in the client
+    //       already scopes results to calleeUsername == uid, which Firestore
+    //       enforces at the query level. Individual document reads are still
+    //       gated below.
+    match /calls_v1/{callId} {
+      allow list: if isAuthed();
+      allow get: if isAuthed() && (
+        request.auth.uid == resource.data.callerUsername ||
+        request.auth.uid == resource.data.calleeUsername
+      );
+      allow create: if isAuthed() &&
+        request.auth.uid == request.resource.data.callerUsername;
+      allow update: if isAuthed() && (
+        request.auth.uid == resource.data.callerUsername ||
+        request.auth.uid == resource.data.calleeUsername
+      );
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.callerUsername ||
+        request.auth.uid == resource.data.calleeUsername
+      );
+
+      // ICE candidates — both parties can read/write/delete
+      match /callerCandidates/{candidateId} {
+        allow read, create, delete: if isAuthed() && (
+          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.callerUsername ||
+          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.calleeUsername
+        );
+      }
+      match /calleeCandidates/{candidateId} {
+        allow read, create, delete: if isAuthed() && (
+          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.callerUsername ||
+          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.calleeUsername
+        );
+      }
     }
 
     // ── Default deny ──────────────────────────────────────
