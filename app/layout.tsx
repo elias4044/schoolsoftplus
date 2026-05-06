@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     description:
       "Fast, modern, AI-powered interface for your SchoolSoft account.",
     images: ["/social-preview.png"],
-    creator: "@elias4044",
+    creator: "@elias4044_",
   },
 
   // Robots

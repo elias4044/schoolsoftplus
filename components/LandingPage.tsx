@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRef, useState, useEffect } from "react";
-import { motion, useInView, useSpring, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useInView, useSpring, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -19,14 +19,19 @@ import {
   GitPullRequest,
   Star,
   ChevronRight,
+  ChevronDown,
   Activity,
   Users,
   MessageSquare,
+  ExternalLink,
+  HelpCircle,
+  FileText,
+  Package,
 } from "lucide-react";
-import { ChangelogButton } from "@/components/ChangelogModal";
 import MessagingShowcase from "@/components/MessagingShowcase";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Image from "next/image";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -86,6 +91,147 @@ function LiveCounter({ label }: { label: string }) {
 
   if (value === null) return <span className="opacity-20">-</span>;
   return <>{display}</>;
+}
+
+/* --- Nav dropdown ----------------------------------------- */
+type NavItem = {
+  label: string;
+  desc?: string;
+  href: string;
+  icon?: React.ElementType;
+  iconColor?: string;
+  external?: boolean;
+  logo?: string;
+  badge?: string;
+};
+
+function NavDropdown({
+  label,
+  items,
+  align = "left",
+}: {
+  label: string;
+  items: NavItem[];
+  align?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    if (open) {
+      document.addEventListener("mousedown", onOutside);
+      document.addEventListener("keydown", onEsc);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition-colors ${
+          open ? "text-white bg-white/6" : "text-white/45 hover:text-white hover:bg-white/4"
+        }`}
+      >
+        {label}
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18 }}>
+          <ChevronDown className="w-3 h-3" />
+        </motion.div>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className={`absolute top-full mt-1.5 ${
+              align === "right" ? "right-0" : "left-0"
+            } min-w-[260px] rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_24px_60px_oklch(0_0_0/0.6)] z-50`}
+          >
+            <div className="p-1.5">
+              {items.map((item, idx) => {
+                const Icon = item.icon;
+                const iconBg = item.iconColor
+                  ? item.iconColor.slice(0, -1) + " / 15%)"
+                  : "oklch(0.65 0.22 278 / 15%)";
+                const inner = (
+                  <>
+                    {item.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.logo}
+                        alt=""
+                        className="w-7 h-7 rounded-lg shrink-0 object-contain bg-white/5 p-0.5"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : Icon ? (
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: iconBg, color: item.iconColor }}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-white/75 group-hover:text-white transition-colors">
+                          {item.label}
+                        </span>
+                        {item.badge && (
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                            style={{ background: "oklch(0.65 0.22 278 / 20%)", color: "oklch(0.78 0.22 278)" }}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.external && (
+                          <ExternalLink className="w-3 h-3 text-white/20 group-hover:text-white/40 transition-colors ml-auto shrink-0" />
+                        )}
+                      </div>
+                      {item.desc && (
+                        <p className="text-[11px] text-white/35 mt-0.5 leading-snug">{item.desc}</p>
+                      )}
+                    </div>
+                  </>
+                );
+                const cls =
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/6 transition-colors group w-full text-left";
+                return item.external ? (
+                  <a
+                    key={idx}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cls}
+                    onClick={() => setOpen(false)}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <Link key={idx} href={item.href} className={cls} onClick={() => setOpen(false)}>
+                    {inner}
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 /* --- Hero 3-D mockup -------------------------------------- */
@@ -265,21 +411,116 @@ export default function LandingPage() {
 
       {/* -- Header -- */}
       <header className="sticky top-0 z-50 border-b border-white/8 bg-[#080808]/90 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" style={{ color: "oklch(0.65 0.22 278)" }} />
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-2">
+          {/* Brand */}
+          <Link href="/" className="flex items-center gap-2 shrink-0 mr-1">
+            <Image src="/logo.png" alt="SchoolSoft+ Logo" className="w-6 h-6" width={24} height={24} />
             <span className="font-semibold text-sm text-white/90">SchoolSoft+</span>
-          </div>
-          <nav className="hidden sm:flex items-center gap-5 text-sm text-white/40">
-            <ChangelogButton variant="badge" />
-            <Link href="/stats" className="hover:text-white transition-colors">Stats</Link>
-            <Link href="/open-source" className="hover:text-white transition-colors">Open source</Link>
-            <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Developers</a>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+          </Link>
+
+          {/* Nav dropdowns */}
+          <nav className="hidden md:flex items-center gap-0.5 flex-1">
+            <NavDropdown
+              label="Products"
+              items={[
+                {
+                  label: "SchoolSoft+",
+                  desc: "The student dashboard app",
+                  href: "/",
+                  logo: "/logo.png",
+                },
+                {
+                  label: "SchoolSoft+ Developer",
+                  desc: "API docs, references & tools",
+                  href: "https://developer.ssp.elias4044.com",
+                  logo: "https://raw.githubusercontent.com/elias4044/ssp-developer/refs/heads/master/public/logo.png",
+                  external: true,
+                },
+                {
+                  label: "SchoolSoft+ Node",
+                  desc: "npm package for the SchoolSoft API",
+                  href: "https://developer.ssp.elias4044.com/docs/ssp-node",
+                  logo: "https://raw.githubusercontent.com/elias4044/ssp-node/refs/heads/main/public/logo.png",
+                  external: true,
+                },
+              ]}
+            />
+            <NavDropdown
+              label="Resources"
+              items={[
+                {
+                  label: "Changelog",
+                  desc: "What's new in SchoolSoft+",
+                  href: "/changelog",
+                  icon: Zap,
+                  iconColor: "oklch(0.72 0.18 148)",
+                  badge: "v1.5.0",
+                },
+                {
+                  label: "Stats",
+                  desc: "Live usage statistics",
+                  href: "/stats",
+                  icon: Activity,
+                  iconColor: "oklch(0.65 0.22 278)",
+                },
+                {
+                  label: "Open source",
+                  desc: "MIT licensed — read the code",
+                  href: "/open-source",
+                  icon: Code2,
+                  iconColor: "oklch(0.75 0.18 40)",
+                },
+                {
+                  label: "Login help",
+                  desc: "Trouble signing in?",
+                  href: "/login-help",
+                  icon: HelpCircle,
+                  iconColor: "oklch(0.70 0.18 320)",
+                },
+                {
+                  label: "Terms & Privacy",
+                  desc: "How we handle your data",
+                  href: "/terms",
+                  icon: FileText,
+                  iconColor: "oklch(0.60 0.12 260)",
+                },
+              ]}
+            />
+            <NavDropdown
+              label="Developers"
+              items={[
+                {
+                  label: "Developer portal",
+                  desc: "API docs & integration guides",
+                  href: "https://developer.ssp.elias4044.com",
+                  icon: Code2,
+                  iconColor: "oklch(0.65 0.22 278)",
+                  external: true,
+                },
+                {
+                  label: "GitHub",
+                  desc: "Source code, issues & pull requests",
+                  href: "https://github.com/elias4044/schoolsoftplus",
+                  icon: GitPullRequest,
+                  iconColor: "oklch(0.75 0.10 220)",
+                  external: true,
+                },
+                {
+                  label: "npm — schoolsoftplus",
+                  desc: "Node.js package for the SchoolSoft API",
+                  href: "https://developer.ssp.elias4044.com/docs/ssp-node",
+                  icon: Package,
+                  iconColor: "oklch(0.72 0.16 35)",
+                  external: true,
+                },
+              ]}
+            />
           </nav>
+
+          {/* CTA */}
           <Link
             href="/login"
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white shrink-0"
             style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
           >
             Sign in <ArrowRight className="w-3.5 h-3.5" />

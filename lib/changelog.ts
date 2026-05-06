@@ -23,13 +23,74 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.5.0",
+    date: "2026-05-06",
+    title: "Voice Calls, Notification Center & Cross-Device Unread Sync",
+    summary:
+      "A major social upgrade: 1-to-1 voice calls land in early beta, built entirely with WebRTC — no third-party app required. A new global notification center surfaces in-app toasts and a history bell everywhere in the dashboard. Unread message state is now backed by Firestore so switching devices or browsers gives you the correct dots immediately.",
+    tags: ["feature", "improvement", "fix"],
+    highlight: true,
+    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.5.0",
+    sections: [
+      {
+        title: "Voice Calls (Early Beta)",
+        items: [
+          { text: "1-to-1 voice calls directly in any DM — click the phone icon in the chat header to ring someone", tag: "feature" },
+          { text: "Built on WebRTC (RTCPeerConnection) with Google STUN servers — audio travels peer-to-peer, never through our servers", tag: "feature" },
+          { text: "Firebase Firestore used for signaling (SDP offer/answer + ICE candidates) — no separate signaling server needed", tag: "feature" },
+          { text: "Incoming call notifications appear on every page — accept or decline without leaving what you're doing", tag: "feature" },
+          { text: "Floating global call panel — stays visible and usable while you navigate anywhere in the app", tag: "feature" },
+          { text: "Mute toggle with live mute indicator in the call UI", tag: "feature" },
+          { text: "Calls auto-clean up from Firestore on hang-up or decline — no lingering signaling data", tag: "improvement" },
+          { text: "45-second ring timeout with automatic cleanup if neither party answers", tag: "improvement" },
+          { text: "Call documents have a server-side TTL (expireAt) as a safety net for orphaned call records", tag: "improvement" },
+          { text: "Requires HTTPS or localhost (browser WebRTC security requirement)", tag: "feature" },
+          { text: "Early beta — bugs are expected. Please report any issues via the Feedback page", tag: "feature" },
+        ],
+      },
+      {
+        title: "Global Notification Center",
+        items: [
+          { text: "New notification bell in the dashboard header (both desktop and mobile) — shows unread count badge", tag: "feature" },
+          { text: "Toast stack appears top-right for transient notifications — success, error, info, warning, and message types", tag: "feature" },
+          { text: "Bell dropdown shows full notification history with timestamps and per-item dismiss", tag: "feature" },
+          { text: "Mark-all-read and clear-all actions in the bell panel", tag: "feature" },
+          { text: "Incoming message toasts fire automatically on every page, not just the messages page", tag: "improvement" },
+          { text: "Toast auto-dismiss: info/success/warning after 4 s, errors persist until manually dismissed", tag: "improvement" },
+          { text: "Native browser Notification fired when a new message arrives and the tab is in the background", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Cross-Device Unread Sync",
+        items: [
+          { text: "Unread message state is now stored in Firestore (lastReadAt map per conversation) — no longer local to the device", tag: "improvement" },
+          { text: "Opening a conversation on one device marks it as read on all your devices instantly via Firestore realtime", tag: "improvement" },
+          { text: "Optimistic local update clears the unread dot immediately on the current device — no waiting for the round-trip", tag: "improvement" },
+          { text: "Removed all localStorage-based unread tracking — previously switching browsers or devices would show stale dots", tag: "fix" },
+          { text: "Unread counting now happens in a global provider so the sidebar badge stays accurate on every page", tag: "improvement" },
+        ],
+      },
+      {
+        title: "Bug Fixes & Polish",
+        items: [
+          { text: "Fixed mark-as-read API returning 400 for DM conversations (was incorrectly gated behind a group-only check)", tag: "fix" },
+          { text: "Fixed notification toasts appearing at the bottom-left — now consistently shown top-right near the bell", tag: "fix" },
+          { text: "Fixed pfpCache reference-before-initialization error on the messages page", tag: "fix" },
+          { text: "Fixed Firestore permission-denied on voice call list queries — switched to a safe list rule that doesn't access resource.data", tag: "fix" },
+          { text: "Mobile chat header is now always sticky so call and action buttons remain visible while scrolling", tag: "fix" },
+          { text: "Encrypted messages now correctly show decrypted content in pinned messages panel, reply quotes, copy buttons, and edit prefill", tag: "fix" },
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.6",
     date: "2026-05-03",
     title: "Class & Staff Pages, Design Overhaul & Developer Portal",
     summary:
       "A packed release: new Class and Staff pages give you a full view of your classmates and teachers. The entire app got a theming overhaul with 6 background themes and 6 accent colours, all configurable from Settings. A brand-new SchoolSoft+ Developer portal lets third-party developers explore the public API. Several bug fixes are also included.",
     tags: ["feature", "improvement", "fix"],
-    highlight: true,
+    highlight: false, // Didnt forget to set this to false this time 🙂
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.6",
     sections: [
       {
@@ -77,7 +138,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     summary:
       "A major upgrade to the messaging system. Group chats can now be end-to-end encrypted using AES-GCM-256 with a shared password. Image and GIF sending is fully integrated with an inline picker, clipboard paste, and live preview. Emoji reactions got a built-in picker with recent tracking, and the whole compose experience was polished with draft persistence, message search, and smarter message grouping.",
     tags: ["feature", "improvement", "security"],
-    highlight: true,
+    highlight: false,
     githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.5",
     sections: [
       {

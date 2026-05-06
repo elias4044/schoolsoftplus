@@ -505,6 +505,18 @@ export async function removeGroupMember(
   return docToConversation(updated);
 }
 
+export async function markConversationRead(
+  conversationId: string,
+  username: string
+): Promise<void> {
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) return;
+  const convo = docToConversation(doc);
+  if (!convo.participants.includes(username)) return;
+  await ref.update({ [`lastReadAt.${username}`]: Date.now() });
+}
+
 export async function transferGroupAdmin(
   conversationId: string,
   requestingUsername: string,

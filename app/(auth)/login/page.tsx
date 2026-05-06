@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const DEFAULT_SCHOOL_ID   = "engelska";
 const DEFAULT_SCHOOL_NAME = "Internationella Engelska Skolan - IES Halmstad";
@@ -242,7 +243,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex overflow-hidden" style={{ background: "var(--background)" }}>
 
-      {/* ── Left panel: immersive dark hero ─────────────── */}
+      {/*  Left panel: immersive dark hero  */}
       <div className="hidden lg:flex lg:w-[54%] relative overflow-hidden flex-col justify-between p-12"
         style={{ background: "var(--card)", borderRight: "1px solid oklch(1 0 0 / 6%)" }}>
 
@@ -257,13 +258,10 @@ export default function LoginPage() {
           style={{ background: "radial-gradient(circle, oklch(0.55 0.25 295 / 8%) 0%, transparent 70%)" }} />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}>
-            <span className="text-white text-xs font-bold">S+</span>
-          </div>
+        <Link href="/" className="relative flex items-center gap-3">
+          <Image src="/logo.png" alt="SchoolSoft+ Logo" className="w-6 h-6" width={16} height={16} />
           <span className="text-sm font-semibold text-foreground/80">SchoolSoft+</span>
-        </div>
+        </Link>
 
         {/* Hero copy + App mockup */}
         <div className="relative flex flex-col items-start gap-10">
@@ -342,7 +340,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* ── Right panel: form ──────────────────────────── */}
+      {/*  Right panel: form  */}
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div
           initial={{ opacity: 0, y: 18 }}

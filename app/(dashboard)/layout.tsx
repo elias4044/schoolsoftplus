@@ -8,6 +8,9 @@ import { Sidebar } from "@/components/sidebar";
 import { AiChatPanel } from "@/components/ai-chat-panel";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { UnreadProvider } from "@/lib/unread-context";
+import { NotificationProvider } from "@/lib/notification-context";
+import { CallProvider } from "@/lib/call-context";
+import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
 import { Comfortaa } from "next/font/google";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
@@ -97,13 +100,16 @@ function MobileHeader({
         Schoolsoft+
       </span>
 
-      <button
-        onClick={onAiOpen}
-        className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-brand-dim transition-colors"
-        aria-label="Open AI Assistant"
-      >
-        <Bot className="w-5 h-5" />
-      </button>
+      <div className="flex items-center gap-1">
+        <NotificationBell />
+        <button
+          onClick={onAiOpen}
+          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-brand-dim transition-colors"
+          aria-label="Open AI Assistant"
+        >
+          <Bot className="w-5 h-5" />
+        </button>
+      </div>
     </header>
   );
 }
@@ -140,11 +146,18 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
+      {/* Desktop notification bell — top-right fixed corner */}
+      <div className="hidden md:block fixed bottom-4 left-42 z-50">
+        <NotificationBell />
+      </div>
+
       {/* Main content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
         {children}
       </main>
 
+      {/* Global floating layers */}
+      <NotificationToasts />
       <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   );
@@ -153,9 +166,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <UnreadProvider>
-        <DashboardShell>{children}</DashboardShell>
-      </UnreadProvider>
+      <NotificationProvider>
+        <UnreadProvider>
+          <CallProvider>
+            <DashboardShell>{children}</DashboardShell>
+          </CallProvider>
+        </UnreadProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

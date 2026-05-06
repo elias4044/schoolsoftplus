@@ -298,7 +298,7 @@ export default function ClassPage() {
                 : `${filteredSections.flatMap(s => s.members).length} staff member${filteredSections.flatMap(s => s.members).length !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 pr-10">
             <button
               onClick={() => tab === "students" ? fetchStudents() : fetchStaff()}
               disabled={loading}

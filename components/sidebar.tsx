@@ -37,6 +37,7 @@ import { Separator } from "@/components/ui/separator";
 import { ChangelogModal } from "@/components/ChangelogModal";
 
 import { Comfortaa } from "next/font/google";
+import Image from "next/image";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 
@@ -151,18 +152,15 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
       <div className="flex items-center justify-between border-b border-sidebar-border shrink-0">
         <Link href="/"
           className={cn(
-            "flex items-center gap-3 px-3 h-16",
+            "flex items-center gap-1 px-3 h-16",
             !isMobile && collapsed && "opacity-0 pointer-events-none"
           )}
         >
           <motion.div
             whileHover={{ scale: 1.05 }}
             className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))",
-            }}
           >
-            <Sparkles className="w-4.5 h-4.5 text-white" />
+            <Image src="/logo.png" alt="SchoolSoft+ Logo" className="w-6 h-6" width={32} height={32} />
           </motion.div>
           <AnimatePresence>
             {(isMobile || !collapsed) && (
@@ -172,7 +170,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2 }}
-                className={"text-sm font-bold tracking-tight text-gradient whitespace-nowrap " + comfortaa.className}
+                className={"text-md pt-1 font-bold tracking-tight text-gradient whitespace-nowrap " + comfortaa.className}
               >
                 Schoolsoft+
               </motion.span>
