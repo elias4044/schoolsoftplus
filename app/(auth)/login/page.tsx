@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation"
 import Link from "next/link";
+import { markTransitionPending } from "@/lib/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,12 @@ import Image from "next/image";
 
 const DEFAULT_SCHOOL_ID   = "engelska";
 const DEFAULT_SCHOOL_NAME = "Internationella Engelska Skolan - IES Halmstad";
+const RECENT_SCHOOLS_KEY  = "ssp_recent_schools";
+const KONAMI_SEQ = [
+  "ArrowUp","ArrowUp","ArrowDown","ArrowDown",
+  "ArrowLeft","ArrowRight","ArrowLeft","ArrowRight",
+  "b","a",
+] as const;
 
 interface School { name: string; id: string; }
 
@@ -21,7 +28,7 @@ interface School { name: string; id: string; }
 const MAX_VISIBLE = 100;
 
 // ---------------------------------------------------------------------------
-// SchoolPicker
+// SchoolPicker  (keyboard-navigable + recent schools)
 // ---------------------------------------------------------------------------
 function SchoolPicker({
   value,
@@ -32,20 +39,32 @@ function SchoolPicker({
   displayName: string;
   onChange: (id: string, name: string) => void;
 }) {
-  const [open, setOpen]         = useState(false);
-  const [query, setQuery]       = useState("");
-  const [schools, setSchools]   = useState<School[]>([]);
-  const [fetched, setFetched]   = useState(false);
-  const [fetching, setFetching] = useState(false);
+  const [open, setOpen]               = useState(false);
+  const [query, setQuery]             = useState("");
+  const [schools, setSchools]         = useState<School[]>([]);
+  const [fetched, setFetched]         = useState(false);
+  const [fetching, setFetching]       = useState(false);
+  const [focusedIdx, setFocusedIdx]   = useState(-1);
+  const [recentSchools, setRecentSchools] = useState<School[]>([]);
+
   const wrapRef  = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef  = useRef<HTMLDivElement>(null);
 
-  // Fetch once on first open
+  // Load recent schools from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SCHOOLS_KEY);
+      if (stored) setRecentSchools(JSON.parse(stored) as School[]);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Fetch schools once on first open
   const loadSchools = useCallback(async () => {
     if (fetched || fetching) return;
     setFetching(true);
     try {
-      const res = await fetch("/api/schools");
+      const res  = await fetch("/api/schools");
       const data = await res.json();
       if (Array.isArray(data.schools)) setSchools(data.schools);
     } catch { /* ignore */ }
@@ -58,37 +77,73 @@ function SchoolPicker({
   function openPicker() {
     setOpen(true);
     setQuery("");
+    setFocusedIdx(-1);
     loadSchools();
     setTimeout(() => inputRef.current?.focus(), 50);
   }
+
+  function saveRecent(school: School) {
+    const updated = [school, ...recentSchools.filter(r => r.id !== school.id)].slice(0, 3);
+    setRecentSchools(updated);
+    try { localStorage.setItem(RECENT_SCHOOLS_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
+  }
+
+  function selectSchool(school: School) {
+    onChange(school.id, school.name);
+    saveRecent(school);
+    setOpen(false);
+  }
+
+  // Reset keyboard focus whenever the search query changes
+  useEffect(() => { setFocusedIdx(-1); }, [query]);
 
   // Close on outside click
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Keyboard: close on Escape
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open]);
-
+  // Build item lists
   const filtered = query.trim()
     ? schools.filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
     : schools;
-  const visible = filtered.slice(0, MAX_VISIBLE);
+  const visible  = filtered.slice(0, MAX_VISIBLE);
   const overflow = filtered.length - visible.length;
+
+  const showRecent     = !query.trim() && recentSchools.length > 0;
+  const recentVisible  = showRecent
+    ? recentSchools.filter(r => !schools.length || schools.some(s => s.id === r.id))
+    : [];
+  const recentIds = new Set(recentVisible.map(r => r.id));
+  const mainList  = visible.filter(s => !recentIds.has(s.id));
+  // Flat list used for keyboard-navigation index tracking
+  const navList   = [...recentVisible, ...mainList];
+
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIdx(i => Math.min(i + 1, navList.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && focusedIdx >= 0 && navList[focusedIdx]) {
+      e.preventDefault();
+      selectSchool(navList[focusedIdx]);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  // Auto-scroll focused item into view
+  useEffect(() => {
+    if (focusedIdx < 0 || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>(`[data-nav-idx="${focusedIdx}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [focusedIdx]);
 
   return (
     <div ref={wrapRef} className="relative">
@@ -102,9 +157,7 @@ function SchoolPicker({
           open && "border-primary/50 ring-1 ring-primary/30"
         )}
       >
-        <span className="flex-1 truncate text-foreground">
-          {displayName || value}
-        </span>
+        <span className="flex-1 truncate text-foreground">{displayName || value}</span>
         {fetching
           ? <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
           : <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
@@ -129,12 +182,14 @@ function SchoolPicker({
                 ref={inputRef}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
+                onKeyDown={handleInputKeyDown}
                 placeholder="Search your school…"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 text-foreground"
               />
               {query && (
                 <button
-                  onClick={() => setQuery("")}
+                  type="button"
+                  onClick={() => { setQuery(""); inputRef.current?.focus(); }}
                   className="text-muted-foreground hover:text-foreground transition-colors text-[10px]"
                 >
                   ✕
@@ -143,30 +198,67 @@ function SchoolPicker({
             </div>
 
             {/* List */}
-            <div className="max-h-56 overflow-y-auto overscroll-contain">
+            <div ref={listRef} className="max-h-56 overflow-y-auto overscroll-contain">
               {fetching && !schools.length ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Loading schools…
                 </div>
-              ) : filtered.length === 0 ? (
+              ) : navList.length === 0 ? (
                 <p className="text-center text-xs text-muted-foreground py-6">
                   No schools found for &ldquo;{query}&rdquo;
                 </p>
               ) : (
                 <>
-                  {visible.map(school => {
-                    const active = school.id === value;
+                  {/* Recent section */}
+                  {showRecent && recentVisible.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 pb-1 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">
+                        Recent
+                      </p>
+                      {recentVisible.map((school, ri) => {
+                        const active  = school.id === value;
+                        const focused = focusedIdx === ri;
+                        return (
+                          <button
+                            key={"r-" + school.id}
+                            data-nav-idx={ri}
+                            type="button"
+                            onClick={() => selectSchool(school)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
+                              active  && "bg-primary/10 text-primary",
+                              focused && !active && "bg-white/8 text-foreground",
+                              !active && !focused && "text-foreground/80 hover:bg-white/5 hover:text-foreground"
+                            )}
+                          >
+                            <span className="flex-1 truncate">{school.name}</span>
+                            {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                      {mainList.length > 0 && (
+                        <div className="mx-3 my-1 border-t border-border" />
+                      )}
+                    </>
+                  )}
+
+                  {/* Main list */}
+                  {mainList.map((school, mi) => {
+                    const navIdx  = recentVisible.length + mi;
+                    const active  = school.id === value;
+                    const focused = focusedIdx === navIdx;
                     return (
                       <button
                         key={school.name}
+                        data-nav-idx={navIdx}
                         type="button"
-                        onClick={() => { onChange(school.id, school.name); setOpen(false); }}
+                        onClick={() => selectSchool(school)}
                         className={cn(
                           "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
-                          active
-                            ? "bg-primary/10 text-primary"
-                            : "text-foreground/80 hover:bg-white/5 hover:text-foreground"
+                          active  && "bg-primary/10 text-primary",
+                          focused && !active && "bg-white/8 text-foreground",
+                          !active && !focused && "text-foreground/80 hover:bg-white/5 hover:text-foreground"
                         )}
                       >
                         <span className="flex-1 truncate">{school.name}</span>
@@ -174,6 +266,7 @@ function SchoolPicker({
                       </button>
                     );
                   })}
+
                   {overflow > 0 && (
                     <p className="text-center text-[10px] text-muted-foreground/50 py-2 border-t border-border">
                       {overflow} more — type to narrow results
@@ -184,12 +277,12 @@ function SchoolPicker({
             </div>
 
             {/* Footer hint */}
-            {schools.length > 0 && (
+            {navList.length > 0 && (
               <div className="border-t border-border px-3 py-1.5 flex items-center justify-between">
                 <span className="text-[10px] text-muted-foreground/50">
-                  {filtered.length} of {schools.length} schools
+                  {filtered.length} of {schools.length || "?"} schools
                 </span>
-                <span className="text-[10px] text-muted-foreground/40">Esc to close</span>
+                <span className="text-[10px] text-muted-foreground/40">↑↓ navigate · ↵ select · Esc close</span>
               </div>
             )}
           </motion.div>
@@ -210,13 +303,59 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exitActive, setExitActive] = useState(false);
+  const [easterEgg, setEasterEgg] = useState(false);
+  const [taglineAlt, setTaglineAlt] = useState(false);
+
+  const shiftHeldRef    = useRef(false);
+  const konamiBufferRef = useRef<string[]>([]);
+  const logoClicksRef   = useRef(0);
+  const logoTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingNavRef   = useRef(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated, authLoading, router]);
 
+  // Track Shift key state globally for the skip-transition shortcut
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = true; };
+    const up   = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = false; };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup",   up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
+
+  // Konami code easter egg  ↑↑↓↓←→←→BA
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      konamiBufferRef.current = [...konamiBufferRef.current, e.key].slice(-KONAMI_SEQ.length);
+      if (konamiBufferRef.current.join(",") === KONAMI_SEQ.join(",")) {
+        setEasterEgg(true);
+        konamiBufferRef.current = [];
+        setTimeout(() => setEasterEgg(false), 4200);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Secret tagline: click the hero heading 5× quickly
+  function handleLogoClick() {
+    logoClicksRef.current += 1;
+    if (logoTimerRef.current) clearTimeout(logoTimerRef.current);
+    if (logoClicksRef.current >= 5) {
+      setTaglineAlt(true);
+      logoClicksRef.current = 0;
+      setTimeout(() => setTaglineAlt(false), 3000);
+    } else {
+      logoTimerRef.current = setTimeout(() => { logoClicksRef.current = 0; }, 1500);
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pendingNavRef.current) return;
     setError(null);
     setIsLoading(true);
     try {
@@ -230,7 +369,13 @@ export default function LoginPage() {
         setError(body?.message ?? "Invalid credentials.");
         return;
       }
-      router.replace("/dashboard");
+      pendingNavRef.current = true;
+      const isLarge = window.innerWidth >= 1024;
+      if (isLarge && !shiftHeldRef.current) {
+        setExitActive(true); // curtain animates in → onAnimationComplete navigates
+      } else {
+        router.replace("/dashboard");
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -266,9 +411,21 @@ export default function LoginPage() {
         {/* Hero copy + App mockup */}
         <div className="relative flex flex-col items-start gap-10">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground leading-tight">
-              Your school,<br />streamlined.
-            </h2>
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={taglineAlt ? "alt" : "default"}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="text-3xl font-bold tracking-tight text-foreground leading-tight cursor-default select-none"
+                onClick={handleLogoClick}
+              >
+                {taglineAlt
+                  ? <>Your teacher&apos;s<br />nightmare.</>
+                  : <>Your school,<br />streamlined.</>}
+              </motion.h2>
+            </AnimatePresence>
             <p className="mt-3 text-sm leading-relaxed max-w-xs" style={{ color: "oklch(1 0 0 / 45%)" }}>
               Schedule, assignments, grades, and AI — in one clean dashboard.
             </p>
@@ -455,6 +612,158 @@ export default function LoginPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── Cinematic exit curtain: 7 strips close in from both sides ── */}
+      {exitActive && (
+        <div className="fixed inset-0 z-9999 overflow-hidden pointer-events-none">
+          {Array.from({ length: 7 }).map((_, i) => {
+            const fromLeft = i % 2 === 0;
+            const isLast   = i === 6;
+            const bg =
+              i % 3 === 0
+                ? "oklch(0.11 0.16 278)"
+                : i % 3 === 1
+                ? "oklch(0.09 0.13 295)"
+                : "oklch(0.07 0.10 310)";
+            return (
+              <motion.div
+                key={i}
+                className="absolute left-0 right-0"
+                style={{
+                  top:        `${(i / 7) * 100}%`,
+                  height:     `${100 / 7 + 0.3}%`,
+                  background: bg,
+                }}
+                initial={{ x: fromLeft ? "-105%" : "105%" }}
+                animate={{ x: "0%" }}
+                transition={{
+                  duration: 0.58,
+                  delay:    i * 0.048,
+                  ease:     [0.76, 0, 0.24, 1],
+                }}
+                onAnimationComplete={
+                  isLast
+                    ? () => { markTransitionPending(); router.replace("/dashboard"); }
+                    : undefined
+                }
+              >
+                {/* Leading-edge shimmer */}
+                <div
+                  className="absolute top-0 bottom-0"
+                  style={{
+                    [fromLeft ? "right" : "left"]: 0,
+                    width: "28px",
+                    background: fromLeft
+                      ? "linear-gradient(to right, transparent, rgba(255,255,255,0.06) 60%, rgba(255,255,255,0.18))"
+                      : "linear-gradient(to left,  transparent, rgba(255,255,255,0.06) 60%, rgba(255,255,255,0.18))",
+                  }}
+                />
+              </motion.div>
+            );
+          })}
+
+          {/* Brand mark springs in once strips converge */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center select-none"
+            style={{ zIndex: 20 }}
+            initial={{ opacity: 0, scale: 0.80 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.44, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="flex flex-col items-center gap-4">
+              <div
+                style={{
+                  filter:
+                    "drop-shadow(0 0 24px oklch(0.65 0.22 278 / 0.65)) drop-shadow(0 4px 16px oklch(0 0 0 / 0.7))",
+                }}
+              >
+                <Image
+                  src="/logo.png"
+                  alt="SchoolSoft+"
+                  width={52}
+                  height={52}
+                  priority
+                />
+              </div>
+              <span
+                className="text-[11px] tracking-[0.40em] uppercase font-medium"
+                style={{ color: "rgba(255,255,255,0.22)" }}
+              >
+                SchoolSoft+
+              </span>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── Konami code easter egg ────────────────────────────── */}
+      <AnimatePresence>
+        {easterEgg && (
+          <motion.div
+            key="easter-egg"
+            initial={{ opacity: 0, scale: 0.88, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 8 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-9998 flex items-center justify-center p-6"
+            style={{ background: "oklch(0 0 0 / 60%)", backdropFilter: "blur(6px)" }}
+            onClick={() => setEasterEgg(false)}
+          >
+            <div
+              className="font-mono text-sm rounded-2xl p-6 shadow-2xl max-w-sm w-full"
+              style={{
+                background: "oklch(0.08 0.02 150)",
+                border: "1px solid oklch(0.50 0.18 148 / 35%)",
+                boxShadow:
+                  "0 0 80px oklch(0.50 0.18 148 / 15%), 0 32px 64px oklch(0 0 0 / 60%)",
+                color: "oklch(0.72 0.18 148)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div
+                className="mb-3 flex items-center gap-2 text-xs tracking-widest uppercase"
+                style={{ color: "oklch(0.50 0.18 148)" }}
+              >
+                <span>▶</span><span>Cheat Code Activated</span>
+              </div>
+              {[
+                "HACKING SCHOOLSOFT",
+                "HACKING INTO YOUR GRADES",
+                "WHY ARE THEY ALL F'S",
+                "NOT CHANGING ALL OF THEM TO A'S",
+              ].map((line, i) => (
+                <motion.p
+                  key={line}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.13 + 0.05 }}
+                  className="text-xs leading-7"
+                >
+                  <span style={{ color: "oklch(0.45 0.15 148)" }}>{">"}</span>{" "}
+                  {line}{" "}
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.13 + 0.22 }}
+                    style={{ color: "oklch(0.65 0.2 148)" }}
+                  >
+                    ✓
+                  </motion.span>
+                </motion.p>
+              ))}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.78 }}
+                className="mt-4 text-center text-[10px] tracking-[0.2em] uppercase"
+                style={{ color: "oklch(0.45 0.15 148)" }}
+              >
+                Good luck today, student · click to dismiss
+              </motion.p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { NotificationProvider } from "@/lib/notification-context";
 import { CallProvider } from "@/lib/call-context";
 import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
 import { Comfortaa } from "next/font/google";
+import { CinematicTransition } from "@/components/CinematicTransition";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 
@@ -170,6 +171,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <UnreadProvider>
           <CallProvider>
             <DashboardShell>{children}</DashboardShell>
+            {/* Cinematic reveal — sweeps away the brand curtain after login */}
+            <CinematicTransition />
           </CallProvider>
         </UnreadProvider>
       </NotificationProvider>
