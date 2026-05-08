@@ -77,79 +77,79 @@ export async function POST(req: NextRequest) {
     console.log(`[login] usertypeCookie: ${usertypeCookie}`);
 
     // -- Update Firestore stats ------------------------------------------------
-    // const statsRef = db.collection("stats").doc("loginStats");
+    const statsRef = db.collection("stats").doc("loginStats");
 
-    // await db.runTransaction(async (tx) => {
-    //   const doc = await tx.get(statsRef);
+    await db.runTransaction(async (tx) => {
+      const doc = await tx.get(statsRef);
 
-    //   type UserEntry = {
-    //     username: string;
-    //     first_login: string;
-    //     last_login: string;
-    //     login_count: number;
-    //     data: { goals: unknown[]; notes: unknown[] };
-    //   };
+      type UserEntry = {
+        username: string;
+        first_login: string;
+        last_login: string;
+        login_count: number;
+        data: { goals: unknown[]; notes: unknown[] };
+      };
 
-    //   type StatsData = {
-    //     total_logins: number;
-    //     total_successful_logins: number;
-    //     total_api_calls: number;
-    //     unique_logins: number;
-    //     failed_logins: number;
-    //     users: UserEntry[];
-    //   };
+      type StatsData = {
+        total_logins: number;
+        total_successful_logins: number;
+        total_api_calls: number;
+        unique_logins: number;
+        failed_logins: number;
+        users: UserEntry[];
+      };
 
-    //   const base: StatsData = {
-    //     total_logins: 0,
-    //     total_successful_logins: 0,
-    //     total_api_calls: 0,
-    //     unique_logins: 0,
-    //     failed_logins: 0,
-    //     users: [],
-    //   };
+      const base: StatsData = {
+        total_logins: 0,
+        total_successful_logins: 0,
+        total_api_calls: 0,
+        unique_logins: 0,
+        failed_logins: 0,
+        users: [],
+      };
 
-    //   const data: StatsData = doc.exists
-    //     ? { ...base, ...(doc.data() as StatsData) }
-    //     : base;
+      const data: StatsData = doc.exists
+        ? { ...base, ...(doc.data() as StatsData) }
+        : base;
 
-    //   data.total_logins += 1;
-    //   data.total_api_calls += 1;
+      data.total_logins += 1;
+      data.total_api_calls += 1;
 
-    //   if (sessionCookie && hashCookie) {
-    //     data.total_successful_logins += 1;
+      if (sessionCookie && hashCookie) {
+        data.total_successful_logins += 1;
 
-    //     const lowerUsername = username.toLowerCase();
-    //     const existingIndex = data.users.findIndex(
-    //       (u) => u.username === lowerUsername
-    //     );
+        const lowerUsername = username.toLowerCase();
+        const existingIndex = data.users.findIndex(
+          (u) => u.username === lowerUsername
+        );
 
-    //     if (existingIndex === -1) {
-    //       data.unique_logins += 1;
-    //       data.users.push({
-    //         username: lowerUsername,
-    //         first_login: time,
-    //         last_login: time,
-    //         login_count: 1,
-    //         data: { goals: [], notes: [] },
-    //       });
-    //     } else {
-    //       data.users[existingIndex].last_login = time;
-    //       data.users[existingIndex].login_count += 1;
-    //       data.users[existingIndex].data ??= { goals: [], notes: [] };
-    //       data.users[existingIndex].data.goals ??= [];
-    //       data.users[existingIndex].data.notes ??= [];
-    //     }
-    //   } else {
-    //     data.failed_logins = (data.failed_logins ?? 0) + 1;
-    //   }
+        if (existingIndex === -1) {
+          data.unique_logins += 1;
+          data.users.push({
+            username: lowerUsername,
+            first_login: time,
+            last_login: time,
+            login_count: 1,
+            data: { goals: [], notes: [] },
+          });
+        } else {
+          data.users[existingIndex].last_login = time;
+          data.users[existingIndex].login_count += 1;
+          data.users[existingIndex].data ??= { goals: [], notes: [] };
+          data.users[existingIndex].data.goals ??= [];
+          data.users[existingIndex].data.notes ??= [];
+        }
+      } else {
+        data.failed_logins = (data.failed_logins ?? 0) + 1;
+      }
 
-    //   doc.exists ? tx.update(statsRef, data) : tx.set(statsRef, data);
-    // });
+      doc.exists ? tx.update(statsRef, data) : tx.set(statsRef, data);
+    });
 
-    // // Fire-and-forget histogram stats (hour, day, school, peak date)
-    // if (sessionCookie && hashCookie) {
-    //   trackLoginEvent(school);
-    // }
+    // Fire-and-forget histogram stats (hour, day, school, peak date)
+    if (sessionCookie && hashCookie) {
+      trackLoginEvent(school);
+    }
 
     if (sessionCookie && hashCookie) {
       // Extract only the raw value (everything after the first '=') from the
