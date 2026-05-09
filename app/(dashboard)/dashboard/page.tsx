@@ -33,7 +33,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight">{greeting}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{formatDate(new Date())}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-10">
           {editing && (
             <>
               <Button variant="ghost" size="sm" className="text-xs gap-1.5"

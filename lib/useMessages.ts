@@ -74,6 +74,7 @@ export interface RTConversation {
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
+  lastReadAt: Record<string, number>;
   createdAt: number;
 }
 
@@ -110,6 +111,7 @@ export function useConversations(username: string) {
           lastMessage:         d.lastMessage        ?? "",
           lastSenderUsername:  d.lastSenderUsername ?? "",
           lastAt:              d.lastAt             ?? 0,
+          lastReadAt:          d.lastReadAt         ?? {},
           createdAt:           d.createdAt          ?? 0,
         };
       });

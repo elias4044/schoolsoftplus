@@ -10,6 +10,7 @@ import {
   addGroupMember,
   removeGroupMember,
   transferGroupAdmin,
+  markConversationRead,
   ReplyTo,
   ShareCard,
 } from "@/app/api/lib/messagingDb";
@@ -238,9 +239,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!convo || !convo.participants.includes(username)) {
     return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
   }
-  if (convo.type !== "group") {
-    return NextResponse.json({ success: false, error: "Not a group conversation." }, { status: 400 });
-  }
 
   let body: {
     action?: string;
@@ -249,6 +247,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     targetUsername?: string;
   } = {};
   try { body = await req.json(); } catch { /* empty */ }
+
+  if (body.action === "mark_read") {
+    await markConversationRead(conversationId, username);
+    return NextResponse.json({ success: true });
+  }
+
+  if (convo.type !== "group") {
+    return NextResponse.json({ success: false, error: "Not a group conversation." }, { status: 400 });
+  }
 
   if (body.action === "rename") {
     const updated = await updateGroupInfo(conversationId, username, {
