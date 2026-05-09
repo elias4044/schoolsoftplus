@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
 
   const sessionInfo = await fetchSchoolsoftSession(school, ssToken);
   const userId = sessionInfo?.userId?.toString() ?? "";
+  const canonicalUsername = sessionInfo?.username ? sessionInfo.username.toLowerCase() : (username ?? "").toLowerCase();
 
   let jsessionid = "";
   let hash       = "";
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set("ssp_usertype",   usertype,   sessionCookieOpts);
   }
   res.cookies.set("ssp_school",   school,   { ...sessionCookieOpts, httpOnly: false });
-  res.cookies.set("ssp_username", username, { ...sessionCookieOpts, httpOnly: false });
+  res.cookies.set("ssp_username", canonicalUsername, { ...sessionCookieOpts, httpOnly: false });
 
   res.cookies.set("ssp_ss_token",         ssToken,                  { ...sessionCookieOpts, maxAge: 60 * 60 * 24 * 30 });
   res.cookies.set("ssp_ss_token_expires", String(ssTokenExpiresAt), { ...sessionCookieOpts, httpOnly: false, maxAge: 60 * 60 * 24 * 30 });

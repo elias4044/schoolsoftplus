@@ -1,8 +1,8 @@
 import { db } from "./firebaseAdmin";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Types
-───────────────────────────────────────────────────────────── */
+ */
 
 export type FriendshipStatus = "pending" | "accepted" | "declined";
 
@@ -16,15 +16,15 @@ export interface Friendship {
   updatedAt: number;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Collection
-───────────────────────────────────────────────────────────── */
+ */
 
 const COL = "friendships_v1";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Helpers
-───────────────────────────────────────────────────────────── */
+ */
 
 function canonical(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
@@ -44,9 +44,9 @@ function docToFriendship(doc: FirebaseFirestore.DocumentSnapshot<any>): Friendsh
   };
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Reads
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function getFriendship(a: string, b: string): Promise<Friendship | null> {
   const [u1, u2] = canonical(a, b);
@@ -96,9 +96,9 @@ export async function getPendingRequestsSent(username: string): Promise<Friendsh
   return snap.docs.map(docToFriendship);
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Writes
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function sendFriendRequest(from: string, to: string): Promise<Friendship> {
   const existing = await getFriendship(from, to);

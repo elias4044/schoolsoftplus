@@ -1,8 +1,8 @@
 import { db } from "./firebaseAdmin";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Types
-───────────────────────────────────────────────────────────── */
+ */
 
 export interface ReplyTo {
   messageId: string;
@@ -10,9 +10,9 @@ export interface ReplyTo {
   senderDisplayName: string;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Share cards — generated server-side, never trusted from client
-───────────────────────────────────────────────────────────── */
+ */
 
 export interface NoteShareCard {
   type: "note";
@@ -70,17 +70,17 @@ export interface Conversation {
   createdAt: number;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Collections
-───────────────────────────────────────────────────────────── */
+ */
 
 const CONV_COL = "conversations_v1";
 const MSG_COL  = "messages_v1";
 const PROF_COL = "profiles_v1";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Helpers
-───────────────────────────────────────────────────────────── */
+ */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conversation {
@@ -122,9 +122,9 @@ function docToMessage(doc: FirebaseFirestore.DocumentSnapshot<any>): Message {
   };
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Conversations
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function getConversationsForUser(username: string): Promise<Conversation[]> {
   const snap = await db
@@ -208,9 +208,9 @@ export async function updateParticipantPfp(username: string, pfpUrl: string) {
   await batch.commit();
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Messages
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function getMessages(conversationId: string, limit = 60): Promise<Message[]> {
   const snap = await db
@@ -343,9 +343,9 @@ export async function toggleReaction(
   return { ...msg, reactions };
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    User search (across profiles_v1)
-───────────────────────────────────────────────────────────── */
+ */
 
 export interface UserSearchResult {
   username: string;
@@ -391,9 +391,9 @@ export async function searchUsers(
   return results;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Group Chat
-───────────────────────────────────────────────────────────── */
+ */
 
 export interface CreateGroupInput {
   creatorUsername: string;

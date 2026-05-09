@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "./useSession";
 
@@ -61,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       : null;
 
+  const refreshInFlight = useRef(false);
+
   // login() is a no-op — the browser already has the cookies set by /api/login.
   // Callers should simply redirect to /dashboard after a successful login fetch.
   const login = useCallback(() => {
@@ -72,28 +74,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }, [router]);
 
-  /* ── AuthV2 proactive token refresh ───────────────────────
+  /* ── AuthV2 proactive token refresh (safe + single in-flight) ──
      Refresh when fewer than 5 minutes remain on the SS token.
-     This keeps JSESSIONID alive without forcing the user to
-     log in again.
+     Protects against overlapping refreshes and unhandled rejections.
   ──────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!session || session.authType !== "authv2") return;
 
     async function maybeRefresh() {
+      // Avoid concurrent refresh attempts
+      if (refreshInFlight.current) return;
+
       const expiresAt = getAuthV2ExpiresAt();
       if (!expiresAt) return;
 
       const secsLeft = expiresAt - Math.floor(Date.now() / 1000);
       if (secsLeft < 300) {
-        // Token is expiring — refresh silently
-        await fetch("/api/auth/v2/token-refresh", { method: "POST" });
+        refreshInFlight.current = true;
+        try {
+          const res = await fetch("/api/auth/v2/token-refresh", { method: "POST" });
+          if (!res.ok) {
+            console.warn("[auth] token-refresh failed:", res.status);
+          }
+        } catch (err) {
+          console.error("[auth] token-refresh error:", err);
+        } finally {
+          refreshInFlight.current = false;
+        }
       }
     }
 
-    maybeRefresh();
-    const interval = setInterval(maybeRefresh, 60 * 1000); // check every minute
-    return () => clearInterval(interval);
+    // Run immediately and then on an interval, catching any unexpected errors.
+    maybeRefresh().catch((err) => console.error("[auth] maybeRefresh error:", err));
+    const interval = setInterval(() => {
+      maybeRefresh().catch((err) => console.error("[auth] maybeRefresh error:", err));
+    }, 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      refreshInFlight.current = false;
+    };
   }, [session]);
 
   return (

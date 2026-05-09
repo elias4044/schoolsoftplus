@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession, applySessionCookieUpdates } from "@/app/api/lib/schoolsoft";
 import { fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
+import { authUser } from "@/app/api/lib/auth";
 import admin from "firebase-admin";
 import "@/app/api/lib/firebaseAdmin"; // ensure admin is initialised
 
@@ -13,6 +14,22 @@ export async function GET(req: NextRequest) {
   // Try JSESSIONID-based session first (works for both classic and AuthV2 post-callback)
   const sess = await requireSession(req);
   let username = sess?.username ?? "";
+
+  // If the incoming request carried a JSESSIONID cookie (classic flow),
+  // validate it server-side before minting a Firebase token. An expired
+  // or stale JSESSIONID should not be able to obtain a token.
+  const incomingHasJsession = !!req.cookies.get("ssp_jsessionid")?.value;
+  if (sess && incomingHasJsession) {
+    try {
+      const valid = await authUser(sess.cookieString, sess.school);
+      if (!valid) {
+        username = ""; // force fallback to AuthV2 bearer verification if available
+      }
+    } catch (err) {
+      console.error("[firebase-token] authUser check failed:", (err as Error).message);
+      username = "";
+    }
+  }
 
   // AuthV2 fallback: if requireSession failed OR returned an empty username,
   // verify directly via the stored Bearer token (doesn't need JSESSIONID).
@@ -33,7 +50,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (!username) {
-    return NextResponse.json({ success: false, error: "Could not determine username." }, { status: 400 });
+    const resErr = NextResponse.json({ success: false, error: "Could not determine username." }, { status: 400 });
+    applySessionCookieUpdates(resErr, sess?.cookieUpdates ?? null);
+    return resErr;
   }
 
   try {

@@ -153,6 +153,7 @@ export async function requireSession(req: NextRequest): Promise<{
   let activeToken  = ssToken ?? "";
   let newRefresh: string | undefined;
   let expiresAt: number | undefined;
+  let refreshedAccessToken = false;
 
   /* Try to refresh the access token first if we have a refresh token */
   if (refreshToken) {
@@ -170,6 +171,7 @@ export async function requireSession(req: NextRequest): Promise<{
           newRefresh  = d.refresh_token as string | undefined;
           const ei    = typeof d.expires === "number" ? d.expires : 900;
           expiresAt   = Math.floor(Date.now() / 1000) + ei;
+          refreshedAccessToken = true;
         }
       }
     } catch { /* fall through with existing token */ }
@@ -242,9 +244,9 @@ export async function requireSession(req: NextRequest): Promise<{
       jsessionid,
       hash,
       usertype,
-      ssToken:      newRefresh ? activeToken : undefined,
+      ssToken:      refreshedAccessToken ? activeToken : undefined,
       refreshToken: newRefresh,
-      expiresAt,
+      expiresAt:    refreshedAccessToken ? expiresAt : undefined,
       username:     resolvedUsername || undefined,
     },
   };

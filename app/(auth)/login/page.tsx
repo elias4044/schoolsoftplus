@@ -228,7 +228,7 @@ function LoginPageInner() {
   // Show AuthV2 error returned via ?authv2_error=... query param
   useEffect(() => {
     const authv2Error = searchParams.get("authv2_error");
-    if (authv2Error) setError(decodeURIComponent(authv2Error));
+    if (authv2Error) setError(authv2Error);
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {

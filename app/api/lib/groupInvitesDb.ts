@@ -1,9 +1,9 @@
 import { db } from "./firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Types
-───────────────────────────────────────────────────────────── */
+ */
 
 export type GroupInviteStatus = "pending" | "accepted" | "declined";
 
@@ -19,17 +19,17 @@ export interface GroupInvite {
   updatedAt: number;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Collection
-───────────────────────────────────────────────────────────── */
+ */
 
 const INV_COL  = "group_invites_v1";
 const CONV_COL = "conversations_v1";
 const PROF_COL = "profiles_v1";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Helpers
-───────────────────────────────────────────────────────────── */
+ */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function docToInvite(doc: FirebaseFirestore.DocumentSnapshot<any>): GroupInvite {
@@ -47,9 +47,9 @@ function docToInvite(doc: FirebaseFirestore.DocumentSnapshot<any>): GroupInvite 
   };
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Reads
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function getPendingInvitesForUser(username: string): Promise<GroupInvite[]> {
   const snap = await db.collection(INV_COL)
@@ -66,9 +66,9 @@ export async function getInviteById(id: string): Promise<GroupInvite | null> {
   return docToInvite(doc);
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Writes
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function sendGroupInvite(
   conversationId: string,
