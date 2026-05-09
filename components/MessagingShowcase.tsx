@@ -5,7 +5,7 @@ import { motion, useInView, useScroll, useTransform, useSpring, AnimatePresence 
 import {
   Lock, ShieldCheck, MessageSquare, Users, Zap, Eye, EyeOff,
   ArrowRight, Key, Server, Wifi, CheckCircle2, ImageIcon, Smile,
-  Reply, Pin, Hash, AtSign, Bell,
+  Reply, Pin, Hash, AtSign, Bell, Phone, Mic, MicOff, PhoneOff, FlaskConical,
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -759,6 +759,182 @@ export default function MessagingShowcase() {
                   { icon: Lock,    color: "oklch(0.72 0.18 148)", t: "Optional E2EE",      d: "Toggle encryption at creation time. Set a shared password. From that point forward, messages are unreadable without it." },
                   { icon: Pin,     color: "oklch(0.75 0.18 40)",  t: "Pin important stuff", d: "Pin messages so they don't get buried. See all pinned messages in the side panel at any time." },
                   { icon: CheckCircle2, color: "oklch(0.72 0.18 190)", t: "Admin controls", d: "Transfer admin, remove members, change description. You're in charge of groups you create." },
+                ].map(({ icon: Icon, color, t, d }, i) => (
+                  <motion.div
+                    key={t}
+                    initial={{ opacity: 0, x: 16 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: "-5% 0px" }}
+                    transition={{ duration: 0.45, delay: i * 0.1 }}
+                    className="flex items-start gap-3"
+                  >
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: `${color}20`, color }}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white/80 mb-0.5">{t}</p>
+                      <p className="text-[11px] text-white/35 leading-relaxed">{d}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════
+          VOICE CALLS (EARLY BETA)
+      ══════════════════════════════════════ */}
+      <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 55% 60% at 30% 50%, oklch(0.55 0.18 190 / 9%), transparent)" }} />
+
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          {/* Call UI mock */}
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-15% 0px" }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
+          >
+            {/* Phone card */}
+            <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] overflow-hidden shadow-[0_40px_80px_oklch(0_0_0/0.5)] max-w-[300px] mx-auto">
+              {/* header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 bg-white/3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+                  style={{ background: "oklch(0.55 0.18 190 / 30%)", color: "oklch(0.72 0.18 190)" }}>
+                  A
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white/90">Alex</p>
+                  <p className="text-[10px] text-white/35">Voice call</p>
+                </div>
+              </div>
+
+              {/* animated waveform */}
+              <div className="flex flex-col items-center justify-center gap-5 py-10">
+                <div className="relative">
+                  {/* pulse rings */}
+                  {[0, 1, 2].map(i => (
+                    <motion.div
+                      key={i}
+                      className="absolute rounded-full border"
+                      style={{
+                        inset: -(i + 1) * 14,
+                        borderColor: "oklch(0.55 0.18 190 / 20%)",
+                      }}
+                      animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.1, 0.4] }}
+                      transition={{ duration: 2, delay: i * 0.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  ))}
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center relative z-10"
+                    style={{ background: "oklch(0.55 0.18 190 / 20%)", border: "1.5px solid oklch(0.55 0.18 190 / 40%)" }}>
+                    <Phone className="w-6 h-6" style={{ color: "oklch(0.72 0.18 190)" }} />
+                  </div>
+                </div>
+
+                {/* sound bars */}
+                <div className="flex items-end gap-1 h-8">
+                  {[3, 5, 8, 6, 4, 7, 5, 3, 6, 4].map((h, i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1 rounded-full"
+                      style={{ background: "oklch(0.65 0.18 190)", height: h * 3 }}
+                      animate={{ scaleY: [1, 0.3 + Math.random() * 0.7, 1] }}
+                      transition={{ duration: 0.5 + Math.random() * 0.4, repeat: Infinity, delay: i * 0.07, ease: "easeInOut" }}
+                    />
+                  ))}
+                </div>
+
+                <p className="text-[11px] text-white/30 font-mono">0:23</p>
+              </div>
+
+              {/* controls */}
+              <div className="flex items-center justify-center gap-5 px-5 py-5 border-t border-white/8">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white/8 border border-white/10">
+                  <MicOff className="w-4 h-4 text-white/50" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                  style={{ background: "oklch(0.55 0.22 20 / 90%)" }}>
+                  <PhoneOff className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white/8 border border-white/10">
+                  <Mic className="w-4 h-4 text-white/50" />
+                </div>
+              </div>
+            </div>
+
+            {/* Incoming call card floating above */}
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute -top-6 -right-4 rounded-2xl border border-white/10 bg-[#0d0d0d]/95 backdrop-blur px-4 py-3 shadow-2xl flex items-center gap-3 w-52"
+            >
+              <motion.div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "oklch(0.55 0.22 145 / 25%)", border: "1px solid oklch(0.55 0.22 145 / 40%)" }}
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <Phone className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.22 145)" }} />
+              </motion.div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-white/80 truncate">Incoming call</p>
+                <p className="text-[9px] text-white/35">Sofia</p>
+              </div>
+              <div className="flex gap-1">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ background: "oklch(0.55 0.22 145 / 30%)" }}>
+                  <Phone className="w-3 h-3" style={{ color: "oklch(0.72 0.22 145)" }} />
+                </div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ background: "oklch(0.55 0.22 20 / 30%)" }}>
+                  <PhoneOff className="w-3 h-3" style={{ color: "oklch(0.72 0.22 20)" }} />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          <div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-15% 0px" }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Beta badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] text-amber-300/80 mb-4"
+              >
+                <FlaskConical className="w-3 h-3" />
+                Early Beta — expect rough edges
+              </motion.div>
+
+              <p className="text-[10px] uppercase tracking-widest text-white/30 mb-3">Voice calls</p>
+              <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight mb-5">
+                Talk, don&apos;t type.<br />
+                <span style={{ color: "oklch(0.72 0.18 190)" }}>Right here.</span>
+              </h3>
+              <p className="text-sm text-white/40 leading-relaxed mb-6">
+                1-to-1 voice calls are built directly into SchoolSoft+. No Zoom link, no Discord, no
+                switching apps. Click the phone icon in any DM and ring the person directly — they get
+                an incoming call notification wherever they are in the app.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { icon: Phone,       color: "oklch(0.72 0.18 190)", t: "In-app calling",       d: "Works on any page — the call panel floats globally so you can keep browsing while on a call." },
+                  { icon: Mic,         color: "oklch(0.65 0.22 278)", t: "Mute anytime",         d: "Toggle your mic with one tap. The other person sees your mute state in real time." },
+                  { icon: Zap,         color: "oklch(0.75 0.18 60)",  t: "WebRTC, peer-to-peer", d: "Audio travels directly between browsers — no server relay. Low latency, no recording." },
+                  { icon: Bell,        color: "oklch(0.72 0.18 40)",  t: "Incoming anywhere",    d: "Receive ring notifications no matter which page you're on. Accept or decline without leaving." },
                 ].map(({ icon: Icon, color, t, d }, i) => (
                   <motion.div
                     key={t}

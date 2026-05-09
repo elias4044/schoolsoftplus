@@ -57,6 +57,7 @@ import {
     MessageCircle,
     Upload,
     XCircle,
+    Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,13 +68,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/useSession";
 import { useUnread } from "@/lib/unread-context";
-import { useNotifications } from "@/lib/useNotifications";
+
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { UserProfileModal } from "@/components/UserProfileModal";
 import { deriveKey, encryptMessage, decryptMessage } from "@/lib/crypto";
 import { useFriends } from "@/lib/useFriends";
 import { useMyPresence, usePresenceMap, statusColor, statusLabel, type UserStatus } from "@/lib/usePresence";
+import { useCallContext } from "@/lib/call-context";
 
 /* ─────────────────────────────────────────────────────────────
    Types
@@ -477,7 +479,7 @@ export default function MessagesPage() {
     const [friendSearching, setFriendSearching] = useState(false);
     const [friendRequestSending, setFriendRequestSending] = useState<string | null>(null);
 
-    const { setUnread, markRead } = useUnread();
+    const { markRead } = useUnread();
 
     const [showPinned, setShowPinned] = useState(false);
     const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
@@ -546,6 +548,9 @@ export default function MessagesPage() {
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
     const [mobileActionMsg, setMobileActionMsg] = useState<Message | null>(null);
     const [viewProfileUsername, setViewProfileUsername] = useState<string | null>(null);
+
+    // ── Voice calls (global context — CallPanel rendered in layout) ──
+    const { call, incomingCall } = useCallContext();
 
     // pfp cache: username → pfp URL, fetched from /api/profile/[username]
     const [pfpCache, setPfpCache] = useState<Record<string, string>>({});
@@ -628,30 +633,16 @@ export default function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [msgSearchQuery, messages]);
 
-    /* Notifications */
-    const { requestPermission } = useNotifications(conversations, messages, activeConvo?.id ?? null, username);
-
+    /* Notifications — permission state */
     useEffect(() => {
         if (typeof Notification !== "undefined") setNotifPermission(Notification.permission);
     }, []);
 
-    /* Unread tracking */
-    useEffect(() => {
-        if (!username) return;
-        for (const c of conversations) {
-            if (c.id === activeConvo?.id) { setUnread(c.id, 0); continue; }
-            const stored = localStorage.getItem(`lastRead_${c.id}`);
-            const lastRead = stored ? parseInt(stored) : 0;
-            setUnread(c.id, c.lastAt > lastRead && c.lastSenderUsername !== username ? 1 : 0);
-        }
-    }, [conversations, activeConvo?.id, username, setUnread]);
-
-    /* Mark read on open */
+    /* Mark read on open and when new messages arrive in the active conversation */
     useEffect(() => {
         if (!activeConvo) return;
-        localStorage.setItem(`lastRead_${activeConvo.id}`, String(Date.now()));
         markRead(activeConvo.id);
-    }, [activeConvo?.id, markRead]);
+    }, [activeConvo?.id, messages, markRead]);
 
     /* Auto-scroll when near bottom */
     useEffect(() => {
@@ -1118,6 +1109,8 @@ export default function MessagesPage() {
 
     return (
         <div className="flex flex-col h-full">
+            {/* ═══ Voice call panel is now in the global layout (lib/call-context.tsx) ══ */}
+
             <div className="flex flex-1 overflow-hidden">
 
                 {/* ═══ Conversation list ═════════════════════════════ */}
@@ -1141,7 +1134,7 @@ export default function MessagesPage() {
                                 <TooltipTrigger asChild>
                                     <Button size="icon" variant="ghost" className="w-7 h-7 rounded-lg hover:bg-white/8"
                                         onClick={async () => {
-                                            const p = await requestPermission();
+                                            const p = await Notification.requestPermission();
                                             if (p) setNotifPermission(p);
                                         }}
                                     >
@@ -1327,14 +1320,15 @@ export default function MessagesPage() {
                         <EmptyChat onNew={() => setShowNewDM(true)} />
                     ) : (
                         <>
-                            {/* Header */}
+                            {/* Header — sticky so it stays visible when the outer scroll jumps */}
                             <motion.div
                                 initial={{ y: -8, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ duration: 0.25 }}
-                                className="flex items-center gap-3 px-4 h-14 border-b border-white/7 shrink-0"
+                                className="sticky top-0 z-10 flex items-center gap-2 px-3 h-14 border-b border-white/7 shrink-0 min-w-0"
+                                style={{ background: "var(--card)" }}
                             >
-                                <button className="md:hidden mr-1 text-muted-foreground hover:text-foreground"
+                                <button className="md:hidden mr-0.5 shrink-0 text-muted-foreground hover:text-foreground"
                                     onClick={() => setMobileShowChat(false)}>
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
@@ -1401,11 +1395,37 @@ export default function MessagesPage() {
                                         )}
                                     </div>
                                 </div>
+                                {activeConvo.type === "dm" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className={cn(
+                                                    "w-8 h-8 shrink-0 rounded-lg",
+                                                    call.phase !== "idle" && "bg-primary/15 text-primary"
+                                                )}
+                                                disabled={call.phase !== "idle"}
+                                                onClick={() => {
+                                                    const partner = activeConvo.participants.find(
+                                                        (p) => p !== username
+                                                    );
+                                                    if (partner) call.startCall(username, partner);
+                                                }}
+                                            >
+                                                <Phone className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-xs">
+                                            {call.phase !== "idle" ? "Call in progress" : "Voice call"}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
                                 {activeConvo.type === "group" && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Button size="icon" variant="ghost"
-                                                className={cn("w-8 h-8 rounded-lg", showGroupInfo && "bg-primary/15 text-primary")}
+                                                className={cn("w-8 h-8 shrink-0 rounded-lg", showGroupInfo && "bg-primary/15 text-primary")}
                                                 onClick={() => {
                                                     setShowGroupInfo(v => !v);
                                                     setShowPinned(false);
@@ -1424,7 +1444,7 @@ export default function MessagesPage() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button size="icon" variant="ghost"
-                                            className={cn("w-8 h-8 rounded-lg", showPinned && "bg-primary/15 text-primary")}
+                                            className={cn("w-8 h-8 shrink-0 rounded-lg", showPinned && "bg-primary/15 text-primary")}
                                             onClick={togglePinnedPanel}
                                         >
                                             <Pin className="w-3.5 h-3.5" />
@@ -1437,7 +1457,7 @@ export default function MessagesPage() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button size="icon" variant="ghost"
-                                            className={cn("w-8 h-8 rounded-lg", showMsgSearch && "bg-primary/15 text-primary")}
+                                            className={cn("w-8 h-8 shrink-0 rounded-lg", showMsgSearch && "bg-primary/15 text-primary")}
                                             onClick={() => { setShowMsgSearch(v => !v); setMsgSearchQuery(""); setMsgSearchResults([]); }}
                                         >
                                             <SearchIcon className="w-3.5 h-3.5" />
@@ -1531,6 +1551,11 @@ export default function MessagesPage() {
                                                                     ? (decryptedCache[msg.id] ?? null)
                                                                     : msg.content
                                                             }
+                                                            replyToDisplayContent={
+                                                                activeConvo?.encrypted && msg.replyTo
+                                                                    ? (decryptedCache[msg.replyTo.messageId] ?? null)
+                                                                    : msg.replyTo?.content ?? null
+                                                            }
                                                             isEncryptedConvo={activeConvo?.encrypted ?? false}
                                                             isMe={msg.senderUsername === username}
                                                             sameSender={i > 0 && group.msgs[i - 1].senderUsername === msg.senderUsername}
@@ -1550,7 +1575,7 @@ export default function MessagesPage() {
                                                                 if (msg.senderUsername !== username) setViewProfileUsername(msg.senderUsername);
                                                             }}
                                                             onMobileTap={() => setMobileActionMsg(msg)}
-                                                            onEditStart={() => { setEditingId(msg.id); setEditContent(msg.content); }}
+                                                            onEditStart={() => { setEditingId(msg.id); setEditContent(activeConvo?.encrypted ? (decryptedCache[msg.id] ?? msg.content) : msg.content); }}
                                                             onEditChange={setEditContent}
                                                             onEditSubmit={() => submitEdit(msg.id)}
                                                             onEditCancel={() => setEditingId(null)}
@@ -1864,7 +1889,7 @@ export default function MessagesPage() {
                                                                         <PinOff className="w-3 h-3" />
                                                                     </button>
                                                                 </div>
-                                                                <p className="text-xs text-foreground/90 wrap-break-word min-w-0">{msg.content}</p>
+                                                                <p className="text-xs text-foreground/90 wrap-break-word min-w-0">{decryptedCache[msg.id] ?? msg.content}</p>
                                                                 <p className="text-[9px] text-muted-foreground">{formatDate(msg.createdAt)} · {formatTime(msg.createdAt)}</p>
                                                             </motion.div>
                                                         ))}
@@ -2387,10 +2412,11 @@ export default function MessagesPage() {
                         isMe={mobileActionMsg.senderUsername === username}
                         canDelete={mobileActionMsg.senderUsername === username || activeConvo?.adminUsername === username}
                         username={username}
+                        displayContent={activeConvo?.encrypted ? (decryptedCache[mobileActionMsg.id] ?? null) : mobileActionMsg.content}
                         onClose={() => setMobileActionMsg(null)}
                         onEdit={() => {
                             setEditingId(mobileActionMsg.id);
-                            setEditContent(mobileActionMsg.content);
+                            setEditContent(activeConvo?.encrypted ? (decryptedCache[mobileActionMsg.id] ?? mobileActionMsg.content) : mobileActionMsg.content);
                         }}
                         onDelete={() => deleteMsg(mobileActionMsg.id)}
                         onPin={() => togglePin(mobileActionMsg.id)}
@@ -3083,13 +3109,14 @@ function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
    MessageBubble
 ───────────────────────────────────────────────────────────── */
 function MessageBubble({
-    msg, displayContent, isEncryptedConvo, isMe, sameSender, isLastInGroup, isEditing, editContent, editSaving, username, isGroup, canDelete,
+    msg, displayContent, replyToDisplayContent, isEncryptedConvo, isMe, sameSender, isLastInGroup, isEditing, editContent, editSaving, username, isGroup, canDelete,
     isMobile, onMobileTap, pfpUrl, onAvatarClick,
     onEditStart, onEditChange, onEditSubmit, onEditCancel, onDelete, onPin, onReply, onReact,
 }: {
     msg: Message; displayContent: string | null; isEncryptedConvo: boolean; isMe: boolean; sameSender: boolean; isLastInGroup: boolean;
     isEditing: boolean; editContent: string; editSaving: boolean; username: string;
     isGroup: boolean; canDelete: boolean;
+    replyToDisplayContent?: string | null;
     isMobile: boolean; onMobileTap: () => void;
     pfpUrl?: string; onAvatarClick?: () => void;
     onEditStart: () => void; onEditChange: (v: string) => void;
@@ -3102,7 +3129,7 @@ function MessageBubble({
     const [copied, setCopied] = useState(false);
 
     const copy = () => {
-        navigator.clipboard.writeText(msg.content);
+        navigator.clipboard.writeText(displayContent ?? msg.content);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
     };
@@ -3160,7 +3187,7 @@ function MessageBubble({
                         <CornerUpLeft className="w-2.5 h-2.5 text-primary/60 shrink-0 mt-0.5" />
                         <div className="min-w-0 overflow-hidden">
                             <p className="text-[9px] font-semibold text-primary/80 truncate">{msg.replyTo.senderDisplayName}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{msg.replyTo.content}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{replyToDisplayContent ?? msg.replyTo.content}</p>
                         </div>
                     </div>
                 )}
@@ -3374,16 +3401,16 @@ interface SheetAction {
 }
 
 function MobileActionSheet({
-    msg, isMe, canDelete, username, onClose, onEdit, onDelete, onPin, onReply, onReact,
+    msg, isMe, canDelete, username, displayContent, onClose, onEdit, onDelete, onPin, onReply, onReact,
 }: {
-    msg: Message; isMe: boolean; canDelete: boolean; username: string;
+    msg: Message; isMe: boolean; canDelete: boolean; username: string; displayContent?: string | null;
     onClose: () => void; onEdit: () => void; onDelete: () => void;
     onPin: () => void; onReply: () => void; onReact: (emoji: string) => void;
 }) {
     const [copied, setCopied] = useState(false);
 
     const copy = () => {
-        navigator.clipboard.writeText(msg.content);
+        navigator.clipboard.writeText(displayContent ?? msg.content);
         setCopied(true);
         setTimeout(() => { setCopied(false); onClose(); }, 900);
     };
@@ -3433,7 +3460,7 @@ function MobileActionSheet({
                         <p className="text-[10px] font-semibold mb-1" style={{ color: "oklch(0.72 0.16 263)" }}>
                             {msg.senderDisplayName}
                         </p>
-                        <p className="text-sm text-foreground/90 line-clamp-3 wrap-break-word">{msg.content}</p>
+                        <p className="text-sm text-foreground/90 line-clamp-3 wrap-break-word">{displayContent ?? msg.content}</p>
                     </div>
                 </div>
 
