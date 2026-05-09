@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { getPendingInvitesForUser, sendGroupInvite, respondToGroupInvite } from "@/app/api/lib/groupInvitesDb";
 
 // GET /api/group-invites — list pending group invites for the current user
 export async function GET(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 // POST /api/group-invites — send an invite (admin only)
 // Body: { conversationId: string, targetUsername: string }
 export async function POST(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/group-invites — respond to an invite
 // Body: { inviteId: string, accept: boolean }
 export async function PATCH(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {

@@ -257,7 +257,7 @@ export default function SchedulePage() {
           <Button
             variant="outline"
             size="icon"
-            className="w-8 h-8 border-white/10 bg-white/5"
+            className="w-8 h-8 btn-nav"
             onClick={() => setWeekOffset((o) => o - 1)}
             aria-label="Previous week"
           >
@@ -266,7 +266,7 @@ export default function SchedulePage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-white/10 bg-white/5 text-xs"
+            className="btn-nav text-xs"
             onClick={() => setWeekOffset(0)}
             disabled={weekOffset === 0}
           >
@@ -275,7 +275,7 @@ export default function SchedulePage() {
           <Button
             variant="outline"
             size="icon"
-            className="w-8 h-8 border-white/10 bg-white/5"
+            className="w-8 h-8 btn-nav"
             onClick={() => setWeekOffset((o) => o + 1)}
             aria-label="Next week"
           >
@@ -290,11 +290,11 @@ export default function SchedulePage() {
           {DAYS.map((d) => (
             <div
               key={d}
-              className="rounded-xl bg-card border border-white/7 p-3 space-y-2 animate-pulse"
+              className="card-base p-3 space-y-2 animate-pulse"
             >
-              <div className="h-4 w-20 rounded bg-white/5 mb-3" />
+              <div className="h-4 w-20 rounded skeleton mb-3" />
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-lg bg-white/5" />
+                <div key={i} className="h-16 rounded-lg skeleton" />
               ))}
             </div>
           ))}
@@ -311,14 +311,14 @@ export default function SchedulePage() {
               className={cn(
                 "rounded-xl border flex flex-col min-h-0",
                 day.isToday
-                  ? "border-primary/20 bg-white/3"
-                  : "border-white/7 bg-card"
+                  ? "today-card"
+                  : "card-base"
               )}
             >
               {/* Day header */}
               <div className={cn(
                 "flex items-center justify-between px-3 py-2.5 border-b shrink-0",
-                day.isToday ? "border-primary/10" : "border-white/5"
+                day.isToday ? "border-primary/15" : "border-border"
               )}>
                 <div>
                   <p className={cn(

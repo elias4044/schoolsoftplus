@@ -1,12 +1,12 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { getProfile, upsertProfile } from "@/app/api/lib/profileDb";
 import { updateParticipantName, updateParticipantPfp } from "@/app/api/lib/messagingDb";
 
 // -- GET /api/profile  -------------------------------------------------------
 export async function GET(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
 // -- PUT /api/profile  -------------------------------------------------------
 export async function PUT(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {

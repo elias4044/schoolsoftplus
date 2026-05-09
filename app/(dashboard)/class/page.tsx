@@ -71,7 +71,7 @@ function StudentCard({ student, index }: { student: ClassStudent; index: number 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03, duration: 0.25 }}
-      className="flex items-center gap-3 rounded-xl border border-white/7 bg-card px-4 py-3 hover:border-white/15 hover:bg-card/80 transition-all group"
+      className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:border-border/80 hover:bg-card/80 transition-all group"
     >
       <Avatar className="w-10 h-10 shrink-0">
         <AvatarFallback
@@ -111,7 +111,7 @@ function StaffCard({ member, index }: { member: StaffMember; index: number }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03, duration: 0.25 }}
-      className="rounded-xl border border-white/7 bg-card hover:border-white/15 transition-all overflow-hidden"
+      className="rounded-xl border border-border bg-card hover:border-border/80 transition-all overflow-hidden"
     >
       <button
         className="w-full flex items-center gap-3 px-4 py-3 text-left group"
@@ -151,7 +151,7 @@ function StaffCard({ member, index }: { member: StaffMember; index: number }) {
             transition={{ duration: 0.22, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 border-t border-white/7 space-y-2">
+            <div className="px-4 pb-4 pt-1 border-t border-border space-y-2">
               {/* Roles */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {member.roles.map(r => (
@@ -302,7 +302,7 @@ export default function ClassPage() {
             <button
               onClick={() => tab === "students" ? fetchStudents() : fetchStaff()}
               disabled={loading}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition-all disabled:opacity-40"
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all disabled:opacity-40"
               title="Refresh"
             >
               <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
@@ -310,7 +310,7 @@ export default function ClassPage() {
             <button
               onClick={handleExport}
               disabled={loading || (tab === "students" ? filteredStudents.length === 0 : filteredSections.length === 0)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all disabled:opacity-40"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -323,7 +323,7 @@ export default function ClassPage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="flex rounded-xl border border-white/10 bg-white/3 p-1 gap-1"
+          className="flex rounded-xl border border-border bg-surface-2/40 p-1 gap-1"
         >
           {(["students", "staff"] as Tab[]).map(t => (
             <button
@@ -332,7 +332,7 @@ export default function ClassPage() {
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all",
                 tab === t
-                  ? "bg-white/10 text-foreground shadow-sm"
+                  ? "bg-surface-2 text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground/80"
               )}
             >

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, getSchool, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, getSchool, requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { handleApiError } from "@/app/api/lib/apiError";
 
 // -- GET /api/subjects/[id]  ---------------------------------------------------
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
     if (!sess) {
       return NextResponse.json(
         { success: false, error: "Not authenticated." },

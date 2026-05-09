@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ interface School { name: string; id: string; }
 
 // How many items to render at most — keeps the DOM small for 3000+ entries
 const MAX_VISIBLE = 100;
+
 
 // ---------------------------------------------------------------------------
 // SchoolPicker
@@ -200,6 +201,7 @@ function SchoolPicker({
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [schoolId,   setSchoolId]   = useState(DEFAULT_SCHOOL_ID);
@@ -208,11 +210,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthV2Loading, setIsAuthV2Loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated, authLoading, router]);
+
+  // Show AuthV2 error returned via ?authv2_error=... query param
+  useEffect(() => {
+    const authv2Error = searchParams.get("authv2_error");
+    if (authv2Error) setError(decodeURIComponent(authv2Error));
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +246,13 @@ export default function LoginPage() {
     }
   };
 
+  const handleAuthV2Login = () => {
+    setError(null);
+    setIsAuthV2Loading(true);
+    // Navigate to the initiate route — it will set cookies then redirect to SchoolSoft
+    window.location.href = `/api/auth/v2/initiate?school=${encodeURIComponent(schoolId)}`;
+  };
+
   if (authLoading) return null;
 
   return (
@@ -244,7 +260,7 @@ export default function LoginPage() {
 
       {/* ── Left panel: immersive dark hero ─────────────── */}
       <div className="hidden lg:flex lg:w-[54%] relative overflow-hidden flex-col justify-between p-12"
-        style={{ background: "var(--card)", borderRight: "1px solid oklch(1 0 0 / 6%)" }}>
+style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
 
         {/* dot grid */}
         <div className="absolute inset-0 pointer-events-none"
@@ -353,7 +369,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}>
+              style={{ background: "linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 75%, oklch(0.4 0.3 285)))" }}>
               <span className="text-white text-xs font-bold">S+</span>
             </div>
             <span className="text-sm font-semibold text-foreground/80">SchoolSoft+</span>
@@ -361,7 +377,7 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
-            <p className="text-sm mt-1.5" style={{ color: "oklch(1 0 0 / 45%)" }}>
+            <p className="text-sm mt-1.5 text-muted-foreground">
               Use your SchoolSoft credentials.
             </p>
           </div>
@@ -380,8 +396,7 @@ export default function LoginPage() {
                 id="username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="h-10 text-sm"
-                style={{ background: "var(--card)", borderColor: "oklch(1 0 0 / 8%)" }}
+                className="h-10 text-sm bg-card"
                 placeholder="firstname.lastname"
                 autoComplete="username"
                 type="text"
@@ -396,8 +411,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="pr-9 h-10 text-sm"
-                  style={{ background: "var(--card)", borderColor: "oklch(1 0 0 / 8%)" }}
+                  className="pr-9 h-10 text-sm bg-card"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
@@ -405,8 +419,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: "oklch(1 0 0 / 35%)" }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -423,8 +436,7 @@ export default function LoginPage() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <p className="text-xs px-3 py-2.5 rounded-lg border"
-                    style={{ color: "oklch(0.68 0.19 24)", background: "oklch(0.58 0.19 24 / 8%)", borderColor: "oklch(0.58 0.19 24 / 20%)" }}>
+                  <p className="text-xs px-3 py-2.5 rounded-lg border border-destructive/20 bg-destructive/8 text-destructive">
                     {error}
                   </p>
                 </motion.div>
@@ -445,9 +457,54 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* ── AuthV2 separator ─────────────────────────────── */}
+          <div className="mt-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[10px] text-muted-foreground/50">or</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* ── AuthV2 login ─────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.1 }}
+            className="mt-4"
+          >
+            {/* Experimental badge */}
+            <div className="flex items-center gap-1.5 mb-3">
+              <FlaskConical className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-medium text-primary">
+                Experimental
+              </span>
+              <span className="text-[10px] text-muted-foreground/60">
+                &middot; Schoolsoft OAuth Login (AuthV2)
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAuthV2Login}
+              disabled={isAuthV2Loading}
+              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
+              style={{
+                background: "color-mix(in oklch, var(--brand) 6%, transparent)",
+                color: "var(--primary)",
+              }}
+            >
+              {isAuthV2Loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Login through SchoolSoft
+                </>
+              )}
+            </button>
+          </motion.div>
+
           {/* Help links */}
-          <div className="mt-6 pt-5 border-t flex items-center justify-between text-[11px]"
-            style={{ borderColor: "oklch(1 0 0 / 6%)", color: "oklch(1 0 0 / 35%)" }}>
+          <div className="mt-6 pt-5 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground/60">
             <Link href="/login-help" className="hover:text-foreground transition-colors">
               Can&apos;t sign in?
             </Link>
@@ -472,7 +529,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={htmlFor} className="text-xs font-medium" style={{ color: "oklch(1 0 0 / 45%)" }}>
+      <Label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
         {label}
       </Label>
       {children}

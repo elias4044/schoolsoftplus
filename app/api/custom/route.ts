@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { handleApiError } from "@/app/api/lib/apiError";
 
 // -- ANY /api/custom  ----------------------------------------------------------
@@ -29,7 +29,7 @@ async function proxyRequest(req: NextRequest, method: string): Promise<NextRespo
     );
   }
 
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json(
       { success: false, error: "Not authenticated." },

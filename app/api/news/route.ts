@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, decodeHtmlResponse, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, decodeHtmlResponse, requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { handleApiError } from "@/app/api/lib/apiError";
 import { trackNewsFetch } from "@/app/api/lib/statsHelper";
 
 // -- GET /api/news  ------------------------------------------------------------
 export async function GET(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json(
       { success: false, error: "Not authenticated." },

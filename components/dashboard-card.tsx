@@ -42,10 +42,9 @@ export function DashboardCard({
     <motion.div
       variants={fadeUp}
       className={cn(
-        "relative rounded-xl overflow-hidden",
+        "relative rounded-xl overflow-hidden card-base",
         className
       )}
-      style={{ background: "var(--card)", border: "1px solid oklch(1 0 0 / 7%)" }}
     >
       {/* Accent top bar */}
       {accent && (
@@ -53,7 +52,7 @@ export function DashboardCard({
           className="absolute top-0 inset-x-0 h-px"
           style={{
             background:
-              "linear-gradient(90deg, transparent, oklch(0.65 0.22 278 / 70%), transparent)",
+              "linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 70%, transparent), transparent)",
           }}
         />
       )}
@@ -65,7 +64,7 @@ export function DashboardCard({
             {Icon && (
               <div
                 className="flex items-center justify-center w-6 h-6 rounded-md"
-                style={{ background: "oklch(0.65 0.22 278 / 15%)" }}
+                style={{ background: "color-mix(in oklch, var(--brand) 15%, transparent)" }}
               >
                 <Icon className="w-3.5 h-3.5 text-primary" />
               </div>
@@ -96,8 +95,7 @@ export function StatCard({ label, value, icon: Icon, trend, className }: StatCar
   return (
     <motion.div
       variants={fadeUp}
-      className={cn("relative rounded-xl p-4 overflow-hidden", className)}
-      style={{ background: "var(--card)", border: "1px solid oklch(1 0 0 / 7%)" }}
+      className={cn("relative rounded-xl p-4 overflow-hidden card-base", className)}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
     >
       <div className="flex items-start justify-between">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import {
   getConversation,
   getMessages,
@@ -137,7 +137,7 @@ async function buildGradeCard(
 // GET /api/conversations/[conversationId]?pinned=true
 export async function GET(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
@@ -161,7 +161,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 // Body: { content?: string; replyTo?: ReplyTo; shareCard?: { type: "note"; noteId: string } | { type: "grade"; assignmentId: string } }
 export async function POST(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 // Body: { action: "rename" | "add_member" | "remove_member" | "transfer_admin", ... }
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { authUser } from "@/app/api/lib/auth";
 
 const REPO = "elias4044/schoolsoftplus";
@@ -14,7 +14,7 @@ const TYPE_LABELS: Record<string, string[]> = {
 
 export async function POST(req: NextRequest) {
   /* ── Auth ──────────────────────────────────────── */
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }

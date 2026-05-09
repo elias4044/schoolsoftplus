@@ -265,23 +265,79 @@
    UTILITY CLASSES
    ========================================================= */
 @layer utilities {
+  /* Elevated surface — card bg + border */
   .surface {
     background: var(--card);
     border: 1px solid var(--border);
+    box-shadow: 0 1px 8px oklch(0 0 0 / 18%);
   }
+
+  /* Sidebar active nav item */
   .nav-active {
     @apply bg-brand-dim text-foreground;
     box-shadow: inset 2px 0 0 var(--brand);
   }
+
+  /* Silver-chrome logo text — deliberately neutral to complement the branded icon */
   .text-gradient {
-    background: linear-gradient(135deg, oklch(0.85 0 0), oklch(0.65 0 0));
+    background: linear-gradient(135deg, oklch(0.94 0 0), oklch(0.72 0 0));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Glassmorphism panel */
   .glass {
     background: oklch(1 0 0 / 4%);
     backdrop-filter: blur(12px);
     border: 1px solid oklch(1 0 0 / 8%);
+  }
+
+  /* Reusable card base — replaces scattered border-white/7 bg-card patterns */
+  .card-base {
+    @apply rounded-xl bg-card border border-border;
+  }
+
+  /* Card that shows hover feedback */
+  .card-interactive {
+    @apply rounded-xl bg-card border border-border transition-colors cursor-pointer;
+  }
+  .card-interactive:hover {
+    border-color: oklch(1 0 0 / 13%);
+    background: color-mix(in oklch, var(--card), oklch(1 0 0) 2%);
+  }
+
+  /* Today-highlighted card — brand-tinted, adapts to accent color */
+  .today-card {
+    background: color-mix(in oklch, var(--brand) 8%, var(--card));
+    border-color: color-mix(in oklch, var(--brand) 28%, transparent);
+  }
+
+  /* Loading skeleton placeholder */
+  .skeleton {
+    @apply animate-pulse rounded-lg;
+    background: oklch(1 0 0 / 6%);
+  }
+
+  /* Small navigation control buttons (prev/next week, etc.) */
+  .btn-nav {
+    border-color: var(--border) !important;
+    background: oklch(1 0 0 / 4%) !important;
+  }
+  .btn-nav:hover:not(:disabled) {
+    background: oklch(1 0 0 / 8%) !important;
+    border-color: oklch(1 0 0 / 12%) !important;
+  }
+
+  /* Standard page content padding */
+  .page-content {
+    @apply p-4 md:p-6;
+  }
+
+  /* Consistent badge for "Today" / status labels */
+  .badge-today {
+    @apply text-primary;
+    background: color-mix(in oklch, var(--brand) 15%, transparent);
+    border: 1px solid color-mix(in oklch, var(--brand) 30%, transparent);
   }
 }

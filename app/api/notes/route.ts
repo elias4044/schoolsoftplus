@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { authUserWithUsername } from "@/app/api/lib/auth";
 import { getNotesByUser, createNote } from "@/app/api/lib/notesDb";
 import { trackNoteCreated } from "@/app/api/lib/statsHelper";
 
 async function authenticate(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return null;
   const username = sess.username.toLowerCase().trim();
   if (!username) return null;

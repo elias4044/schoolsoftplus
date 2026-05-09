@@ -44,10 +44,10 @@ export default function NewsPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="rounded-xl bg-card border border-white/7 p-5 animate-pulse space-y-2">
-              <div className="h-4 w-1/2 rounded bg-white/5" />
-              <div className="h-3 w-full rounded bg-white/5" />
-              <div className="h-3 w-3/4 rounded bg-white/5" />
+            <div key={i} className="card-base p-5 space-y-2">
+              <div className="h-4 w-1/2 skeleton" />
+              <div className="h-3 w-full skeleton" />
+              <div className="h-3 w-3/4 skeleton" />
             </div>
           ))}
         </div>
@@ -64,7 +64,7 @@ export default function NewsPage() {
             <motion.div
               key={item.id ?? i}
               variants={fadeUp}
-              className="rounded-xl border border-white/7 bg-card p-5 hover:border-white/15 transition-colors"
+              className="card-interactive p-5 hover:border-border/80"
             >
               <div className="flex items-start justify-between gap-4 mb-2">
                 <h2 className="text-sm font-semibold text-foreground leading-snug">{item.title}</h2>
