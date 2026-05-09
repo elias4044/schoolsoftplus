@@ -144,7 +144,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
         className="absolute top-0 inset-x-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent, oklch(0.65 0.22 278 / 50%), transparent)",
+            "linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 50%, transparent), transparent)",
         }}
       />
 
@@ -265,8 +265,8 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
               <AvatarFallback
                 className="text-xs font-semibold"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))",
-                  color: "oklch(0.75 0.15 278)",
+                  background: "color-mix(in oklch, var(--brand) 25%, transparent)",
+                  color: "var(--primary)",
                 }}
               >
                 {initials}
@@ -367,7 +367,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
         "flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm cursor-pointer transition-colors select-none",
         collapsed && "justify-center px-0 w-10 h-10 mx-auto",
         active
-          ? "bg-white/8 text-foreground font-medium"
+          ? "bg-brand-dim text-foreground font-medium"
           : danger
           ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           : accent
@@ -376,7 +376,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
       )}
       style={
         active
-          ? { boxShadow: "inset 2px 0 0 oklch(0.65 0.22 278)" }
+          ? { boxShadow: "inset 2px 0 0 var(--brand)" }
           : undefined
       }
     >
@@ -402,7 +402,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
               {badge != null && badge > 0 && (
                 <span
                   className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[9px] font-bold text-white"
-                  style={{ background: "oklch(0.65 0.22 278)" }}
+                  style={{ background: "var(--brand)" }}
                 >
                   {badge > 99 ? "99+" : badge}
                 </span>
@@ -437,7 +437,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
             {badge != null && badge > 0 && (
               <span
                 className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white pointer-events-none"
-                style={{ background: "oklch(0.65 0.22 278)" }}
+                style={{ background: "var(--brand)" }}
               >
                 {badge > 9 ? "9+" : badge}
               </span>

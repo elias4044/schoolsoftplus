@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     if (loginRes.status !== 200) {
       console.warn(`[mobile/login POST] password login status ${loginRes.status}`, loginRes.data);
       return NextResponse.json(
-        { success: false, error: "Authentication failed. Check your credentials." },
+        { success: false, error: loginRes.data?.userMessage || "Authentication failed." },
         { status: 401 }
       );
     }

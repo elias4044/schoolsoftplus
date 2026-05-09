@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSchoolsoftClient, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { handleApiError } from "@/app/api/lib/apiError";
 import { trackScheduleView } from "@/app/api/lib/statsHelper";
 
@@ -21,7 +21,7 @@ function isoWeek(date: Date): number {
 }
 
 export async function GET(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json(
       { success: false, error: "Not authenticated." },

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { staggerContainer, fadeUp } from "@/components/dashboard-card";
 import { apiFetch } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 
 interface LunchDay {
   day: string;
@@ -72,7 +73,7 @@ export default function LunchPage() {
           <Button
             variant="outline"
             size="icon"
-            className="w-8 h-8 border-white/10 bg-white/5"
+            className="w-8 h-8 btn-nav"
             onClick={() => setWeekOffset(o => o - 1)}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -80,7 +81,7 @@ export default function LunchPage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-white/10 bg-white/5 text-xs"
+            className="btn-nav text-xs"
             onClick={() => setWeekOffset(0)}
           >
             This week
@@ -88,7 +89,7 @@ export default function LunchPage() {
           <Button
             variant="outline"
             size="icon"
-            className="w-8 h-8 border-white/10 bg-white/5"
+            className="w-8 h-8 btn-nav"
             onClick={() => setWeekOffset(o => o + 1)}
           >
             <ChevronRight className="w-4 h-4" />
@@ -99,7 +100,7 @@ export default function LunchPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-20 rounded-xl bg-card border border-white/7 animate-pulse" />
+            <div key={i} className="h-20 card-base skeleton" />
           ))}
         </div>
       ) : menu.length === 0 ? (
@@ -119,25 +120,15 @@ export default function LunchPage() {
               <motion.div
                 key={i}
                 variants={fadeUp}
-                className="rounded-xl border p-4"
-                style={{
-                  border: isToday
-                    ? "1px solid oklch(0.65 0.22 278 / 30%)"
-                    : "1px solid oklch(1 0 0 / 7%)",
-                  background: isToday ? "oklch(0.65 0.22 278 / 8%)" : "var(--card)",
-                }}
-              >
+                className={cn(
+                "rounded-xl border p-4",
+                isToday ? "today-card" : "card-base"
+              )}
+            >
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-sm font-semibold capitalize">{day.day}</p>
                   {isToday && (
-                    <Badge
-                      className="text-[9px] px-1.5 py-0"
-                      style={{
-                        background: "oklch(0.65 0.22 278 / 20%)",
-                        color: "oklch(0.75 0.15 278)",
-                        border: "1px solid oklch(0.65 0.22 278 / 30%)",
-                      }}
-                    >
+                    <Badge className="text-[9px] px-1.5 py-0 badge-today">
                       Today
                     </Badge>
                   )}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { authUser } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 
 // ---------------------------------------------------------------------------
 // Valid AI note actions
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   rateLimitMap.set(ip, [...timestamps, now]);
 
   // Auth
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
   }

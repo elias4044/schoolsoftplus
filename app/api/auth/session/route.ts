@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";import axios from "axios";
+import { NextRequest, NextResponse } from "next/server"; 
+import axios from "axios";
 
 /* -------------------------------------------------------------
    GET /api/mobile/session
@@ -10,13 +11,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "x-ss-token header is required." }, { status: 400 });
   }
 
-  const school      = req.headers.get("x-school")       ?? "engelska";
-  const userId      = req.headers.get("x-userid");
-  const username    = req.headers.get("x-username")     ?? "";
-  const orgid       = req.headers.get("x-orgid")        ?? "18";
-  const language    = req.headers.get("x-language")     ?? "sw";
-  const theme       = req.headers.get("x-theme")        ?? "dark";
-  const useros      = req.headers.get("x-useros")       ?? "android";
+  const school = req.headers.get("x-school") ?? "engelska";
+  const userId = req.headers.get("x-userid");
+  const username = req.headers.get("x-username") ?? "";
+  const orgid = req.headers.get("x-orgid") ?? "18";
+  const language = req.headers.get("x-language") ?? "sw";
+  const theme = req.headers.get("x-theme") ?? "dark";
+  const useros = req.headers.get("x-useros") ?? "android";
   const redirectUrl = req.headers.get("x-redirect-url") ??
     `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`;
 
@@ -26,15 +27,15 @@ export async function GET(req: NextRequest) {
   try {
     const res = await axios.get(sessionUrl, {
       headers: {
-        "Accept":           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "User-Agent":       "nyEva",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "User-Agent": "nyEva",
         "X-Requested-With": "com.schoolsoft.eapp.android",
-        "token":            ssToken,
-        "orgid":            orgid,
-        "redirecturl":      redirectUrl,
-        "language":         language,
-        "theme":            theme,
-        "useros":           useros,
+        "token": ssToken,
+        "orgid": orgid,
+        "redirecturl": redirectUrl,
+        "language": language,
+        "theme": theme,
+        "useros": useros,
         ...(userId ? { "userid": userId } : {}),
       },
       maxRedirects: 0,
@@ -68,8 +69,8 @@ export async function GET(req: NextRequest) {
   }
 
   const jsessionid = cookieMap["JSESSIONID"] ?? "";
-  const hash       = cookieMap["hash"]       ?? "";
-  const usertype   = cookieMap["usertype"]   ?? "1";
+  const hash = cookieMap["hash"] ?? "";
+  const usertype = cookieMap["usertype"] ?? "1";
 
   if (!jsessionid || !hash) {
     console.warn("[mobile/session] missing JSESSIONID or hash", cookieMap);
@@ -80,12 +81,12 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    success:        true,
+    success: true,
     school,
     username,
     ssp_jsessionid: jsessionid,
-    ssp_hash:       hash,
-    ssp_usertype:   usertype,
-    cookieHeader:   `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}`,
+    ssp_hash: hash,
+    ssp_usertype: usertype,
+    cookieHeader: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}`,
   });
 }

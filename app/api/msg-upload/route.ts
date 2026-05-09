@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -21,7 +21,7 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
  * Accepts GIFs and images up to 10 MB (vs 5 MB for profile pictures).
  */
 export async function POST(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   if (!(await authUser(sess.cookieString, sess.school)))

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { authUserWithUsername } from "@/app/api/lib/auth";
 import {
   getCountdownsByUser,
@@ -15,7 +15,7 @@ import {
 /* ---------------------------------------------------------- */
 
 async function authenticate(req: NextRequest): Promise<string | null> {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return null;
   const username = sess.username.toLowerCase().trim();
   if (!username) return null;

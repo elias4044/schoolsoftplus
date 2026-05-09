@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { createSchoolsoftClient, requireSession, applySessionCookieUpdates } from "@/app/api/lib/schoolsoft";
 import { handleApiError } from "@/app/api/lib/apiError";
 
 type SubjectEntity = {
@@ -11,7 +11,7 @@ type SubjectEntity = {
 // -- GET /api/subjects  --------------------------------------------------------
 // Returns all subjects, each enriched with entities, unread counts, and teachers.
 export async function GET(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json(
       { success: false, error: "Not authenticated." },
@@ -21,11 +21,11 @@ export async function GET(req: NextRequest) {
 
   const { cookieString: cookies, school } = sess;
 
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 }
-    );
+  const authOk = await authUser(cookies, school);
+  if (!authOk) {
+    const res = NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    applySessionCookieUpdates(res, sess.cookieUpdates ?? null);
+    return res;
   }
 
   const api = createSchoolsoftClient(school);
@@ -77,8 +77,12 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json({ success: true, subjects: enriched });
+    const res = NextResponse.json({ success: true, subjects: enriched });
+    applySessionCookieUpdates(res, sess.cookieUpdates ?? null);
+    return res;
   } catch (error) {
-    return handleApiError(error, "subjects");
+    const errRes = handleApiError(error, "subjects");
+    applySessionCookieUpdates(errRes as NextResponse, sess?.cookieUpdates ?? null);
+    return errRes;
   }
 }

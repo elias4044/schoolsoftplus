@@ -520,8 +520,7 @@ export default function LandingPage() {
           {/* CTA */}
           <Link
             href="/login"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white shrink-0"
-            style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white bg-primary"
           >
             Sign in <ArrowRight className="w-3.5 h-3.5" />
           </Link>
@@ -863,7 +862,7 @@ export default function LandingPage() {
             <Sparkles className="w-4 h-4" style={{ color: "oklch(0.65 0.22 278)" }} />
             <span className="text-sm font-bold text-white/80">SchoolSoft+</span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/30">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/50">
             <Link href="/terms"       className="hover:text-white transition-colors">Terms &amp; Privacy</Link>
             <Link href="/login-help"  className="hover:text-white transition-colors">Login help</Link>
             <Link href="/stats"       className="hover:text-white transition-colors">Stats</Link>
@@ -872,7 +871,7 @@ export default function LandingPage() {
             <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Developers</a>
             <a href="https://github.com/elias4044/schoolsoftplus" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           </div>
-          <p className="text-xs text-white/20">Not affiliated with SchoolSoft AB.</p>
+          <p className="text-xs text-white/40">Not affiliated with SchoolSoft AB.</p>
         </div>
       </footer>
 

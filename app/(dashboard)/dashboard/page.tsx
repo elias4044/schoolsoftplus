@@ -40,7 +40,7 @@ export default function DashboardPage() {
                 onClick={() => setAddOpen(true)}>
                 <Plus className="w-3.5 h-3.5" /> Add widget
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-muted-foreground"
+              <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-white"
                 onClick={reset}>
                 <RotateCcw className="w-3.5 h-3.5" /> Reset
               </Button>
@@ -49,8 +49,7 @@ export default function DashboardPage() {
           <Button
             size="sm"
             onClick={() => setEditing(e => !e)}
-            className="text-xs gap-1.5"
-            style={editing ? { background: "oklch(0.65 0.22 278 / 20%)", color: "oklch(0.75 0.15 278)" } : {}}
+            className="text-xs gap-1.5 text-white "
           >
             <Pencil className="w-3.5 h-3.5" />
             {editing ? "Done" : "Edit layout"}

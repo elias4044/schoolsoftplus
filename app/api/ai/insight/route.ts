@@ -5,7 +5,7 @@ import { authUser } from "@/app/api/lib/auth";
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  getSessionCookies,
+  requireSession, getSessionCookies,
 } from "@/app/api/lib/schoolsoft";
 import { trackAiMessage } from "@/app/api/lib/statsHelper";
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   rateLimitMap.set(ip, [...timestamps, now]);
 
   // Auth
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
   }

@@ -1,1 +1,0 @@
-might not need the uhh schedule refetching every time we switch week. Not effecient ❌ We want effecient 👍

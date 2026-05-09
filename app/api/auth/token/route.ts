@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signMobileToken, fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
-import { exchangeCodeForToken } from "@/app/api/mobile/login/route";
+import { exchangeCodeForToken } from "@/app/api/auth/login/route";
 import { trackLoginEvent } from "@/app/api/lib/statsHelper";
 
 /* 

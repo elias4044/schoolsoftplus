@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { updatePresence } from "@/app/api/lib/presenceDb";
 import type { UserStatus } from "@/app/api/lib/presenceDb";
 
 // PATCH /api/presence  — update my own presence
 // Body: { status: "online" | "idle" | "offline" }
 export async function PATCH(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {

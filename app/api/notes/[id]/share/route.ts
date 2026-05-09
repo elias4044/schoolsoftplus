@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
 import { authUserWithUsername } from "@/app/api/lib/auth";
 import { generateShareToken, revokeShareToken } from "@/app/api/lib/notesDb";
 
 async function authenticate(req: NextRequest) {
-  const sess = getSessionCookies(req);
+  const sess = await requireSession(req);
   if (!sess) return null;
   const username = sess.username.toLowerCase().trim();
   if (!username) return null;
