@@ -147,10 +147,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
-      {/* Desktop notification bell — top-right fixed corner */}
-      <div className="hidden md:block fixed bottom-4 left-42 z-50">
+      {/* Desktop notification bell — top-right fixed corner. Disable due to placement issues */}
+      {/* <div className="hidden md:block fixed bottom-4 left-42 z-50">
         <NotificationBell />
-      </div>
+      </div> */}
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
