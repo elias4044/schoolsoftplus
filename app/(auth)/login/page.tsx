@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { markTransitionPending } from "@/lib/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +13,13 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
-const DEFAULT_SCHOOL_ID   = "engelska";
+const DEFAULT_SCHOOL_ID = "engelska";
 const DEFAULT_SCHOOL_NAME = "Internationella Engelska Skolan - IES Halmstad";
-const RECENT_SCHOOLS_KEY  = "ssp_recent_schools";
+const RECENT_SCHOOLS_KEY = "ssp_recent_schools";
 const KONAMI_SEQ = [
-  "ArrowUp","ArrowUp","ArrowDown","ArrowDown",
-  "ArrowLeft","ArrowRight","ArrowLeft","ArrowRight",
-  "b","a",
+  "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
+  "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight",
+  "b", "a",
 ] as const;
 
 interface School { name: string; id: string; }
@@ -40,17 +40,17 @@ function SchoolPicker({
   displayName: string;
   onChange: (id: string, name: string) => void;
 }) {
-  const [open, setOpen]               = useState(false);
-  const [query, setQuery]             = useState("");
-  const [schools, setSchools]         = useState<School[]>([]);
-  const [fetched, setFetched]         = useState(false);
-  const [fetching, setFetching]       = useState(false);
-  const [focusedIdx, setFocusedIdx]   = useState(-1);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [schools, setSchools] = useState<School[]>([]);
+  const [fetched, setFetched] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [focusedIdx, setFocusedIdx] = useState(-1);
   const [recentSchools, setRecentSchools] = useState<School[]>([]);
 
-  const wrapRef  = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef  = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Load recent schools from localStorage
   useEffect(() => {
@@ -65,7 +65,7 @@ function SchoolPicker({
     if (fetched || fetching) return;
     setFetching(true);
     try {
-      const res  = await fetch("/api/schools");
+      const res = await fetch("/api/schools");
       const data = await res.json();
       if (Array.isArray(data.schools)) setSchools(data.schools);
     } catch { /* ignore */ }
@@ -112,17 +112,17 @@ function SchoolPicker({
   const filtered = query.trim()
     ? schools.filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
     : schools;
-  const visible  = filtered.slice(0, MAX_VISIBLE);
+  const visible = filtered.slice(0, MAX_VISIBLE);
   const overflow = filtered.length - visible.length;
 
-  const showRecent     = !query.trim() && recentSchools.length > 0;
-  const recentVisible  = showRecent
+  const showRecent = !query.trim() && recentSchools.length > 0;
+  const recentVisible = showRecent
     ? recentSchools.filter(r => !schools.length || schools.some(s => s.id === r.id))
     : [];
   const recentIds = new Set(recentVisible.map(r => r.id));
-  const mainList  = visible.filter(s => !recentIds.has(s.id));
+  const mainList = visible.filter(s => !recentIds.has(s.id));
   // Flat list used for keyboard-navigation index tracking
-  const navList   = [...recentVisible, ...mainList];
+  const navList = [...recentVisible, ...mainList];
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
@@ -218,7 +218,7 @@ function SchoolPicker({
                         Recent
                       </p>
                       {recentVisible.map((school, ri) => {
-                        const active  = school.id === value;
+                        const active = school.id === value;
                         const focused = focusedIdx === ri;
                         return (
                           <button
@@ -228,7 +228,7 @@ function SchoolPicker({
                             onClick={() => selectSchool(school)}
                             className={cn(
                               "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
-                              active  && "bg-primary/10 text-primary",
+                              active && "bg-primary/10 text-primary",
                               focused && !active && "bg-white/8 text-foreground",
                               !active && !focused && "text-foreground/80 hover:bg-white/5 hover:text-foreground"
                             )}
@@ -246,8 +246,8 @@ function SchoolPicker({
 
                   {/* Main list */}
                   {mainList.map((school, mi) => {
-                    const navIdx  = recentVisible.length + mi;
-                    const active  = school.id === value;
+                    const navIdx = recentVisible.length + mi;
+                    const active = school.id === value;
                     const focused = focusedIdx === navIdx;
                     return (
                       <button
@@ -257,7 +257,7 @@ function SchoolPicker({
                         onClick={() => selectSchool(school)}
                         className={cn(
                           "w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors",
-                          active  && "bg-primary/10 text-primary",
+                          active && "bg-primary/10 text-primary",
                           focused && !active && "bg-white/8 text-foreground",
                           !active && !focused && "text-foreground/80 hover:bg-white/5 hover:text-foreground"
                         )}
@@ -306,23 +306,24 @@ function LoginPageInner() {
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const [schoolId,   setSchoolId]   = useState(DEFAULT_SCHOOL_ID);
+  const [schoolId, setSchoolId] = useState(DEFAULT_SCHOOL_ID);
   const [schoolName, setSchoolName] = useState(DEFAULT_SCHOOL_NAME);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthV2Loading, setIsAuthV2Loading] = useState(false);
+  const [isAuthV2ExternalLoading, setIsAuthV2ExternalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exitActive, setExitActive] = useState(false);
   const [easterEgg, setEasterEgg] = useState(false);
   const [taglineAlt, setTaglineAlt] = useState(false);
 
-  const shiftHeldRef    = useRef(false);
+  const shiftHeldRef = useRef(false);
   const konamiBufferRef = useRef<string[]>([]);
-  const logoClicksRef   = useRef(0);
-  const logoTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingNavRef   = useRef(false);
+  const logoClicksRef = useRef(0);
+  const logoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingNavRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace("/dashboard");
@@ -333,13 +334,13 @@ function LoginPageInner() {
     const authv2Error = searchParams.get("authv2_error");
     if (authv2Error) setError(authv2Error);
   }, [searchParams]);
-  
+
   // Track Shift key state globally for the skip-transition shortcut
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = true; };
-    const up   = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = false; };
+    const up = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = false; };
     window.addEventListener("keydown", down);
-    window.addEventListener("keyup",   up);
+    window.addEventListener("keyup", up);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
   }, []);
 
@@ -407,6 +408,13 @@ function LoginPageInner() {
     window.location.href = `/api/auth/v2/initiate?school=${encodeURIComponent(schoolId)}`;
   };
 
+  const handleAuthV2ExternalLogin = () => {
+    setError(null);
+    setIsAuthV2ExternalLoading(true);
+    // Navigate to the initiate route — it will set cookies then redirect to SchoolSoft
+    window.location.href = `/api/auth/v2/initiate/external?school=${encodeURIComponent(schoolId)}`;
+  };
+
   if (authLoading) return null;
 
   return (
@@ -414,7 +422,7 @@ function LoginPageInner() {
 
       {/*  Left panel: immersive dark hero  */}
       <div className="hidden lg:flex lg:w-[54%] relative overflow-hidden flex-col justify-between p-12"
-style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
+        style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
 
         {/* dot grid */}
         <div className="absolute inset-0 pointer-events-none"
@@ -480,9 +488,9 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
                 {/* rows */}
                 <div className="p-3 space-y-2">
                   {[
-                    { icon: CalendarDays, label: "Mathematics · 08:15",   color: "oklch(0.65 0.22 278)" },
-                    { icon: BookOpen,     label: "English · 10:00",        color: "oklch(0.72 0.18 148)" },
-                    { icon: StickyNote,   label: "2 notes · updated",      color: "oklch(0.75 0.18 310)" },
+                    { icon: CalendarDays, label: "Mathematics · 08:15", color: "oklch(0.65 0.22 278)" },
+                    { icon: BookOpen, label: "English · 10:00", color: "oklch(0.72 0.18 148)" },
+                    { icon: StickyNote, label: "2 notes · updated", color: "oklch(0.75 0.18 310)" },
                   ].map(({ icon: Icon, label, color }, i) => (
                     <motion.div
                       key={label}
@@ -505,7 +513,7 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
                   style={{ borderColor: "oklch(1 0 0 / 6%)", background: "oklch(1 0 0 / 2%)" }}>
                   <span className="text-[9px]" style={{ color: "oklch(1 0 0 / 30%)" }}>3 lessons today</span>
                   <div className="flex gap-1">
-                    {[0,1,2].map(i => (
+                    {[0, 1, 2].map(i => (
                       <div key={i} className="w-1.5 h-1.5 rounded-full"
                         style={{ background: i === 0 ? "var(--primary)" : "oklch(1 0 0 / 10%)" }} />
                     ))}
@@ -620,14 +628,14 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
             </button>
           </form>
 
-          {/* ── AuthV2 separator ─────────────────────────────── */}
+          {/*  AuthV2 separator  */}
           <div className="mt-5 flex items-center gap-3">
             <div className="flex-1 h-px bg-border" />
             <span className="text-[10px] text-muted-foreground/50">or</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* ── AuthV2 login ─────────────────────────────────── */}
+          {/*  AuthV2 login  */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -649,7 +657,7 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
               type="button"
               onClick={handleAuthV2Login}
               disabled={isAuthV2Loading}
-              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
+              className="w-full mb-3 h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
               style={{
                 background: "color-mix(in oklch, var(--brand) 6%, transparent)",
                 color: "var(--primary)",
@@ -661,6 +669,25 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
                 <>
                   <ExternalLink className="w-3.5 h-3.5" />
                   Login through SchoolSoft
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleAuthV2ExternalLogin}
+              disabled={isAuthV2ExternalLoading}
+              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
+              style={{
+                background: "color-mix(in oklch, var(--brand) 8%, transparent)",
+                color: "var(--primary)",
+              }}
+            >
+              {isAuthV2ExternalLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Login with external provider
                 </>
               )}
             </button>
@@ -678,33 +705,33 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
         </motion.div>
       </div>
 
-      {/* ── Cinematic exit curtain: 7 strips close in from both sides ── */}
+      {/*  Cinematic exit curtain: 7 strips close in from both sides  */}
       {exitActive && (
         <div className="fixed inset-0 z-9999 overflow-hidden pointer-events-none">
           {Array.from({ length: 7 }).map((_, i) => {
             const fromLeft = i % 2 === 0;
-            const isLast   = i === 6;
+            const isLast = i === 6;
             const bg =
               i % 3 === 0
                 ? "oklch(0.11 0.16 278)"
                 : i % 3 === 1
-                ? "oklch(0.09 0.13 295)"
-                : "oklch(0.07 0.10 310)";
+                  ? "oklch(0.09 0.13 295)"
+                  : "oklch(0.07 0.10 310)";
             return (
               <motion.div
                 key={i}
                 className="absolute left-0 right-0"
                 style={{
-                  top:        `${(i / 7) * 100}%`,
-                  height:     `${100 / 7 + 0.3}%`,
+                  top: `${(i / 7) * 100}%`,
+                  height: `${100 / 7 + 0.3}%`,
                   background: bg,
                 }}
                 initial={{ x: fromLeft ? "-105%" : "105%" }}
                 animate={{ x: "0%" }}
                 transition={{
                   duration: 0.58,
-                  delay:    i * 0.048,
-                  ease:     [0.76, 0, 0.24, 1],
+                  delay: i * 0.048,
+                  ease: [0.76, 0, 0.24, 1],
                 }}
                 onAnimationComplete={
                   isLast
@@ -761,7 +788,7 @@ style={{ background: "var(--card)", borderRight: "1px solid var(--border)" }}>
         </div>
       )}
 
-      {/* ── Konami code easter egg ────────────────────────────── */}
+      {/*  Konami code easter egg  */}
       <AnimatePresence>
         {easterEgg && (
           <motion.div
