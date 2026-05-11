@@ -520,7 +520,7 @@ export default function LandingPage() {
           {/* CTA */}
           <Link
             href="/login"
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white bg-primary"
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white bg-primary/60 hover:bg-primary/70 transition-colors"
           >
             Sign in <ArrowRight className="w-3.5 h-3.5" />
           </Link>

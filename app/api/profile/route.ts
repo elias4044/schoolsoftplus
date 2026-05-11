@@ -50,7 +50,8 @@ export async function PUT(req: NextRequest) {
   const MAX_LEN: Record<string, number> = {
     displayName: 80, bio: 500, pronouns: 40, location: 80,
     website: 200, pfpUrl: 500, coverUrl: 500, accentColor: 30,
-    github: 100, twitter: 100, instagram: 100, linkedin: 200, dmPrivacy: 10,
+    github: 100, twitter: 100, instagram: 100, linkedin: 200, dmPrivacy: 10, ringtone: 20,
+    ringtoneCustomUrl: 500,
   };
 
   const update: Record<string, string> = {};
@@ -63,8 +64,15 @@ export async function PUT(req: NextRequest) {
   if (update.website && !/^https?:\/\/.+/.test(update.website)) {
     return NextResponse.json({ success: false, error: "website must be a valid URL." }, { status: 400 });
   }
+  if (update.ringtoneCustomUrl !== undefined && update.ringtoneCustomUrl !== "") {
+    if (!/^https?:\/\/.+/.test(update.ringtoneCustomUrl)) {
+      return NextResponse.json({ success: false, error: "ringtoneCustomUrl must be a valid URL or empty." }, { status: 400 });
+    }
+  }
   if (update.accentColor && !/^#[0-9a-fA-F]{6}$/.test(update.accentColor)) delete update.accentColor;
   if (update.dmPrivacy && !["everyone", "nobody"].includes(update.dmPrivacy)) delete update.dmPrivacy;
+  const VALID_RINGTONES = ["default", "classic", "digital", "soft", "pulse", "custom"];
+  if (update.ringtone && !VALID_RINGTONES.includes(update.ringtone)) delete update.ringtone;
 
   const profile = await upsertProfile(username, { ...update, ...sessionSnap });
 

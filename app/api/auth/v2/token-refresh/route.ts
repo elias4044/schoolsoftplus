@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
+import { makeUserHandle, getPasskeyUser, updatePasskeyToken } from "@/app/api/lib/passkeyDb";
+import { encrypt } from "@/app/api/lib/serverCrypto";
 
 const CLIENT_ID = "eApp";
 
@@ -145,6 +147,22 @@ export async function POST(req: NextRequest) {
   res.cookies.set("ssp_ss_token_expires", String(ssTokenExpiresAt), { ...sessionCookieOpts, httpOnly: false, maxAge: 60 * 60 * 24 * 30 });
   if (newRefreshToken) {
     res.cookies.set("ssp_ss_refresh_token", newRefreshToken, { ...sessionCookieOpts, maxAge: 60 * 60 * 24 * 30 });
+  }
+
+  // Keep the passkey store in sync: if this user has a passkey record,
+  // update it with the latest refresh token so future passkey logins work.
+  const tokenToStore = newRefreshToken ?? refreshToken;
+  if (tokenToStore && canonicalUsername && school) {
+    const userHandle = makeUserHandle(canonicalUsername, school);
+    getPasskeyUser(userHandle)
+      .then(record => {
+        if (!record) return;
+        const { ciphertext, iv } = encrypt(tokenToStore);
+        return updatePasskeyToken(userHandle, ciphertext, iv);
+      })
+      .catch(err =>
+        console.error("[auth/v2/token-refresh] passkey token sync error:", (err as Error).message)
+      );
   }
 
   return res;

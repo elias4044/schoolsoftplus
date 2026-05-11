@@ -59,8 +59,7 @@ export function AddWidgetPanel({ open, onClose, existingWidgets, onAdd }: Props)
                     }}
                   >
                     <div
-                      className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 mt-0.5"
-                      style={{ background: "oklch(0.65 0.22 278 / 15%)" }}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 mt-0.5 bg-brand-dim"
                     >
                       <Icon className="w-4 h-4 text-primary" />
                     </div>
