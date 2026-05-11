@@ -30,12 +30,10 @@ export async function POST(req: NextRequest) {
   const { rpID, rpName } = getRpConfig();
 
   // Collect existing credential IDs to exclude from re-registration
-  let existingCredentialIds: Uint8Array[] = [];
+  let existingCredentialIds: string[] = [];
   try {
     const existing = await listCredentials(userHandle);
-    existingCredentialIds = existing.map(c =>
-      Uint8Array.from(Buffer.from(c.credentialId, "base64url"))
-    );
+    existingCredentialIds = existing.map(c => c.credentialId);
   } catch { /* non-fatal */ }
 
   const options = await generateRegistrationOptions({
@@ -50,7 +48,7 @@ export async function POST(req: NextRequest) {
       userVerification: "required",
       // Allow both platform (Face ID, Windows Hello) and cross-platform (hardware keys)
     },
-    excludeCredentials: existingCredentialIds.map(id => ({ id, type: "public-key" })),
+    excludeCredentials: existingCredentialIds.map(id => ({ id })),
   });
 
   // Store challenge in Firestore
