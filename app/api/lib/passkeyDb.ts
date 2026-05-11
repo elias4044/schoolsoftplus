@@ -136,34 +136,34 @@ export async function getCredential(
 
 /**
  * Finds the userHandle that owns a given credentialId.
- * Used during authentication when we only have the credential ID.
+ * Uses a flat index doc to avoid a collection-group query (no Firestore index required).
  */
 export async function findCredentialByIdGlobal(
   credentialId: string
 ): Promise<{ userHandle: string; credential: PasskeyCredential } | null> {
-  // Collection-group query across all "credentials" subcollections
-  const snap = await db
-    .collectionGroup("credentials")
-    .where("credentialId", "==", credentialId)
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
-  // Parent path: passkey_users/{userHandle}/credentials/{credId}
-  const userHandle = doc.ref.parent.parent!.id;
-  return { userHandle, credential: doc.data() as PasskeyCredential };
+  const indexDoc = await db.collection("passkey_credential_index").doc(credentialId).get();
+  if (!indexDoc.exists) return null;
+  const { userHandle } = indexDoc.data() as { userHandle: string };
+  const credential = await getCredential(userHandle, credentialId);
+  if (!credential) return null;
+  return { userHandle, credential };
 }
 
 export async function saveCredential(
   userHandle: string,
   cred: PasskeyCredential
 ): Promise<void> {
-  await db
-    .collection("passkey_users")
-    .doc(userHandle)
-    .collection("credentials")
-    .doc(cred.credentialId)
-    .set(cred);
+  const batch = db.batch();
+  batch.set(
+    db.collection("passkey_users").doc(userHandle).collection("credentials").doc(cred.credentialId),
+    cred
+  );
+  // Flat index: credentialId -> userHandle (no collection-group query needed)
+  batch.set(
+    db.collection("passkey_credential_index").doc(cred.credentialId),
+    { userHandle }
+  );
+  await batch.commit();
 }
 
 export async function updateCredentialSignCount(
@@ -193,12 +193,14 @@ export async function deleteCredential(
   userHandle: string,
   credentialId: string
 ): Promise<void> {
-  await db
-    .collection("passkey_users")
-    .doc(userHandle)
-    .collection("credentials")
-    .doc(credentialId)
-    .delete();
+  const batch = db.batch();
+  batch.delete(
+    db.collection("passkey_users").doc(userHandle).collection("credentials").doc(credentialId)
+  );
+  batch.delete(
+    db.collection("passkey_credential_index").doc(credentialId)
+  );
+  await batch.commit();
 }
 
 /** Returns the number of credentials for a user. */

@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
 
   const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
 
-  // Encode credential ID and public key as base64url strings for storage
-  const credentialId = Buffer.from(credential.id).toString("base64url");
+  // credential.id is already base64url in @simplewebauthn/server v13+
+  const credentialId = credential.id;
   const publicKey = Buffer.from(credential.publicKey).toString("base64url");
 
   // Determine a device name: user-provided or fallback to UA
