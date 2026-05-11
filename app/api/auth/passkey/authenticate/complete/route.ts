@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       expectedRPID: rpID,
       requireUserVerification: true,
       credential: {
-        id: Uint8Array.from(Buffer.from(credential.credentialId, "base64url")),
+        id: credential.credentialId,
         publicKey: Uint8Array.from(Buffer.from(credential.publicKey, "base64url")),
         counter: credential.signCount,
       },
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
         "User-Agent": "nyEva",
         "X-Requested-With": "com.schoolsoft.eapp.android",
         token:       ssToken,
-        orgid,
+        orgId,
         redirecturl: redirectUrl,
         language:    "sw",
         theme:       "dark",
