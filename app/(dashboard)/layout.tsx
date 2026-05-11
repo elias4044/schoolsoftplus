@@ -13,6 +13,7 @@ import { CallProvider } from "@/lib/call-context";
 import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
 import { Comfortaa } from "next/font/google";
 import { CinematicTransition } from "@/components/CinematicTransition";
+import { Metadata } from "next";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 

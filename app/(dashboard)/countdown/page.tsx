@@ -740,12 +740,9 @@ export default function CountdownPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
-              style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))" }}
-            >
-              <Timer className="w-5 h-5" style={{ color: "oklch(0.72 0.18 278)" }} />
-            </div>
+                      <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        <Timer className="w-6 h-6 text-primary" />
+                      </h1>
             <div>
               <h1 className="text-xl font-bold">Countdowns</h1>
               <p className="text-xs text-muted-foreground">Track events, exams and more</p>

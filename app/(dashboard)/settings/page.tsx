@@ -1,13 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, LogOut, User, Palette, Check, Monitor, Layout } from "lucide-react";
+import { LogOut, User, Palette, Check, Layout, Bell, Play, KeyRound } from "lucide-react";
+import PasskeyManager from "@/components/PasskeyManager";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/lib/auth-context";
 import { useAppTheme, THEMES, ACCENTS } from "@/lib/theme-context";
 import type { AppTheme, AccentColor } from "@/lib/theme-context";
+import { RINGTONE_OPTIONS, useRingtone, type RingtoneId } from "@/components/CallPanel";
+
+/* ── Ringtone preview helper ──────────────────────────────── */
+function RingtonePreviewButton({ id, customUrl }: { id: string; customUrl?: string }) {
+  const [playing, setPlaying] = useState(false);
+  useRingtone(id, playing, customUrl);
+
+  function handlePreview() {
+    setPlaying(true);
+    // Play one 3-second cycle then stop
+    setTimeout(() => setPlaying(false), 2_800);
+  }
+
+  return (
+    <button
+      onClick={handlePreview}
+      disabled={playing}
+      className="flex items-center justify-center w-6 h-6 rounded-md transition-colors hover:bg-white/8 disabled:opacity-40"
+      aria-label={`Preview ${id} ringtone`}
+    >
+      <Play className="w-3 h-3" style={{ color: playing ? "var(--primary)" : "oklch(1 0 0 / 45%)" }} />
+    </button>
+  );
+}
 
 /* ── Section wrapper ──────────────────────────────────────── */
 function Section({ icon: Icon, title, children }: {
@@ -36,6 +62,61 @@ function Section({ icon: Icon, title, children }: {
 export default function SettingsPage() {
   const { session, logout } = useAuth();
   const { theme, accent, setTheme, setAccent } = useAppTheme();
+
+  // Ringtone preference — loaded from profile, saved on change
+  const [ringtone, setRingtoneState] = useState<RingtoneId>("default");
+  const [ringtoneSaving, setRingtoneSaving] = useState(false);
+  const savingRef = useRef(false);
+
+  const [ringtoneCustomUrl, setRingtoneCustomUrl] = useState("");
+  const customUrlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.profile?.ringtone) {
+          setRingtoneState(data.profile.ringtone as RingtoneId);
+        }
+        if (data.success && data.profile?.ringtoneCustomUrl) {
+          setRingtoneCustomUrl(data.profile.ringtoneCustomUrl);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveRingtone = useCallback(async (id: RingtoneId) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setRingtoneSaving(true);
+    try {
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ringtone: id }),
+      });
+    } catch { /* ignore */ } finally {
+      savingRef.current = false;
+      setRingtoneSaving(false);
+    }
+  }, []);
+
+  function handleRingtoneCustomUrlChange(url: string) {
+    setRingtoneCustomUrl(url);
+    if (customUrlDebounceRef.current) clearTimeout(customUrlDebounceRef.current);
+    customUrlDebounceRef.current = setTimeout(() => {
+      fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ringtoneCustomUrl: url }),
+      }).catch(() => {});
+    }, 500);
+  }
+
+  function handleRingtoneSelect(id: RingtoneId) {
+    setRingtoneState(id);
+    saveRingtone(id);
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -138,6 +219,73 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground leading-relaxed">
             Customise your dashboard layout by pressing <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(1 0 0 / 6%)" }}>Edit layout</span> on the dashboard page. You can drag, resize, add and remove widgets.
           </p>
+        </Section>
+
+        {/* ── Sound ───────────────────────────────────────── */}
+        <Section icon={Bell} title="Sound">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Ringtone</p>
+            <div className="flex flex-col gap-1.5">
+              {RINGTONE_OPTIONS.map((opt) => (
+                <div key={opt.id}>
+                  <div
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer"
+                    style={{
+                      borderColor: ringtone === opt.id ? "var(--primary)" : "oklch(1 0 0 / 8%)",
+                      background: ringtone === opt.id ? "var(--brand-dim)" : "oklch(1 0 0 / 2%)",
+                    }}
+                    onClick={() => handleRingtoneSelect(opt.id as RingtoneId)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0 transition-colors"
+                        style={{
+                          background: ringtone === opt.id ? "var(--primary)" : "oklch(1 0 0 / 20%)",
+                        }}
+                      />
+                      <span className="text-sm font-medium">{opt.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RingtonePreviewButton id={opt.id} customUrl={opt.id === "custom" ? ringtoneCustomUrl : undefined} />
+                      {ringtone === opt.id && (
+                        <Check className="w-3.5 h-3.5" style={{ color: "var(--primary)" }} />
+                      )}
+                    </div>
+                  </div>
+                  {/* URL input — only shown for custom, only when selected */}
+                  {opt.id === "custom" && ringtone === "custom" && (
+                    <div className="mt-1.5 ml-8">
+                      <Input
+                        type="url"
+                        placeholder="https://example.com/ringtone.mp3"
+                        value={ringtoneCustomUrl}
+                        onChange={(e) => handleRingtoneCustomUrlChange(e.target.value)}
+                        className="text-xs h-8"
+                        style={{ background: "oklch(1 0 0 / 4%)", borderColor: "oklch(1 0 0 / 10%)" }}
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Direct link to an MP3 file. Must start with https://
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {ringtoneSaving && (
+              <p className="text-[10px] text-muted-foreground mt-2">Saving...</p>
+            )}
+          </div>
+        </Section>
+
+        {/* ── Security ─────────────────────────────────────── */}
+        <Section icon={KeyRound} title="Security">
+          <div>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              Passkeys let you sign in with Face ID, fingerprint, or a hardware security key.
+              They are tied to your current SchoolSoft session and require AuthV2 to be set up first.
+            </p>
+            <PasskeyManager />
+          </div>
         </Section>
 
         {/* ── Danger zone ──────────────────────────────────── */}

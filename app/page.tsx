@@ -12,6 +12,14 @@ export const metadata: Metadata = {
       "Fast, modern, AI-powered interface for your SchoolSoft account.",
     url: "https://ssp.elias4044.com",
     type: "website",
+    images: [
+      {
+        url: "https://ssp.elias4044.com/social_preview.png",
+        width: 1481,
+        height: 599,
+        alt: "SchoolSoft+ — A better student dashboard",
+      },
+    ],
   },
 };
 

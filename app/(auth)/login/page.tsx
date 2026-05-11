@@ -5,13 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { markTransitionPending } from "@/lib/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical, ShieldCheck } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical, ShieldCheck, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { startAuthentication, browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/types";
 
 const DEFAULT_SCHOOL_ID = "engelska";
 const DEFAULT_SCHOOL_NAME = "Internationella Engelska Skolan - IES Halmstad";
@@ -314,6 +316,9 @@ function LoginPageInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthV2Loading, setIsAuthV2Loading] = useState(false);
   const [isAuthV2ExternalLoading, setIsAuthV2ExternalLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  const [passkeySupported, setPasskeySupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exitActive, setExitActive] = useState(false);
   const [easterEgg, setEasterEgg] = useState(false);
@@ -328,6 +333,10 @@ function LoginPageInner() {
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated, authLoading, router]);
+
+  useEffect(() => {
+    setPasskeySupported(browserSupportsWebAuthn());
+  }, []);
 
   // Show AuthV2 error returned via ?authv2_error=... query param
   useEffect(() => {
@@ -398,6 +407,47 @@ function LoginPageInner() {
       setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setPasskeyError(null);
+    setIsPasskeyLoading(true);
+    try {
+      const beginRes = await fetch("/api/auth/passkey/authenticate/begin", { method: "POST" });
+      const beginData = await beginRes.json();
+      if (!beginData.success) throw new Error(beginData.error ?? "Failed to start passkey login.");
+
+      const options = beginData.options as PublicKeyCredentialRequestOptionsJSON;
+
+      let authResp;
+      try {
+        authResp = await startAuthentication({ optionsJSON: options });
+      } catch (err) {
+        const e = err as Error;
+        if (e.name === "NotAllowedError") throw new Error("Passkey sign-in was cancelled.");
+        throw new Error("Could not access your passkey. Please try again.");
+      }
+
+      const completeRes = await fetch("/api/auth/passkey/authenticate/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: authResp }),
+      });
+      const completeData = await completeRes.json();
+      if (!completeData.success) throw new Error(completeData.error ?? "Passkey login failed.");
+
+      // Navigate to dashboard
+      const isLarge = window.innerWidth >= 1024;
+      if (isLarge && !shiftHeldRef.current) {
+        setExitActive(true);
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (err) {
+      setPasskeyError((err as Error).message);
+    } finally {
+      setIsPasskeyLoading(false);
     }
   };
 
@@ -692,6 +742,46 @@ function LoginPageInner() {
               )}
             </button>
           </motion.div>
+
+          {/* Passkey sign-in */}
+          {passkeySupported && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.15 }}
+              className="mt-3"
+            >
+              <button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={isPasskeyLoading}
+                className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border hover:bg-white/5"
+                style={{ borderColor: "oklch(1 0 0 / 10%)", color: "oklch(1 0 0 / 55%)" }}
+              >
+                {isPasskeyLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <KeyRound className="w-3.5 h-3.5" />
+                    Sign in with a passkey
+                  </>
+                )}
+              </button>
+              <AnimatePresence>
+                {passkeyError && (
+                  <motion.p
+                    key="pk-err"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden text-xs mt-2 px-3 py-2 rounded-lg border border-destructive/20 bg-destructive/8 text-destructive"
+                  >
+                    {passkeyError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
           {/* Help links */}
           <div className="mt-6 pt-5 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground/60">

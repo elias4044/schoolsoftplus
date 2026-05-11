@@ -141,7 +141,30 @@ service cloud.firestore {
         );
       }
     }
+    // ── Group Voice Calls (WebRTC signaling — mesh) ───────────
+    // Any authenticated user may read/write active group call documents.
+    // The conversationId in the document ties access to a conversation,
+    // but we keep rules simple here since conversation membership is
+    // enforced at the query level and client-side guards.
+    match /group_calls_v2/{callId} {
+      allow read, list: if isAuthed();
+      allow create: if isAuthed() &&
+        request.auth.uid == request.resource.data.startedBy &&
+        request.resource.data.status == "active";
+      allow update: if isAuthed();
+      allow delete: if false;
 
+      match /connections/{connectionKey} {
+        allow read, write: if isAuthed();
+
+        match /fromInitiator/{candidateId} {
+          allow read, create, delete: if isAuthed();
+        }
+        match /fromResponder/{candidateId} {
+          allow read, create, delete: if isAuthed();
+        }
+      }
+    }
     // ── Default deny ──────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

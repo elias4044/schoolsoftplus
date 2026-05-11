@@ -34,10 +34,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 
-/* ── Constants ─────────────────────────────────────────── */
+/*  Constants  */
 const REPO_URL = "https://github.com/elias4044/schoolsoftplus";
 
-/* ── Label colour map ───────────────────────────────────── */
+/*  Label colour map  */
 const LABEL_COLOURS: Record<string, string> = {
   bug:               "oklch(0.65 0.22 25)",
   "feature request": "oklch(0.65 0.22 278)",
@@ -54,7 +54,7 @@ function labelColour(name: string, ghColor?: string): string {
   return LABEL_COLOURS[name.toLowerCase()] ?? (ghColor ? `#${ghColor}` : "oklch(0.55 0.08 278)");
 }
 
-/* ── Templates ──────────────────────────────────────────── */
+/*  Templates  */
 const TEMPLATES = [
   {
     id:     "bug",
@@ -115,7 +115,7 @@ Any other solutions you've thought about.`,
 
 type TemplateId = (typeof TEMPLATES)[number]["id"];
 
-/* ── GitHub Issue type ──────────────────────────────────── */
+/*  GitHub Issue type  */
 interface GHLabel { name: string; color: string }
 interface GHIssue {
   id:         number;
@@ -129,7 +129,7 @@ interface GHIssue {
   labels:     GHLabel[];
 }
 
-/* ── Helpers ────────────────────────────────────────────── */
+/*  Helpers  */
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60_000);
@@ -142,7 +142,7 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
-/* ── IssueCard ──────────────────────────────────────────── */
+/*  IssueCard  */
 function IssueCard({ issue }: { issue: GHIssue }) {
   const isOpen = issue.state === "open";
   return (
@@ -198,7 +198,7 @@ function IssueCard({ issue }: { issue: GHIssue }) {
   );
 }
 
-/* ── SubmitForm ─────────────────────────────────────────── */
+/*  SubmitForm  */
 interface SubmitFormProps {
   templateId: TemplateId;
   username:   string;
@@ -320,7 +320,7 @@ function SubmitForm({ templateId, username, onBack, onSuccess }: SubmitFormProps
   );
 }
 
-/* ── SuccessBanner ──────────────────────────────────────── */
+/*  SuccessBanner  */
 function SuccessBanner({ url, number, onReset }: { url: string; number: number; onReset: () => void }) {
   return (
     <motion.div
@@ -367,7 +367,7 @@ function SuccessBanner({ url, number, onReset }: { url: string; number: number; 
   );
 }
 
-/* ── Main Page ──────────────────────────────────────────── */
+/*  Main Page  */
 type Tab = "submit" | "open" | "closed";
 type LabelFilter = "all" | "bug" | "feature request" | "question";
 type SubmitStep = "pick" | "form" | "success";
@@ -423,7 +423,7 @@ export default function FeedbackPage() {
     ? issues.filter(i => i.title.toLowerCase().includes(search.toLowerCase()))
     : issues;
 
-  /* ── Render ─────────────────────────────────────── */
+  /*  Render  */
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -481,7 +481,7 @@ export default function FeedbackPage() {
 
       <AnimatePresence mode="wait">
 
-        {/* ── Submit tab ── */}
+        {/*  Submit tab  */}
         {tab === "submit" && (
           <motion.div
             key="submit-root"
@@ -576,7 +576,7 @@ export default function FeedbackPage() {
           </motion.div>
         )}
 
-        {/* ── Issues tabs ── */}
+        {/*  Issues tabs  */}
         {(tab === "open" || tab === "closed") && (
           <motion.div
             key={tab}

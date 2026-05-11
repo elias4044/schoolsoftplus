@@ -408,7 +408,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
                 </span>
               )}
               {shortcut && (
-                <span className="text-[9px] font-mono tracking-tight opacity-40 shrink-0">
+                <span className="text-[9px] font-mono tracking-tight opacity-0 md:opacity-80 shrink-0">
                   {shortcut}
                 </span>
               )}
@@ -447,7 +447,7 @@ function NavItem({ href, label, Icon, active, collapsed, onClick, accent, danger
         <TooltipContent side="right" className="text-xs flex items-center gap-2">
           {label}
           {shortcut && (
-            <span className="font-mono text-[10px] opacity-60">{shortcut}</span>
+            <span className="font-mono text-[10px] opacity-80">{shortcut}</span>
           )}
         </TooltipContent>
       </Tooltip>

@@ -1,6 +1,6 @@
 {
   "name": "schoolsoftplus",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "private": false,
   "repository": {
     "type": "git",
@@ -34,6 +34,8 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.0",
     "axios": "^1.15.0",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",

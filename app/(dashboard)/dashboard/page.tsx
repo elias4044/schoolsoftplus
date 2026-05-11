@@ -36,11 +36,11 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 pr-10">
           {editing && (
             <>
-              <Button variant="ghost" size="sm" className="text-xs gap-1.5"
+              <Button variant="ghost" size="sm" className="text-xs gap-1. text-white"
                 onClick={() => setAddOpen(true)}>
                 <Plus className="w-3.5 h-3.5" /> Add widget
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-white"
+              <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-white "
                 onClick={reset}>
                 <RotateCcw className="w-3.5 h-3.5" /> Reset
               </Button>
@@ -49,7 +49,7 @@ export default function DashboardPage() {
           <Button
             size="sm"
             onClick={() => setEditing(e => !e)}
-            className="text-xs gap-1.5 text-white "
+            className="text-xs gap-1.5 text-white bg-primary/60 hover:bg-primary/80"
           >
             <Pencil className="w-3.5 h-3.5" />
             {editing ? "Done" : "Edit layout"}

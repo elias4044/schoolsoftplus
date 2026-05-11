@@ -86,8 +86,7 @@ export function WidgetShell({ instance, children, onResize, onRemove, editing }:
         </AnimatePresence>
 
         <div
-          className="flex items-center justify-center w-5 h-5 rounded-md shrink-0"
-          style={{ background: "oklch(0.65 0.22 278 / 15%)" }}
+          className="flex items-center justify-center w-5 h-5 rounded-md shrink-0 bg-brand-dim"
         >
           <Icon className="w-3 h-3 text-primary" />
         </div>

@@ -76,6 +76,8 @@ import { deriveKey, encryptMessage, decryptMessage } from "@/lib/crypto";
 import { useFriends } from "@/lib/useFriends";
 import { useMyPresence, usePresenceMap, statusColor, statusLabel, type UserStatus } from "@/lib/usePresence";
 import { useCallContext } from "@/lib/call-context";
+import { useActiveGroupCallForConversation } from "@/lib/useCall";
+import { GroupCallEncryptionNotice } from "@/components/CallPanel";
 
 /* ─────────────────────────────────────────────────────────────
    Types
@@ -550,7 +552,13 @@ export default function MessagesPage() {
     const [viewProfileUsername, setViewProfileUsername] = useState<string | null>(null);
 
     // ── Voice calls (global context — CallPanel rendered in layout) ──
-    const { call, incomingCall } = useCallContext();
+    const { call, groupCall } = useCallContext();
+    const [showEncCallWarning, setShowEncCallWarning] = useState(false);
+
+    // Detect any active group call in the current group conversation
+    const activeGroupCallInfo = useActiveGroupCallForConversation(
+        activeConvo?.type === "group" ? activeConvo.id : null
+    );
 
     // pfp cache: username → pfp URL, fetched from /api/profile/[username]
     const [pfpCache, setPfpCache] = useState<Record<string, string>>({});
@@ -1405,7 +1413,7 @@ export default function MessagesPage() {
                                                     "w-8 h-8 shrink-0 rounded-lg",
                                                     call.phase !== "idle" && "bg-primary/15 text-primary"
                                                 )}
-                                                disabled={call.phase !== "idle"}
+                                                disabled={call.phase !== "idle" || groupCall.phase !== "idle"}
                                                 onClick={() => {
                                                     const partner = activeConvo.participants.find(
                                                         (p) => p !== username
@@ -1419,6 +1427,59 @@ export default function MessagesPage() {
                                         <TooltipContent side="bottom" className="text-xs">
                                             {call.phase !== "idle" ? "Call in progress" : "Voice call"}
                                         </TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {activeConvo.type === "group" && activeGroupCallInfo && (
+                                    // Active group call banner
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs font-medium"
+                                        style={{ background: "oklch(0.60 0.20 148 / 12%)", border: "1px solid oklch(0.60 0.20 148 / 25%)" }}>
+                                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "oklch(0.60 0.20 148)" }} />
+                                        <span className="text-[10px]" style={{ color: "oklch(0.65 0.18 148)" }}>
+                                            {activeGroupCallInfo.participants.length} in call
+                                        </span>
+                                        {groupCall.session?.callId === activeGroupCallInfo.callId ? (
+                                            <button
+                                                onClick={() => groupCall.leaveGroupCall()}
+                                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md transition-colors hover:bg-red-500/15"
+                                                style={{ color: "oklch(0.72 0.20 24)" }}
+                                            >
+                                                Leave
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    if (groupCall.phase !== "idle" || call.phase !== "idle") return;
+                                                    groupCall.joinGroupCall(activeGroupCallInfo.callId, activeConvo.id, username);
+                                                }}
+                                                disabled={groupCall.phase !== "idle" || call.phase !== "idle"}
+                                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md transition-colors hover:bg-green-500/15 disabled:opacity-50"
+                                                style={{ color: "oklch(0.65 0.18 148)" }}
+                                            >
+                                                Join
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {activeConvo.type === "group" && !activeGroupCallInfo && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="w-8 h-8 shrink-0 rounded-lg"
+                                                disabled={groupCall.phase !== "idle" || call.phase !== "idle"}
+                                                onClick={() => {
+                                                    if (activeConvo.encrypted) {
+                                                        setShowEncCallWarning(true);
+                                                    } else {
+                                                        groupCall.startGroupCall(username, activeConvo.id);
+                                                    }
+                                                }}
+                                            >
+                                                <Phone className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-xs">Start voice call</TooltipContent>
                                     </Tooltip>
                                 )}
                                 {activeConvo.type === "group" && (
@@ -2531,6 +2592,21 @@ export default function MessagesPage() {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Group call encryption warning */}
+            <AnimatePresence>
+                {showEncCallWarning && (
+                    <GroupCallEncryptionNotice
+                        onCancel={() => setShowEncCallWarning(false)}
+                        onConfirm={() => {
+                            setShowEncCallWarning(false);
+                            if (activeConvo?.type === "group") {
+                                groupCall.startGroupCall(username, activeConvo.id);
+                            }
+                        }}
+                    />
                 )}
             </AnimatePresence>
         </div>

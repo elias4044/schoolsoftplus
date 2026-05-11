@@ -17,6 +17,9 @@ export interface UserProfile {
   twitter: string;
   instagram: string;
   linkedin: string;
+  // calls
+  ringtone: string;  // ringtone ID, e.g. "default" | "classic" | "digital" | "soft" | "pulse" | "custom"
+  ringtoneCustomUrl: string;  // custom MP3 URL, used when ringtone === "custom"
   // privacy
   dmPrivacy: "everyone" | "nobody";  // who can initiate DMs
   // read-only snapshot fields (refreshed from session on every save)
@@ -46,6 +49,8 @@ function docToProfile(doc: FirebaseFirestore.DocumentSnapshot<any>): UserProfile
     twitter:     d.twitter     ?? "",
     instagram:   d.instagram   ?? "",
     linkedin:    d.linkedin    ?? "",
+    ringtone:         d.ringtone ?? "default",
+    ringtoneCustomUrl: d.ringtoneCustomUrl ?? "",
     dmPrivacy:   d.dmPrivacy === "nobody" ? "nobody" : "everyone",
     firstName:   d.firstName   ?? "",
     lastName:    d.lastName    ?? "",
@@ -76,6 +81,8 @@ export interface ProfileUpdate {
   twitter?: string;
   instagram?: string;
   linkedin?: string;
+  ringtone?: string;
+  ringtoneCustomUrl?: string;
   dmPrivacy?: string;
   // session snapshot
   firstName?: string;
