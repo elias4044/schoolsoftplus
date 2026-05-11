@@ -4,9 +4,11 @@ import { verifyAuthenticationResponse, type AuthenticationResponseJSON } from "@
 import {
   consumeChallenge,
   findCredentialByIdGlobal,
+  getCredential,
   getPasskeyUser,
   updateCredentialSignCount,
   updatePasskeyToken,
+  type PasskeyCredential,
 } from "@/app/api/lib/passkeyDb";
 import { decrypt, encrypt } from "@/app/api/lib/serverCrypto";
 import { fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
@@ -57,9 +59,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Resolve the credential from Firestore using the ID the authenticator returned
+  // Resolve the credential from Firestore.
   const rawCredId = body.response.id;
-  const credentialEntry = await findCredentialByIdGlobal(rawCredId);
+  const responseUserHandle = body.response.response?.userHandle;
+
+  let credentialEntry: { userHandle: string; credential: PasskeyCredential } | null = null;
+
+  if (responseUserHandle) {
+    const cred = await getCredential(responseUserHandle, rawCredId);
+    if (cred) credentialEntry = { userHandle: responseUserHandle, credential: cred };
+  }
+
+  // Fall back to collection-group query (requires a Firestore index on credentials.credentialId)
+  if (!credentialEntry) {
+    credentialEntry = await findCredentialByIdGlobal(rawCredId);
+  }
+
   if (!credentialEntry) {
     return NextResponse.json(
       { success: false, error: "Passkey not recognised." },
