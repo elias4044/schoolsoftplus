@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyRegistrationResponse } from "@simplewebauthn/server";
-import type { RegistrationResponseJSON } from "@simplewebauthn/types";
+import { verifyRegistrationResponse, type RegistrationResponseJSON } from "@simplewebauthn/server";
 import { requireSession } from "@/app/api/lib/schoolsoft";
 import {
   makeUserHandle,
