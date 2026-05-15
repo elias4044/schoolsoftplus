@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,10 +15,3 @@ const firebaseConfig = {
 const app  = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const clientDb   = getFirestore(app);
 export const clientAuth = getAuth(app);
-
-
-export async function initAnalytics() {
-  if (typeof window === "undefined") return null;
-  if (!(await isSupported())) return null;
-  return getAnalytics(app);
-}

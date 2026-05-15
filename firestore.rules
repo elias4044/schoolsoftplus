@@ -165,6 +165,22 @@ service cloud.firestore {
         }
       }
     }
+    // ── Referrals ─────────────────────────────────────────
+    // Authenticated users can read their own referral doc (for the dashboard).
+    // All writes go through the server-side API (Admin SDK bypasses rules).
+    match /referrals_v1/{username} {
+      allow read: if isOwner(username);
+      allow write: if false;
+    }
+
+    // Referral code lookup — publicly readable so the join page can
+    // display the referrer's name without requiring authentication.
+    // No sensitive data is stored here (just username + createdAt).
+    match /referral_codes_v1/{code} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ── Default deny ──────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
