@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from '@vercel/analytics/next';
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppThemeProvider } from "@/lib/theme-context";
-import GoogleAnalytics from "./GoogleAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -118,7 +118,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </AppThemeProvider>
         <Analytics />
-        <GoogleAnalytics />
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""} />
       </body>
     </html>
   );

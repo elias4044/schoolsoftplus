@@ -28,6 +28,7 @@ import {
   Users,
   GraduationCap,
   Layers,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -57,10 +58,11 @@ const BOTTOM_NAV = [
   { href: "/notes",       label: "Notes",       icon: StickyNote,    shortcut: "Alt+N" },
   { href: "/flashcards",  label: "Flashcards",  icon: Layers,        shortcut: "Alt+K" },
   { href: "/messages",    label: "Messages",    icon: MessageSquare, shortcut: "Alt+M" },
-  { href: "/people",   label: "People",   icon: Users,          shortcut: "Alt+U" },
-  { href: "/profile",  label: "Profile",  icon: UserCircle,     shortcut: "Alt+P" },
-  { href: "/settings", label: "Settings", icon: Settings,       shortcut: "Alt+," },
-  { href: "/feedback", label: "Feedback", icon: GitPullRequest, shortcut: "Alt+F" },
+  { href: "/people",      label: "People",      icon: Users,         shortcut: "Alt+U" },
+  { href: "/referrals",   label: "Referrals",   icon: Gift,          shortcut: "Alt+R" },
+  { href: "/profile",     label: "Profile",     icon: UserCircle,    shortcut: "Alt+P" },
+  { href: "/settings",    label: "Settings",    icon: Settings,      shortcut: "Alt+," },
+  { href: "/feedback",    label: "Feedback",    icon: GitPullRequest, shortcut: "Alt+F" },
 ] as const;
 
 /* -- Keyboard navigation hook ----------------------------- */
@@ -92,6 +94,8 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "M": e.preventDefault(); router.push("/messages");  break;
         case "u":
         case "U": e.preventDefault(); router.push("/people");    break;
+        case "r":
+        case "R": e.preventDefault(); router.push("/referrals"); break;
         case "f":
         case "F": e.preventDefault(); router.push("/feedback");  break;
         case "p":

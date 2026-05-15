@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { db } from "@/app/api/lib/firebaseAdmin";
 import { trackLoginEvent } from "@/app/api/lib/statsHelper";
+import { getUsernameByCode, creditReferral } from "@/app/api/lib/referralDb";
 
 const SCHOOLSOFT_LOGIN_URL = "https://sms.schoolsoft.se/{school}/jsp/Login.jsp";
 
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
   const time = new Date().toLocaleString("sv-SE", {
     timeZone: "Europe/Stockholm",
   });
+
+  // Captured inside the stats transaction — used for referral crediting below
+  let isNewUser = false;
 
   try {
     // -- Attempt SchoolSoft login ----------------------------------------------
@@ -124,6 +128,7 @@ export async function POST(req: NextRequest) {
         );
 
         if (existingIndex === -1) {
+          isNewUser = true;
           data.unique_logins += 1;
           data.users.push({
             username: lowerUsername,
@@ -151,6 +156,22 @@ export async function POST(req: NextRequest) {
       trackLoginEvent(school);
     }
 
+    // -- Referral tracking for first-time users --------------------------------
+    if (isNewUser && sessionCookie && hashCookie) {
+      const refCode = req.cookies.get("ssp_ref")?.value ?? "";
+      if (refCode && /^[A-Z0-9]{6,12}$/.test(refCode.toUpperCase())) {
+        const lowerUsername = username!.toLowerCase();
+        // Fire-and-forget: do not block the login response
+        getUsernameByCode(refCode.toUpperCase())
+          .then((referrerUsername) => {
+            if (referrerUsername && referrerUsername !== lowerUsername) {
+              return creditReferral(referrerUsername, lowerUsername);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+
     if (sessionCookie && hashCookie) {
       // Extract only the raw value (everything after the first '=') from the
       // first segment of each Set-Cookie header, e.g.:
@@ -175,6 +196,8 @@ export async function POST(req: NextRequest) {
       if (usertypeVal) response.cookies.set("ssp_usertype", usertypeVal, cookieOpts);
       response.cookies.set("ssp_school",   school,     { ...cookieOpts, httpOnly: false });
       response.cookies.set("ssp_username", username!.toLowerCase(),  { ...cookieOpts, httpOnly: false });
+      // Clear the referral cookie after use so it cannot be replayed
+      response.cookies.set("ssp_ref", "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 
       return response;
     }
