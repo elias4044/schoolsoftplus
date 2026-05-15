@@ -1,7 +1,7 @@
 # AuthV2
 
 After weeks of work and reverse engineering, I'm excited to introduce **AuthV2**.
-> Proper documentation coming soon!
+> Documentation now available at [https://developer.ssp.elias4044.com/docs/auth-v2](https://developer.ssp.elias4044.com/docs/auth-v2)
 
 ## What is AuthV2?
 

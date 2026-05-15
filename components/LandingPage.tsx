@@ -156,7 +156,7 @@ function NavDropdown({
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className={`absolute top-full mt-1.5 ${
               align === "right" ? "right-0" : "left-0"
-            } min-w-[260px] rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_24px_60px_oklch(0_0_0/0.6)] z-50`}
+            } min-w-65 rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_24px_60px_oklch(0_0_0/0.6)] z-50`}
           >
             <div className="p-1.5">
               {items.map((item, idx) => {
@@ -345,7 +345,7 @@ function FeatureScroller() {
             initial={{ opacity: 0, y: 28, scale: 0.96 }}
             animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-            className="w-[280px] md:w-[320px] shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
+            className="w-70 md:w-[320px] shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
             style={{ scrollSnapAlign: "start" }}
           >
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: `${color}20`, color }}>
@@ -530,9 +530,9 @@ export default function LandingPage() {
       {/* -- Hero -- */}
       <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
         {/* ambient orbs */}
-        <div className="lp-orb-1 absolute -top-32 -right-32 w-[700px] h-[700px] rounded-full pointer-events-none"
+        <div className="lp-orb-1 absolute -top-32 -right-32 w-175 h-175 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(circle, oklch(0.55 0.25 263 / 16%) 0%, transparent 70%)" }} />
-        <div className="lp-orb-2 absolute bottom-0 -left-40 w-[500px] h-[500px] rounded-full pointer-events-none"
+        <div className="lp-orb-2 absolute bottom-0 -left-40 w-125 h-125 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(circle, oklch(0.55 0.22 148 / 10%) 0%, transparent 70%)" }} />
         {/* dot grid */}
         <div className="absolute inset-0 pointer-events-none"
@@ -553,7 +553,7 @@ export default function LandingPage() {
                 Free - Open source - No tracking
               </motion.div>
 
-              <div className="perspective-[800px] mb-5">
+              <div className="perspective-midrange mb-5">
                 <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.95]">
                   {"Your school day, organised properly.".split(/\s+/).map((word, i) => (
                     <span key={i} className="lp-word inline-block mr-[0.2em] last:mr-0 opacity-0">{word}</span>

@@ -36,7 +36,21 @@ export interface GradeShareCard {
   sharedAt: number;
 }
 
-export type ShareCard = NoteShareCard | GradeShareCard;
+export interface FlashDeckShareCard {
+  type: "flashdeck";
+  deckId: string;
+  title: string;
+  description: string;
+  color: string;
+  icon: string;
+  cardCount: number;
+  tags: string[];
+  subjectName: string | null;
+  sharedByUsername: string;
+  sharedAt: number;
+}
+
+export type ShareCard = NoteShareCard | GradeShareCard | FlashDeckShareCard;
 
 export interface Message {
   id: string;
@@ -260,7 +274,7 @@ export async function createMessage(
 
   // Update conversation meta
   await db.collection(CONV_COL).doc(conversationId).update({
-    lastMessage:        shareCard ? (shareCard.type === "note" ? `📎 Shared a note` : `📊 Shared a grade`) : content.slice(0, 120),
+    lastMessage:        shareCard ? (shareCard.type === "note" ? `📎 Shared a note` : shareCard.type === "flashdeck" ? `Shared a flashcard deck` : `📊 Shared a grade`) : content.slice(0, 120),
     lastSenderUsername: senderUsername,
     lastAt:             now,
   });

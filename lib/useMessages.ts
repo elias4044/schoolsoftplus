@@ -42,7 +42,21 @@ export interface GradeShareCard {
   sharedAt: number;
 }
 
-export type ShareCard = NoteShareCard | GradeShareCard;
+export interface FlashDeckShareCard {
+  type: "flashdeck";
+  deckId: string;
+  title: string;
+  description: string;
+  color: string;
+  icon: string;
+  cardCount: number;
+  tags: string[];
+  subjectName: string | null;
+  sharedByUsername: string;
+  sharedAt: number;
+}
+
+export type ShareCard = NoteShareCard | GradeShareCard | FlashDeckShareCard;
 
 export interface RTMessage {
   id: string;

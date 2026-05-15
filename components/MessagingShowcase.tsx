@@ -56,7 +56,7 @@ function LiveChat({ active }: { active: boolean }) {
   }, [active]);
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-4 min-h-[280px]">
+    <div className="flex flex-col gap-2 px-4 py-4 min-h-70">
       {MESSAGES.map(m => (
         visible.includes(m.id) ? (
           <motion.div
@@ -155,7 +155,7 @@ function E2EEFlow() {
           <div key={i} className="relative flex gap-4 pb-6 last:pb-0">
             {/* vertical line */}
             {i < E2EE_STEPS.length - 1 && (
-              <div className="absolute left-[15px] top-8 bottom-0 w-px">
+              <div className="absolute left-3.75 top-8 bottom-0 w-px">
                 <motion.div
                   className="absolute inset-0 origin-top"
                   style={{ background: "oklch(0.65 0.22 278 / 40%)" }}
@@ -237,7 +237,7 @@ function EncryptedPreview() {
         <span className="w-2 h-2 rounded-full bg-green-400/60 inline-block" />
         stored in database
       </div>
-      <div className="relative overflow-hidden rounded-lg bg-black/30 border border-white/8 px-3 py-2 min-h-[40px]">
+      <div className="relative overflow-hidden rounded-lg bg-black/30 border border-white/8 px-3 py-2 min-h-10">
         <AnimatePresence mode="wait">
           {revealed ? (
             <motion.p
@@ -389,7 +389,7 @@ function FeatureScroller() {
             initial={{ opacity: 0, y: 28, scale: 0.96 }}
             animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.55, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="w-[300px] md:w-[340px] shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
+            className="w-75 md:w-85 shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
             style={{ scrollSnapAlign: "start" }}
           >
             <div
@@ -450,7 +450,7 @@ function BigStat({ value, label, suffix = "" }: { value: number | null; label: s
       <p className="text-4xl md:text-5xl font-black tracking-tighter tabular-nums" style={{ color: "oklch(0.75 0.22 278)" }}>
         {value ? display : <span className="opacity-20">—</span>}{suffix}
       </p>
-      <p className="text-xs text-white/35 text-center leading-snug max-w-[120px]">{label}</p>
+      <p className="text-xs text-white/35 text-center leading-snug max-w-30">{label}</p>
     </div>
   );
 }
@@ -505,9 +505,9 @@ export default function MessagingShowcase() {
       ══════════════════════════════════════ */}
       <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
         {/* ambient orbs */}
-        <div className="orb-1 absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full pointer-events-none"
+        <div className="orb-1 absolute -top-32 -left-32 w-150 h-150 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(circle, oklch(0.55 0.25 278 / 18%) 0%, transparent 70%)" }} />
-        <div className="orb-2 absolute -bottom-20 -right-20 w-[500px] h-[500px] rounded-full pointer-events-none"
+        <div className="orb-2 absolute -bottom-20 -right-20 w-125 h-125 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(circle, oklch(0.60 0.20 310 / 12%) 0%, transparent 70%)" }} />
         <div className="absolute inset-0 pointer-events-none"
           style={{ backgroundImage: "radial-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
@@ -525,7 +525,7 @@ export default function MessagingShowcase() {
           </motion.div>
 
           {/* headline — each word animated by GSAP */}
-          <div className="perspective-[800px] mb-6">
+          <div className="perspective-midrange mb-6">
             <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.95]">
               {"Talk to your\nclassmates.".split(/\s+/).map((word, i) => (
                 <span key={i} className="hero-word inline-block mr-[0.22em] last:mr-0 opacity-0">{word}</span>
@@ -801,7 +801,7 @@ export default function MessagingShowcase() {
             className="relative"
           >
             {/* Phone card */}
-            <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] overflow-hidden shadow-[0_40px_80px_oklch(0_0_0/0.5)] max-w-[300px] mx-auto">
+            <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] overflow-hidden shadow-[0_40px_80px_oklch(0_0_0/0.5)] max-w-75 mx-auto">
               {/* header */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 bg-white/3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"

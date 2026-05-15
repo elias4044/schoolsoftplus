@@ -27,6 +27,7 @@ import {
   Megaphone,
   Users,
   GraduationCap,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -53,8 +54,9 @@ const NAV_ITEMS = [
 ] as const;
 
 const BOTTOM_NAV = [
-  { href: "/notes",    label: "Notes",    icon: StickyNote,     shortcut: "Alt+N" },
-  { href: "/messages", label: "Messages", icon: MessageSquare,  shortcut: "Alt+M" },
+  { href: "/notes",       label: "Notes",       icon: StickyNote,    shortcut: "Alt+N" },
+  { href: "/flashcards",  label: "Flashcards",  icon: Layers,        shortcut: "Alt+K" },
+  { href: "/messages",    label: "Messages",    icon: MessageSquare, shortcut: "Alt+M" },
   { href: "/people",   label: "People",   icon: Users,          shortcut: "Alt+U" },
   { href: "/profile",  label: "Profile",  icon: UserCircle,     shortcut: "Alt+P" },
   { href: "/settings", label: "Settings", icon: Settings,       shortcut: "Alt+," },
@@ -83,7 +85,9 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "6": e.preventDefault(); router.push("/countdown"); break;
         case "7": e.preventDefault(); router.push("/class");     break;
         case "n":
-        case "N": e.preventDefault(); router.push("/notes");     break;
+        case "N": e.preventDefault(); router.push("/notes");      break;
+        case "k":
+        case "K": e.preventDefault(); router.push("/flashcards"); break;
         case "m":
         case "M": e.preventDefault(); router.push("/messages");  break;
         case "u":
