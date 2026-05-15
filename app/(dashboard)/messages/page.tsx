@@ -59,6 +59,7 @@ import {
     XCircle,
     Phone,
     Download,
+    Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -456,6 +457,11 @@ export default function MessagesPage() {
     const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
     const { messages, loading: msgLoading } = useMessages(activeConvo?.id ?? null);
 
+    // Clear optimistic when switching conversations
+    useEffect(() => {
+        setOptimisticMsgs([]);
+    }, [activeConvo?.id]);
+
     // Friends
     const { friends, received: friendRequests, sent: sentFriendRequests, profileMap: friendProfileMap, isFriend, pendingFrom, sentTo } = useFriends(username);
     // Group invites
@@ -488,6 +494,7 @@ export default function MessagesPage() {
     const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
     const [draft, setDraft] = useState("");
     const [sending, setSending] = useState(false);
+    const [optimisticMsgs, setOptimisticMsgs] = useState<Message[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editContent, setEditContent] = useState("");
     const [editSaving, setEditSaving] = useState(false);
@@ -1014,6 +1021,26 @@ export default function MessagesPage() {
             ? { messageId: replyingTo.id, content: replyingTo.content, senderDisplayName: replyingTo.senderDisplayName }
             : null;
         setDraft(""); setReplyingTo(null); setImagePreview(null);
+
+        // Push optimistic message so it shows immediately
+        const optMsg: Message = {
+            id: `__opt_${Date.now()}`,
+            conversationId: activeConvo.id,
+            senderUsername: username,
+            senderDisplayName: activeConvo.participantNames[username] || username,
+            content,
+            edited: false,
+            editedAt: null,
+            pinned: false,
+            deletedAt: null,
+            createdAt: Date.now(),
+            reactions: {},
+            replyTo: reply,
+            shareCard: null,
+            isNew: true,
+            sending: true,
+        };
+        setOptimisticMsgs(prev => [...prev, optMsg]);
         try {
             // Encrypt if E2EE group
             if (isEncrypted) {
@@ -1091,7 +1118,19 @@ export default function MessagesPage() {
         return c.participants.find(p => p !== username) ?? "";
     };
 
-    const visibleMessages = messages.filter(m => m.deletedAt === null);
+    // Deduplicate optimistic messages against real ones in the same render to avoid double-show.
+    // When a real message from the current user arrives with a timestamp close to an optimistic
+    // one, that optimistic is considered confirmed and excluded.
+    const visibleMessages = (() => {
+        const real = messages.filter(m => m.deletedAt === null);
+        if (optimisticMsgs.length === 0) return real;
+        const oldestOptTime = optimisticMsgs[0].createdAt - 10_000;
+        const confirmedCount = Math.min(
+            real.filter(m => m.senderUsername === username && m.createdAt >= oldestOptTime).length,
+            optimisticMsgs.length,
+        );
+        return [...real, ...optimisticMsgs.slice(confirmedCount)];
+    })();
     const grouped: { date: string; msgs: Message[] }[] = [];
     for (const msg of visibleMessages) {
         const d = formatDate(msg.createdAt);
@@ -1609,9 +1648,11 @@ export default function MessagesPage() {
                                                         <MessageBubble
                                                             msg={msg}
                                                             displayContent={
-                                                                activeConvo?.encrypted
-                                                                    ? (decryptedCache[msg.id] ?? null)
-                                                                    : msg.content
+                                                                msg.sending
+                                                                    ? msg.content
+                                                                    : activeConvo?.encrypted
+                                                                        ? (decryptedCache[msg.id] ?? null)
+                                                                        : msg.content
                                                             }
                                                             replyToDisplayContent={
                                                                 activeConvo?.encrypted && msg.replyTo
@@ -3414,7 +3455,8 @@ function MessageBubble({
                             className={cn(
                                 "rounded-2xl px-3.5 py-2 text-sm wrap-break-word",
                                 isMe ? "rounded-tr-sm text-white" : "rounded-tl-sm bg-white/8 text-foreground",
-                                isMobile && "cursor-pointer active:opacity-75 transition-opacity select-none"
+                                isMobile && "cursor-pointer active:opacity-75 transition-opacity select-none",
+                                msg.sending && "opacity-60",
                             )}
                             style={isMe ? { background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" } : undefined}
                             onClick={() => { if (isMobile) onMobileTap(); }}
@@ -3436,7 +3478,7 @@ function MessageBubble({
 
                     {/* Action toolbar — desktop hover only */}
                     <AnimatePresence>
-                        {hover && !isEditing && !isMobile && (
+                        {hover && !isEditing && !isMobile && !msg.sending && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.88 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -3514,9 +3556,11 @@ function MessageBubble({
 
                 <div className="flex items-center gap-1 mt-0.5 px-1">
                     {isLastInGroup && (
-                        <span className="text-[9px] text-muted-foreground">{formatTime(msg.createdAt)}</span>
+                        msg.sending
+                            ? <span className="flex items-center gap-1 text-[9px] text-muted-foreground/50"><Clock className="w-2.5 h-2.5 animate-pulse" /> Sending</span>
+                            : <span className="text-[9px] text-muted-foreground">{formatTime(msg.createdAt)}</span>
                     )}
-                    {msg.edited && <span className="text-[9px] text-muted-foreground italic">(edited)</span>}
+                    {msg.edited && !msg.sending && <span className="text-[9px] text-muted-foreground italic">(edited)</span>}
                 </div>
             </div>
         </motion.div>

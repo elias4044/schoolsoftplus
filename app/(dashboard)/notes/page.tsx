@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   StickyNote, Plus, Search, X, Loader2,
-  FileText, Archive, Globe, MessageSquare,
+  FileText, Archive, Globe, MessageSquare, Upload,
 } from "lucide-react";
 import NoteEditor, { type Note } from "@/components/NoteEditor";
 import { apiFetch } from "@/lib/api-client";
@@ -40,6 +40,7 @@ export default function NotesPage() {
   const [search, setSearch]     = useState("");
   const [mobileView, setMobileView] = useState<"list" | "editor">("list");
   const [shareCard, setShareCard] = useState<ShareCardRef | null>(null);
+  const importInputRef          = useRef<HTMLInputElement>(null);
   const searchRef               = useRef<HTMLInputElement>(null);
 
   function openSharePicker(note: Note) {
@@ -93,6 +94,38 @@ export default function NotesPage() {
     setMobileView("list");
   };
 
+  const duplicateNote = async (note: Note) => {
+    try {
+      const res = await apiFetch<{ note: Note }>("/api/notes", {
+        method: "POST",
+        body: JSON.stringify({
+          title: `${note.title || "Untitled"} (copy)`,
+          content: note.content,
+          status: "draft" as NoteStatus,
+        }) as unknown as BodyInit,
+      });
+      setNotes(n => [res.note, ...n]);
+      setSelected(res.note.id);
+      setMobileView("editor");
+    } catch { /* ignore */ }
+  };
+
+  const handleImportFile = async (file: File) => {
+    const text = await file.text();
+    const lines = text.split("\n");
+    const firstLine = lines.find(l => l.trim()) ?? "";
+    const title = firstLine.replace(/^#+\s*/, "").trim() || file.name.replace(/\.(md|txt|markdown)$/i, "");
+    try {
+      const res = await apiFetch<{ note: Note }>("/api/notes", {
+        method: "POST",
+        body: JSON.stringify({ title, content: text, status: "draft" as NoteStatus }) as unknown as BodyInit,
+      });
+      setNotes(n => [res.note, ...n]);
+      setSelected(res.note.id);
+      setMobileView("editor");
+    } catch { /* ignore */ }
+  };
+
   const selectNote = useCallback((id: string) => {
     setSelected(id);
     setMobileView("editor");
@@ -118,6 +151,24 @@ export default function NotesPage() {
         <div className="flex items-center gap-2 px-3 py-3 shrink-0">
           <StickyNote className="w-4 h-4 text-primary shrink-0" />
           <span className="font-semibold text-sm flex-1">Notes</span>
+          {/* Import file */}
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".md,.txt,.markdown"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) { handleImportFile(file); e.target.value = ""; }
+            }}
+          />
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors hover:bg-white/6"
+            title="Import note from file"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
           <button
             onClick={createNote}
             disabled={creating}
@@ -239,6 +290,7 @@ export default function NotesPage() {
                 note={activeNote}
                 onUpdate={handleUpdate}
                 onDelete={() => handleDelete(activeNote.id)}
+                onDuplicate={() => duplicateNote(activeNote)}
                 onBack={() => setMobileView("list")}
                 onShareToMessages={() => openSharePicker(activeNote)}
               />

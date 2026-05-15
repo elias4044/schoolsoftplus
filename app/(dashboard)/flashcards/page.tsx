@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ShareConversationPicker, { type ShareCardRef } from "@/components/ShareConversationPicker";
 
 /* ============================================================
@@ -506,17 +513,20 @@ function DeckFormModal({ initial, subjects, onSave, onClose }: DeckFormProps) {
         {subjects.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs text-muted-foreground">Linked subject (optional)</Label>
-            <select
-              value={subjectId ?? ""}
-              onChange={e => setSubjectId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full rounded-md text-sm px-3 py-2 outline-none"
-              style={{ background: "var(--input)", border: "1px solid oklch(1 0 0 / 15%)", color: "var(--foreground)" }}
+            <Select
+              value={subjectId?.toString() ?? "none"}
+              onValueChange={v => setSubjectId(v === "none" ? null : Number(v))}
             >
-              <option value="">None</option>
-              {subjects.map(s => (
-                <option key={s.activityId} value={s.activityId}>{s.subject}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {subjects.map(s => (
+                  <SelectItem key={s.activityId} value={s.activityId.toString()}>{s.subject}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -826,19 +836,19 @@ function AiGeneratePanel({ deck, notes, onClose, onGenerated }: AiGeneratePanelP
                   className="w-full rounded-xl text-sm px-3 py-2.5 resize-none outline-none"
                   style={{ background: "oklch(1 0 0 / 5%)", border: "1px solid oklch(1 0 0 / 12%)" }}
                 />
+              ) : notes.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No notes found.</p>
               ) : (
-                <select
-                  value={selectedNote}
-                  onChange={e => setSelectedNote(e.target.value)}
-                  className="w-full rounded-lg text-sm px-3 py-2.5 outline-none"
-                  style={{ background: "var(--input)", border: "1px solid oklch(1 0 0 / 15%)", color: "var(--foreground)" }}
-                >
-                  {notes.length === 0 ? (
-                    <option value="">No notes found</option>
-                  ) : (
-                    notes.map(n => <option key={n.id} value={n.id}>{n.title || "Untitled"}</option>)
-                  )}
-                </select>
+                <Select value={selectedNote} onValueChange={setSelectedNote}>
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select a note" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {notes.map(n => (
+                      <SelectItem key={n.id} value={n.id}>{n.title || "Untitled"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               {/* Count slider */}

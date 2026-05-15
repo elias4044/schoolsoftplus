@@ -73,6 +73,7 @@ export interface RTMessage {
   replyTo: ReplyTo | null;
   shareCard: ShareCard | null;
   isNew?: boolean;
+  sending?: boolean;
 }
 
 export interface RTConversation {

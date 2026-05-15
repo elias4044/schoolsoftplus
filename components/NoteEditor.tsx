@@ -9,12 +9,18 @@ import {
   Eye, Edit3, CheckCircle, Share2, Check, Copy, X, Loader2,
   ArrowLeft, Sparkles, Wand2, FileText, MessageSquare, ChevronDown,
   AlignLeft, Minimize2, Maximize2, List as ListIcon, Type, Pencil,
-  RotateCcw, ThumbsUp, Send,
+  RotateCcw, ThumbsUp, Send, Download, Expand, Shrink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import type { NoteStatus } from "@/app/api/lib/notesDb";
 import type { NoteAiAction } from "@/app/api/ai/note/route";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface Note {
   id: string;
@@ -30,6 +36,7 @@ interface Props {
   note: Note;
   onUpdate: (updated: Note) => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
   onBack?: () => void;
   onShareToMessages?: () => void;
 }
@@ -135,7 +142,7 @@ const TOOLBAR: ToolbarAction[] = [
   { icon: Quote,    label: "Blockquote",      action: ta => prependLine(ta, "> ") },
 ];
 
-export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareToMessages }: Props) {
+export default function NoteEditor({ note, onUpdate, onDelete, onDuplicate, onBack, onShareToMessages }: Props) {
   const [title, setTitle]       = useState(note.title);
   const [content, setContent]   = useState(note.content);
   const [status, setStatus]     = useState<NoteStatus>(note.status);
@@ -154,6 +161,9 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareTo
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
   const [previousContent, setPreviousContent] = useState<string | null>(null); // for undo
+
+  const [fullscreen, setFullscreen] = useState(false);
+  const [contentCopied, setContentCopied] = useState(false);
 
   const taRef   = useRef<HTMLTextAreaElement>(null);
   const saveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -253,6 +263,26 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareTo
     navigator.clipboard.writeText(`${window.location.origin}/shared/${shareToken}`);
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
+  }
+
+  function exportNote(fmt: "md" | "txt") {
+    const text =
+      fmt === "md"
+        ? `# ${title}\n\n${content}`
+        : `${title}\n\n${content.replace(/[#*_`~>[\]!]/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\s+/g, " ").trim()}`;
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(title || "untitled").replace(/[/\\:*?"<>|]/g, "-")}.${fmt}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function copyContent() {
+    navigator.clipboard.writeText(content);
+    setContentCopied(true);
+    setTimeout(() => setContentCopied(false), 2000);
   }
 
   async function handleDelete() {
@@ -373,10 +403,15 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareTo
     setPreviousContent(null);
   }
 
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const charCount = content.length;
   const st = STATUS_CONFIG[status];
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className={cn(
+      "flex flex-col h-full min-h-0",
+      fullscreen && "fixed inset-0 z-50 bg-background",
+    )}>
       {/* ---- Top bar ---- */}
       <div
         className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 border-b shrink-0"
@@ -518,6 +553,61 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareTo
             style={{ background: preview ? "oklch(0.65 0.22 278 / 12%)" : "oklch(1 0 0 / 5%)" }}
           >
             {preview ? <><Edit3 className="w-2.5 h-2.5" /> Edit</> : <><Eye className="w-2.5 h-2.5" /> Preview</>}
+          </button>
+
+          {/* Copy content */}
+          <button
+            onClick={copyContent}
+            className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+            style={{ background: "oklch(1 0 0 / 5%)" }}
+            title="Copy content"
+          >
+            {contentCopied ? <><Check className="w-2.5 h-2.5 text-green-400" /> Copied</> : <><Copy className="w-2.5 h-2.5" /> Copy</>}
+          </button>
+
+          {/* Export */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                style={{ background: "oklch(1 0 0 / 5%)" }}
+              >
+                <Download className="w-2.5 h-2.5" />
+                Export
+                <ChevronDown className="w-2 h-2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-36">
+              <DropdownMenuItem onClick={() => exportNote("md")}>
+                Markdown (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportNote("txt")}>
+                Plain text (.txt)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Duplicate */}
+          {onDuplicate && (
+            <button
+              onClick={onDuplicate}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+              style={{ background: "oklch(1 0 0 / 5%)" }}
+              title="Duplicate note"
+            >
+              <FileText className="w-2.5 h-2.5" />
+              Duplicate
+            </button>
+          )}
+
+          {/* Fullscreen toggle */}
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+            style={{ background: "oklch(1 0 0 / 5%)" }}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {fullscreen ? <Shrink className="w-2.5 h-2.5" /> : <Expand className="w-2.5 h-2.5" />}
           </button>
 
           {/* Delete */}
@@ -709,6 +799,11 @@ export default function NoteEditor({ note, onUpdate, onDelete, onBack, onShareTo
               <Icon className="w-3.5 h-3.5" />
             </button>
           ))}
+          <div className="ml-auto shrink-0 flex items-center gap-2 pl-2">
+            <span className="text-[10px] text-muted-foreground/50 tabular-nums whitespace-nowrap">
+              {wordCount} {wordCount === 1 ? "word" : "words"} &middot; {charCount} chars
+            </span>
+          </div>
         </div>
       )}
 
