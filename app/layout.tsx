@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from '@vercel/analytics/next';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppThemeProvider } from "@/lib/theme-context";
+import GoogleAnalytics from "./GoogleAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -117,6 +118,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </AppThemeProvider>
         <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );
