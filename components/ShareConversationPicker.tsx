@@ -20,7 +20,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Search, Check, Loader2, StickyNote, BarChart2,
+  X, Search, Check, Loader2, StickyNote, BarChart2, Layers,
   Users, AlertCircle, MessageSquare, ChevronRight,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -30,8 +30,9 @@ import { useSession } from "@/lib/useSession";
 
 /* -- Public types ----------------------------------------- */
 export type ShareCardRef =
-  | { type: "note";  noteId: string;  noteTitle?: string; notePreview?: string; noteStatus?: string }
-  | { type: "grade"; assignmentId: number | string; assignmentTitle?: string; subjectName?: string; grade?: string };
+  | { type: "note";      noteId: string;       noteTitle?: string; notePreview?: string; noteStatus?: string }
+  | { type: "grade";     assignmentId: number | string; assignmentTitle?: string; subjectName?: string; grade?: string }
+  | { type: "flashdeck"; deckId: string;        deckTitle: string; deckCardCount: number; deckColor: string; deckDescription?: string };
 
 interface Props {
   card: ShareCardRef;
@@ -50,6 +51,15 @@ const GRADE_COLORS: Record<string, { bg: string; color: string }> = {
   D: { bg: "oklch(0.65 0.20 175 / 20%)", color: "oklch(0.75 0.18 175)" },
   E: { bg: "oklch(0.65 0.22 148 / 20%)", color: "oklch(0.72 0.18 148)" },
   F: { bg: "oklch(1 0 0 / 8%)",           color: "oklch(0.55 0 0)"      },
+};
+
+const PICKER_DECK_COLORS: Record<string, { from: string; to: string }> = {
+  violet:  { from: "oklch(0.65 0.22 278)",  to: "oklch(0.55 0.25 295)"  },
+  rose:    { from: "oklch(0.68 0.22 10)",   to: "oklch(0.58 0.26 340)"  },
+  amber:   { from: "oklch(0.78 0.17 75)",   to: "oklch(0.68 0.20 55)"   },
+  emerald: { from: "oklch(0.70 0.18 148)",  to: "oklch(0.60 0.22 165)"  },
+  sky:     { from: "oklch(0.72 0.17 220)",  to: "oklch(0.62 0.22 240)"  },
+  slate:   { from: "oklch(0.60 0.04 255)",  to: "oklch(0.48 0.05 265)"  },
 };
 
 /* -- Preview panels ---------------------------------------- */
@@ -131,6 +141,38 @@ function GradePreview({ card }: { card: Extract<ShareCardRef, { type: "grade" }>
   );
 }
 
+function FlashDeckPreview({ card }: { card: Extract<ShareCardRef, { type: "flashdeck" }> }) {
+  const c = PICKER_DECK_COLORS[card.deckColor] ?? PICKER_DECK_COLORS.violet;
+  return (
+    <div
+      className="mx-4 mb-1 rounded-xl border overflow-hidden"
+      style={{ background: "oklch(1 0 0 / 4%)", borderColor: "oklch(1 0 0 / 10%)" }}
+    >
+      <div
+        className="flex items-center gap-2.5 px-3.5 py-2.5 border-b"
+        style={{ borderColor: "oklch(1 0 0 / 8%)" }}
+      >
+        <div
+          className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}
+        >
+          <Layers className="w-3 h-3 text-white" />
+        </div>
+        <span className="text-xs font-semibold flex-1 truncate">{card.deckTitle}</span>
+        <span
+          className="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
+          style={{ background: `${c.from}22`, color: c.from }}
+        >
+          {card.deckCardCount} card{card.deckCardCount !== 1 ? "s" : ""}
+        </span>
+      </div>
+      <p className="px-3.5 py-2 text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+        {card.deckDescription || "Flashcard deck"}
+      </p>
+    </div>
+  );
+}
+
 /* -- Main -------------------------------------------------- */
 export default function ShareConversationPicker({ card, onClose }: Props) {
   const { session } = useSession();
@@ -177,8 +219,10 @@ export default function ShareConversationPicker({ card, onClose }: Props) {
 
     const shareCard =
       card.type === "note"
-        ? { type: "note",  noteId: card.noteId }
-        : { type: "grade", assignmentId: card.assignmentId };
+        ? { type: "note",      noteId:       card.noteId       }
+        : card.type === "grade"
+        ? { type: "grade",     assignmentId: card.assignmentId }
+        : { type: "flashdeck", deckId:       card.deckId       };
 
     try {
       const res = await fetch(`/api/conversations/${conversationId}`, {
@@ -228,7 +272,7 @@ export default function ShareConversationPicker({ card, onClose }: Props) {
         <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
           <div>
             <h2 className="text-sm font-bold leading-tight">
-              {card.type === "note" ? "Share note to messages" : "Share grade to messages"}
+              {card.type === "note" ? "Share note to messages" : card.type === "flashdeck" ? "Share deck to messages" : "Share grade to messages"}
             </h2>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {sentCount > 0
@@ -246,8 +290,9 @@ export default function ShareConversationPicker({ card, onClose }: Props) {
 
         {/* Preview */}
         <div className="pt-3 pb-1 shrink-0">
-          {card.type === "note"  && <NotePreview  card={card} />}
-          {card.type === "grade" && <GradePreview card={card} />}
+          {card.type === "note"      && <NotePreview      card={card} />}
+          {card.type === "grade"     && <GradePreview     card={card} />}
+          {card.type === "flashdeck" && <FlashDeckPreview card={card} />}
         </div>
 
         {/* Divider */}

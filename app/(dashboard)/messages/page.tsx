@@ -58,12 +58,13 @@ import {
     Upload,
     XCircle,
     Phone,
+    Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard } from "@/lib/useMessages";
+import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard, FlashDeckShareCard } from "@/lib/useMessages";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/useSession";
@@ -3100,8 +3101,130 @@ function GradeCardBubble({ card, isMe }: { card: GradeShareCard; isMe: boolean }
     );
 }
 
+const DECK_BUBBLE_COLORS: Record<string, { from: string; to: string }> = {
+    violet:  { from: "oklch(0.65 0.22 278)",  to: "oklch(0.55 0.25 295)"  },
+    rose:    { from: "oklch(0.68 0.22 10)",   to: "oklch(0.58 0.26 340)"  },
+    amber:   { from: "oklch(0.78 0.17 75)",   to: "oklch(0.68 0.20 55)"   },
+    emerald: { from: "oklch(0.70 0.18 148)",  to: "oklch(0.60 0.22 165)"  },
+    sky:     { from: "oklch(0.72 0.17 220)",  to: "oklch(0.62 0.22 240)"  },
+    slate:   { from: "oklch(0.60 0.04 255)",  to: "oklch(0.48 0.05 265)"  },
+};
+
+function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: boolean }) {
+    const [importing, setImporting] = useState(false);
+    const [imported,  setImported]  = useState(false);
+    const [importErr, setImportErr] = useState("");
+    const c = DECK_BUBBLE_COLORS[card.color] ?? DECK_BUBBLE_COLORS.violet;
+
+    async function importDeck() {
+        if (importing || imported) return;
+        setImporting(true);
+        setImportErr("");
+        try {
+            const res  = await fetch("/api/flashcards/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deckId: card.deckId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setImported(true);
+            } else {
+                setImportErr(data.error ?? "Import failed.");
+            }
+        } catch {
+            setImportErr("Network error.");
+        } finally {
+            setImporting(false);
+        }
+    }
+
+    return (
+        <div
+            className="mt-1.5 rounded-2xl overflow-hidden"
+            style={{
+                background: isMe ? "oklch(0 0 0 / 22%)" : "oklch(1 0 0 / 6%)",
+                border: `1px solid ${isMe ? "oklch(1 0 0 / 14%)" : "oklch(1 0 0 / 10%)"}`,
+                minWidth: 230,
+                maxWidth: 310,
+            }}
+        >
+            {/* Header */}
+            <div
+                className="flex items-center gap-2 px-3 py-2 border-b"
+                style={{ borderColor: isMe ? "oklch(1 0 0 / 12%)" : "oklch(1 0 0 / 7%)" }}
+            >
+                <div
+                    className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}
+                >
+                    <BookOpen className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-55 flex-1">Flashcard deck</span>
+                <span
+                    className="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
+                    style={{ background: `${c.from}22`, color: c.from }}
+                >
+                    {card.cardCount} card{card.cardCount !== 1 ? "s" : ""}
+                </span>
+            </div>
+
+            {/* Body */}
+            <div className="px-3 py-2.5">
+                <p className="text-sm font-semibold leading-snug">{card.title}</p>
+                {card.description && (
+                    <p className="text-[11px] opacity-55 mt-0.5 line-clamp-2">{card.description}</p>
+                )}
+                {card.subjectName && (
+                    <p className="text-[10px] opacity-40 mt-1">{card.subjectName}</p>
+                )}
+                {card.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                        {card.tags.slice(0, 4).map(t => (
+                            <span
+                                key={t}
+                                className="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+                                style={{ background: `${c.from}15`, color: c.from }}
+                            >
+                                {t}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Import button */}
+            <div
+                className="px-3 pb-3 pt-0.5 border-t"
+                style={{ borderColor: isMe ? "oklch(1 0 0 / 8%)" : "oklch(1 0 0 / 6%)" }}
+            >
+                {importErr && <p className="text-[10px] text-red-400 mb-1.5">{importErr}</p>}
+                <button
+                    onClick={importDeck}
+                    disabled={importing || imported}
+                    className={cn(
+                        "w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all mt-2",
+                        imported  ? "opacity-60 cursor-default" :
+                        importing ? "opacity-50 cursor-wait" :
+                        "hover:opacity-90 active:scale-[0.98]"
+                    )}
+                    style={{
+                        background: imported ? "oklch(1 0 0 / 8%)" : `linear-gradient(135deg, ${c.from}, ${c.to})`,
+                        color: imported ? "oklch(0.55 0 0)" : "white",
+                    }}
+                >
+                    {importing ? <><Loader2 className="w-3 h-3 animate-spin" /> Importing...</> :
+                     imported  ? <><Check   className="w-3 h-3" /> Added to your decks</> :
+                                 <><Download className="w-3 h-3" /> Import deck</>}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
-    if (card.type === "note") return <NoteCardBubble card={card} isMe={isMe} />;
+    if (card.type === "note")      return <NoteCardBubble      card={card} isMe={isMe} />;
+    if (card.type === "flashdeck") return <FlashDeckCardBubble card={card} isMe={isMe} />;
     return <GradeCardBubble card={card} isMe={isMe} />;
 }
 

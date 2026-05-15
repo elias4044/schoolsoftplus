@@ -13,9 +13,11 @@ import {
   markConversationRead,
   ReplyTo,
   ShareCard,
+  FlashDeckShareCard,
 } from "@/app/api/lib/messagingDb";
 import { getProfile } from "@/app/api/lib/profileDb";
 import { getNoteById } from "@/app/api/lib/notesDb";
+import { getDeckByIdAny } from "@/app/api/lib/flashcardsDb";
 import { trackMessageSent } from "@/app/api/lib/statsHelper";
 import { createSchoolsoftClient } from "@/app/api/lib/schoolsoft";
 
@@ -43,6 +45,25 @@ async function buildNoteCard(noteId: string, username: string): Promise<ShareCar
     status: note.status,
     sharedAt: Date.now(),
   };
+}
+
+/** Server-side: build a verified FlashDeckShareCard */
+async function buildFlashDeckCard(deckId: string, username: string): Promise<ShareCard | null> {
+  const deck = await getDeckByIdAny(deckId);
+  if (!deck || deck.username !== username) return null;
+  return {
+    type: "flashdeck",
+    deckId: deck.id,
+    title: deck.title.slice(0, 120),
+    description: deck.description.slice(0, 200),
+    color: deck.color,
+    icon: deck.emoji,
+    cardCount: deck.cardCount,
+    tags: deck.tags.slice(0, 10),
+    subjectName: deck.subjectName,
+    sharedByUsername: username,
+    sharedAt: Date.now(),
+  } satisfies FlashDeckShareCard;
 }
 
 /** Server-side: build a verified GradeShareCard by fetching fresh from SchoolSoft */
@@ -177,7 +198,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   let body: {
     content?: string;
     replyTo?: ReplyTo;
-    shareCard?: { type: string; noteId?: string; assignmentId?: string };
+    shareCard?: { type: string; noteId?: string; assignmentId?: string; deckId?: string };
   } = {};
   try { body = await req.json(); } catch { /* empty */ }
 
@@ -193,11 +214,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!verifiedShareCard) {
       return NextResponse.json({ success: false, error: "Assignment not found." }, { status: 404 });
     }
+  } else if (body.shareCard?.type === "flashdeck" && body.shareCard.deckId) {
+    verifiedShareCard = await buildFlashDeckCard(body.shareCard.deckId, username);
+    if (!verifiedShareCard) {
+      return NextResponse.json({ success: false, error: "Deck not found or access denied." }, { status: 403 });
+    }
   }
 
   const content = verifiedShareCard
     ? (verifiedShareCard.type === "note"
         ? `📎 Shared a note: ${(verifiedShareCard as import("@/app/api/lib/messagingDb").NoteShareCard).title}`
+        : verifiedShareCard.type === "flashdeck"
+        ? `Shared a flashcard deck: ${(verifiedShareCard as FlashDeckShareCard).title}`
         : `📊 Shared a grade`)
     : (body.content ?? "").trim().slice(0, 2000);
 
