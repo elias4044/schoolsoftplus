@@ -22,3 +22,6 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.firestore();
+// Ignore undefined properties in documents to avoid Firestore errors when
+// optional fields are omitted during saves.
+db.settings({ ignoreUndefinedProperties: true });
