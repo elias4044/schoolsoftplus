@@ -25,6 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { staggerContainer, fadeUp } from "@/components/dashboard-card";
 import { apiFetch } from "@/lib/api-client";
 import ShareConversationPicker from "@/components/ShareConversationPicker";
+import { inferGrade } from "@/lib/grades/inferGrade";
+import { OVERALL_GRADE_STYLE } from "@/lib/grades/constants";
+import type { PartialMoment, AssessedCriteriaTab, AssessedCriteria } from "@/lib/grades/types";
 
 /* -------------------------------------------------------------------------
    Types
@@ -472,141 +475,8 @@ function PartialMomentRow({ moment }: { moment: Record<string, unknown> }) {
 }
 
 /* -------------------------------------------------------------------------
-   Assessment types
+   Assessment UI styles
 -------------------------------------------------------------------------- */
-
-interface PartialMoment {
-  id?: number;
-  name: string;
-  points: number;
-  max: number;
-}
-
-interface CriteriaLevel {
-  levelEnum: string;
-  value: number;
-  description: string;
-}
-
-interface CriteriaStep {
-  gradeCriteriaGroupId: number;
-  text: string; // may contain HTML
-  level: CriteriaLevel;
-}
-
-interface AssessedCriteria {
-  level: CriteriaLevel;
-  steps: CriteriaStep[];
-}
-
-interface CriteriaTabContent {
-  type: string;
-  id: number;
-  typeId: number;
-  name: string;
-}
-
-interface AssessedCriteriaTab {
-  content: CriteriaTabContent;
-  assessedCriteria: AssessedCriteria[];
-}
-
-interface GradeInference {
-  grade: string;
-  confidence: "confirmed" | "estimated";
-  source: "points" | "criteria";
-}
-
-/* -------------------------------------------------------------------------
-   Grade inference
--------------------------------------------------------------------------- */
-
-function inferGradeFromPoints(moments: PartialMoment[]): GradeInference | null {
-  // Only treat as E/C/A grading if names match the Swedish grade-level pattern:
-  // name is exactly the letter, or starts with the letter followed by a space/hyphen
-  const isGradeLevel = (name: string, letter: string) => {
-    const n = name.trim().toLowerCase();
-    return n === letter || n.startsWith(letter + " ") || n.startsWith(letter + "-");
-  };
-  const find = (letter: string) => moments.find(m => isGradeLevel(m.name, letter));
-
-  const e = find("e");
-  const c = find("c");
-  const a = find("a");
-
-  // --- Named E/C/A threshold mode --- [old]
-  // if (e && e.max > 0) {
-  //   const ePct = e.points / e.max;
-  //   const cPct = c && c.max > 0 ? c.points / c.max : 0;
-  //   const aPct = a && a.max > 0 ? a.points / a.max : 0;
-
-  //   if (ePct < 1.0) {
-  //     return { grade: "F", confidence: ePct < 0.5 ? "confirmed" : "estimated", source: "points" };
-  //   }
-  //   if (c && cPct >= 1.0) {
-  //     if (a && aPct >= 1.0) return { grade: "A", confidence: "confirmed", source: "points" };
-  //     if (a && aPct >= 0.5) return { grade: "B", confidence: "estimated", source: "points" };
-  //     return { grade: "C", confidence: "confirmed", source: "points" };
-  //   }
-  //   if (c && cPct >= 0.5) return { grade: "D", confidence: "estimated", source: "points" };
-  //   return { grade: "E", confidence: "confirmed", source: "points" };
-  // }
-
-  // --- Generic total-percentage mode ---
-  const totalMax = moments.reduce((s, m) => s + m.max, 0);
-  if (totalMax === 0) return null;
-  const totalPoints = moments.reduce((s, m) => s + m.points, 0);
-  const pct = (totalPoints / totalMax) * 100;
-
-  const grade =
-    pct >= 95 ? "A" :
-    pct >= 85 ? "B" :
-    pct >= 70 ? "C" :
-    pct >= 50 ? "D" :
-    pct >= 40 ? "E" : "F";
-
-  return { grade, confidence: "estimated", source: "points" };
-}
-
-function inferGradeFromCriteria(tabs: AssessedCriteriaTab[]): GradeInference | null {
-  const allCriteria = tabs.flatMap(t => t.assessedCriteria ?? []);
-  if (!allCriteria.length) return null;
-  const levels = allCriteria.map(c => c.level?.value ?? 0).filter(v => v >= 7);
-  if (!levels.length) return null;
-  const minLevel = Math.min(...levels);
-  const avgLevel = levels.reduce((s, v) => s + v, 0) / levels.length;
-  // In Swedish grading the minimum criterion is the ceiling; weight toward it
-  const effective = minLevel * 0.65 + avgLevel * 0.35;
-  const grade =
-    effective >= 10.5 ? "A" :
-    effective >= 9.5  ? "B" :
-    effective >= 8.5  ? "C" :
-    effective >= 7.5  ? "D" :
-    effective >= 7    ? "E" : "F";
-  return { grade, confidence: "estimated", source: "criteria" };
-}
-
-function inferGrade(moments: PartialMoment[], tabs: AssessedCriteriaTab[]): GradeInference | null {
-  if (tabs.length > 0) return inferGradeFromCriteria(tabs);
-  if (moments.length > 0) {
-    const r = inferGradeFromPoints(moments);
-    if (r) return r;
-  }
-  return null;
-}
-
-/* -------------------------------------------------------------------------
-   Shared style maps
--------------------------------------------------------------------------- */
-
-const OVERALL_GRADE_STYLE: Record<string, { bg: string; color: string; border: string; glow: string }> = {
-  A: { bg: "oklch(0.65 0.22 278 / 18%)", color: "oklch(0.80 0.18 278)", border: "oklch(0.65 0.22 278 / 40%)", glow: "oklch(0.65 0.22 278 / 22%)" },
-  B: { bg: "oklch(0.65 0.20 245 / 18%)", color: "oklch(0.78 0.17 245)", border: "oklch(0.65 0.20 245 / 40%)", glow: "oklch(0.65 0.20 245 / 22%)" },
-  C: { bg: "oklch(0.65 0.18 210 / 18%)", color: "oklch(0.78 0.16 210)", border: "oklch(0.65 0.18 210 / 40%)", glow: "oklch(0.65 0.18 210 / 22%)" },
-  D: { bg: "oklch(0.65 0.20 175 / 18%)", color: "oklch(0.75 0.18 175)", border: "oklch(0.65 0.20 175 / 40%)", glow: "oklch(0.65 0.20 175 / 22%)" },
-  E: { bg: "oklch(0.65 0.22 148 / 18%)", color: "oklch(0.72 0.18 148)", border: "oklch(0.65 0.22 148 / 40%)", glow: "oklch(0.65 0.22 148 / 22%)" },
-  F: { bg: "oklch(1 0 0 / 6%)",           color: "oklch(0.55 0 0)",      border: "oklch(1 0 0 / 12%)",          glow: "oklch(1 0 0 / 8%)"          },
-};
 
 const GRADE_LEVEL_STYLE: Record<string, { track: string; fill: string; glow: string; label: string }> = {
   e: { track: "oklch(0.65 0.22 148 / 12%)", fill: "oklch(0.65 0.22 148)", glow: "oklch(0.65 0.22 148 / 35%)", label: "E" },

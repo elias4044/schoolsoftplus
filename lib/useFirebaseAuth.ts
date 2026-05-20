@@ -4,6 +4,60 @@ import { useEffect, useRef, useState } from "react";
 import { signInWithCustomToken, onAuthStateChanged, User } from "firebase/auth";
 import { clientAuth } from "./firebase";
 
+type Subscriber = (state: { fbUser: User | null; ready: boolean }) => void;
+
+let sharedUser: User | null = clientAuth.currentUser;
+let sharedReady = Boolean(clientAuth.currentUser);
+let authObserverAttached = false;
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+let refreshPromise: Promise<void> | null = null;
+const subscribers = new Set<Subscriber>();
+
+async function signInShared() {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch("/api/firebase-token");
+      const data = await res.json();
+      if (data.success && data.token) {
+        await signInWithCustomToken(clientAuth, data.token);
+      }
+    } catch (err) {
+      console.error("[useFirebaseAuth] sign-in error:", err);
+    }
+  })();
+
+  try {
+    await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+function emitAuthState() {
+  const snapshot = { fbUser: sharedUser, ready: sharedReady };
+  subscribers.forEach((subscriber) => subscriber(snapshot));
+}
+
+function ensureAuthBootstrap() {
+  if (!authObserverAttached) {
+    authObserverAttached = true;
+    onAuthStateChanged(clientAuth, (user) => {
+      sharedUser = user;
+      sharedReady = true;
+      emitAuthState();
+    });
+  }
+
+  if (!refreshTimer) {
+    void signInShared();
+    refreshTimer = setInterval(() => {
+      void signInShared();
+    }, 55 * 60 * 1000);
+  }
+}
+
 /**
  * Fetches a custom Firebase token from our API (which validates the SchoolSoft
  * session), then signs into Firebase Auth with it.  Subsequent Firestore
@@ -13,40 +67,27 @@ import { clientAuth } from "./firebase";
  * 1 hour; Firebase ID tokens expire in 1 hour but are auto-refreshed by the SDK).
  */
 export function useFirebaseAuth() {
-  const [fbUser, setFbUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const signIn = async () => {
-    try {
-      const res  = await fetch("/api/firebase-token");
-      const data = await res.json();
-      if (data.success && data.token) {
-        await signInWithCustomToken(clientAuth, data.token);
-      }
-    } catch (err) {
-      console.error("[useFirebaseAuth] sign-in error:", err);
-    }
-  };
+  const [fbUser, setFbUser] = useState<User | null>(sharedUser);
+  const [ready, setReady] = useState(sharedReady);
+  const subscriberRef = useRef<Subscriber | null>(null);
 
   useEffect(() => {
-    // Listen for auth state changes
-    const unsub = onAuthStateChanged(clientAuth, user => {
-      setFbUser(user);
-      setReady(true);
-    });
+    ensureAuthBootstrap();
 
-    // Kick off initial sign-in
-    signIn();
-
-    // Refresh the custom token every 55 minutes
-    timerRef.current = setInterval(signIn, 55 * 60 * 1000);
+    const subscriber: Subscriber = (state) => {
+      setFbUser(state.fbUser);
+      setReady(state.ready);
+    };
+    subscriberRef.current = subscriber;
+    subscribers.add(subscriber);
+    subscriber({ fbUser: sharedUser, ready: sharedReady });
 
     return () => {
-      unsub();
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (subscriberRef.current) {
+        subscribers.delete(subscriberRef.current);
+        subscriberRef.current = null;
+      }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { fbUser, ready };

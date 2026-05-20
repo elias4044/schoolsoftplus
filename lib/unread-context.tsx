@@ -7,6 +7,7 @@ import { useNotificationCenter } from "./notification-context";
 
 
 interface UnreadContextValue {
+  loading: boolean;
   totalUnread: number;
   unreadByConvo: Record<string, number>;
   markRead: (conversationId: string) => void;
@@ -15,6 +16,7 @@ interface UnreadContextValue {
 }
 
 const UnreadContext = createContext<UnreadContextValue>({
+  loading: true,
   totalUnread: 0,
   unreadByConvo: {},
   markRead: () => {},
@@ -24,7 +26,7 @@ const UnreadContext = createContext<UnreadContextValue>({
 export function UnreadProvider({ children }: { children: React.ReactNode }) {
   const { session } = useSession();
   const username = session?.username ?? "";
-  const { conversations } = useConversations(username);
+  const { conversations, loading } = useConversations(username);
   const { addNotification } = useNotificationCenter();
 
   // Optimistic local read timestamps — avoids waiting for Firestore round-trip
@@ -99,7 +101,7 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
   }, [username]);
 
   return (
-    <UnreadContext.Provider value={{ totalUnread, unreadByConvo, markRead, conversations }}>
+    <UnreadContext.Provider value={{ loading, totalUnread, unreadByConvo, markRead, conversations }}>
       {children}
     </UnreadContext.Provider>
   );

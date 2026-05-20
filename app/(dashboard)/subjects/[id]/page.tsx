@@ -19,6 +19,7 @@ import { staggerContainer, fadeUp } from "@/components/dashboard-card";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
 import Link from "next/link";
+import { GradeTracker } from "@/components/grades/GradeTracker";
 
 /* -- Types ------------------------------------------------ */
 interface SubjectDetail {
@@ -292,7 +293,7 @@ export default function SubjectDetailPage() {
   const expired = tasks.filter(a => a.status === "EXPIRED");
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       {/* Back */}
       <BackButton onClick={() => router.back()} />
 
@@ -338,13 +339,24 @@ export default function SubjectDetailPage() {
         </div>
       </motion.div>
 
-      {/* Sections */}
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="space-y-3"
-      >
+      {/* Mobile grade tracker */}
+      <div className="lg:hidden">
+        <GradeTracker
+          subjectId={id}
+          subjectName={subjectName}
+          subjectColor={subjectColor}
+          variant="mobile"
+        />
+      </div>
+
+      <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:items-start">
+        {/* Sections */}
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="space-y-3 min-w-0"
+        >
         {/* Active / Upcoming */}
         {active.length > 0 && (
           <motion.div variants={fadeUp}>
@@ -392,7 +404,18 @@ export default function SubjectDetailPage() {
             No assignments found for this subject.
           </motion.div>
         )}
-      </motion.div>
+        </motion.div>
+
+        {/* Desktop grade tracker sidebar */}
+        <div className="hidden lg:block">
+          <GradeTracker
+            subjectId={id}
+            subjectName={subjectName}
+            subjectColor={subjectColor}
+            variant="sidebar"
+          />
+        </div>
+      </div>
     </div>
   );
 }

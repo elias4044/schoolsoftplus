@@ -6,6 +6,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   limitToLast,
   onSnapshot,
   Unsubscribe,
@@ -107,7 +108,8 @@ export function useConversations(username: string) {
     const q = query(
       collection(clientDb, "conversations_v1"),
       where("participants", "array-contains", username),
-      orderBy("lastAt", "desc")
+      orderBy("lastAt", "desc"),
+      limit(50)
     );
 
     unsubRef.current = onSnapshot(q, snap => {

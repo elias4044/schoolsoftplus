@@ -523,12 +523,9 @@ export async function markConversationRead(
   conversationId: string,
   username: string
 ): Promise<void> {
-  const ref = db.collection(CONV_COL).doc(conversationId);
-  const doc = await ref.get();
-  if (!doc.exists) return;
-  const convo = docToConversation(doc);
-  if (!convo.participants.includes(username)) return;
-  await ref.update({ [`lastReadAt.${username}`]: Date.now() });
+  await db.collection(CONV_COL).doc(conversationId).update({
+    [`lastReadAt.${username}`]: Date.now(),
+  });
 }
 
 export async function transferGroupAdmin(

@@ -8,6 +8,7 @@ import { GripVertical, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WIDGET_REGISTRY, sizeToClasses, SIZE_LABELS } from "@/lib/widgets/registry";
 import type { WidgetInstance, WidgetSize } from "@/lib/widgets/types";
+import { WidgetErrorBoundary } from "./WidgetErrorBoundary";
 
 interface Props {
   instance: WidgetInstance;
@@ -156,7 +157,9 @@ export function WidgetShell({ instance, children, onResize, onRemove, editing }:
 
       {/* Content */}
       <div className="relative z-10 flex-1 px-3 pb-3 pt-1 min-h-0 overflow-hidden">
-        {children}
+        <WidgetErrorBoundary widgetId={instance.widgetId}>
+          {children}
+        </WidgetErrorBoundary>
       </div>
     </div>
   );
