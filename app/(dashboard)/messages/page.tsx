@@ -65,7 +65,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useConversations, useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard, FlashDeckShareCard } from "@/lib/useMessages";
+import { useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard, FlashDeckShareCard } from "@/lib/useMessages";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/useSession";
@@ -453,7 +453,7 @@ export default function MessagesPage() {
             .catch(() => setProfileExists(false));
     }, []);
 
-    const { conversations, loading: convoLoading } = useConversations(username);
+    const { conversations, loading: convoLoading, markRead } = useUnread();
     const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
     const { messages, loading: msgLoading } = useMessages(activeConvo?.id ?? null);
 
@@ -487,8 +487,6 @@ export default function MessagesPage() {
     const [friendSearchResults, setFriendSearchResults] = useState<UserSearchResult[]>([]);
     const [friendSearching, setFriendSearching] = useState(false);
     const [friendRequestSending, setFriendRequestSending] = useState<string | null>(null);
-
-    const { markRead } = useUnread();
 
     const [showPinned, setShowPinned] = useState(false);
     const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
@@ -558,6 +556,14 @@ export default function MessagesPage() {
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
     const [mobileActionMsg, setMobileActionMsg] = useState<Message | null>(null);
     const [viewProfileUsername, setViewProfileUsername] = useState<string | null>(null);
+
+    useEffect(() => {
+        setActiveConvo(prev => {
+            if (!prev) return prev;
+            const next = conversations.find(c => c.id === prev.id);
+            return next ?? null;
+        });
+    }, [conversations]);
 
     // ── Voice calls (global context — CallPanel rendered in layout) ──
     const { call, groupCall } = useCallContext();
@@ -654,11 +660,18 @@ export default function MessagesPage() {
         if (typeof Notification !== "undefined") setNotifPermission(Notification.permission);
     }, []);
 
-    /* Mark read on open and when new messages arrive in the active conversation */
+    /* Mark read when a conversation is opened or receives a new unread message */
     useEffect(() => {
         if (!activeConvo) return;
-        markRead(activeConvo.id);
-    }, [activeConvo?.id, messages, markRead]);
+        const lastReadAt = activeConvo.lastReadAt?.[username] ?? 0;
+        if (
+            activeConvo.lastSenderUsername &&
+            activeConvo.lastSenderUsername !== username &&
+            activeConvo.lastAt > lastReadAt
+        ) {
+            markRead(activeConvo.id);
+        }
+    }, [activeConvo, username, markRead]);
 
     /* Auto-scroll when near bottom */
     useEffect(() => {

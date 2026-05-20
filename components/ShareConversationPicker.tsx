@@ -25,8 +25,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useConversations } from "@/lib/useMessages";
 import { useSession } from "@/lib/useSession";
+import { useUnread } from "@/lib/unread-context";
 
 /* -- Public types ----------------------------------------- */
 export type ShareCardRef =
@@ -177,7 +177,7 @@ function FlashDeckPreview({ card }: { card: Extract<ShareCardRef, { type: "flash
 export default function ShareConversationPicker({ card, onClose }: Props) {
   const { session } = useSession();
   const username = session?.username ?? "";
-  const { conversations, loading: convosLoading } = useConversations(username);
+  const { conversations, loading: convosLoading } = useUnread();
 
   const [filter, setFilter]   = useState("");
   const [sending, setSending] = useState<string | null>(null);

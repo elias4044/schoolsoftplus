@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { MessageSquare, ChevronRight, Lock, Users } from "lucide-react";
-import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
-import { clientDb } from "@/lib/firebase";
-import { useFirebaseAuth } from "@/lib/useFirebaseAuth";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import type { WidgetSize } from "@/lib/widgets/types";
+import { useUnread } from "@/lib/unread-context";
 import type { RTConversation } from "@/lib/useMessages";
 
 interface Props { size: WidgetSize }
@@ -54,30 +51,13 @@ function ConvAvatar({ conv, myUsername }: { conv: RTConversation; myUsername: st
 
 export default function MessagesWidget({ size }: Props) {
   const { session } = useAuth();
-  const { fbUser } = useFirebaseAuth();
-  const [convs, setConvs] = useState<RTConversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { conversations, loading } = useUnread();
 
   const myUsername = session?.username ?? "";
 
-  useEffect(() => {
-    if (!fbUser || !myUsername) { setLoading(false); return; }
-    const q = query(
-      collection(clientDb, "conversations"),
-      where("participants", "array-contains", myUsername),
-      orderBy("lastAt", "desc"),
-      limit(8)
-    );
-    const unsub = onSnapshot(q, snap => {
-      setConvs(snap.docs.map(d => ({ id: d.id, ...d.data() } as RTConversation)));
-      setLoading(false);
-    }, () => setLoading(false));
-    return () => unsub();
-  }, [fbUser, myUsername]);
-
   const compact = size === "2x1" || size === "4x1";
   const maxShown = compact ? 3 : size === "2x2" ? 5 : 8;
-  const shown = convs.slice(0, maxShown);
+  const shown = conversations.slice(0, maxShown);
 
   return (
     <div className="flex flex-col h-full px-4 pt-4 pb-3 gap-3">
@@ -103,7 +83,7 @@ export default function MessagesWidget({ size }: Props) {
             ))}
           </div>
         </div>
-      ) : convs.length === 0 ? (
+      ) : conversations.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-1.5 text-center">
           <MessageSquare className="w-5 h-5 text-muted-foreground/30" />
           <p className="text-xs text-muted-foreground/50">No conversations yet</p>
