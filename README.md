@@ -266,7 +266,7 @@ See [Terms & Privacy](https://ssp.elias4044.com/terms) for full details.
 
 MIT © [Elias](https://github.com/elias4044) — see [LICENSE](LICENSE) for details.
 
-You're free to use, modify, and distribute this code. A credit or link back is higly appreciated.
+You're free to use, modify, and distribute this code. A credit or link back is highly appreciated.
 
 ---
 
