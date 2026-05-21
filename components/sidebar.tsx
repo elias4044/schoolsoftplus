@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import { useUnread } from "@/lib/unread-context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -143,7 +142,6 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
     : session?.username?.slice(0, 2).toUpperCase() ?? "??";
 
   const sidebarWidth = collapsed ? 64 : 220;
-  const { totalUnread } = useUnread();
 
   const sidebarContent = (isMobile: boolean) => (
     <>
@@ -220,7 +218,6 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
             active={pathname === item.href}
             collapsed={!isMobile && collapsed}
             shortcut={item.shortcut}
-            badge={item.href === "/messages" && pathname !== "/messages" ? totalUnread : undefined}
           />
         ))}
 

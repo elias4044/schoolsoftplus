@@ -1,98 +1,52 @@
 "use client";
 
-import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
-import { useConversations, type RTConversation } from "./useMessages";
+import React, { createContext, useContext, useCallback, useRef, useState } from "react";
 import { useSession } from "./useSession";
-import { useNotificationCenter } from "./notification-context";
-
 
 interface UnreadContextValue {
   loading: boolean;
-  totalUnread: number;
-  unreadByConvo: Record<string, number>;
+  currentConversationId: string | null;
+  isUnread: boolean;
   markRead: (conversationId: string) => void;
-  /** All conversations — available globally without a separate hook call */
-  conversations: RTConversation[];
+  setCurrentConversation: (conversationId: string | null) => void;
 }
 
 const UnreadContext = createContext<UnreadContextValue>({
-  loading: true,
-  totalUnread: 0,
-  unreadByConvo: {},
+  loading: false,
+  currentConversationId: null,
+  isUnread: false,
   markRead: () => {},
-  conversations: [],
+  setCurrentConversation: () => {},
 });
 
-export function UnreadProvider({ children }: { children: React.ReactNode }) {
+interface UnreadProviderProps {
+  children: React.ReactNode;
+}
+
+export function UnreadProvider({ children }: UnreadProviderProps) {
   const { session } = useSession();
   const username = session?.username ?? "";
-  const { conversations, loading } = useConversations(username);
-  const { addNotification } = useNotificationCenter();
 
-  // Optimistic local read timestamps — avoids waiting for Firestore round-trip
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [optimisticReadAt, setOptimisticReadAt] = useState<Record<string, number>>({});
 
-  // Track previous lastAt per convo to detect genuinely new messages
-  const prevLastAtRef = useRef<Map<string, number>>(new Map());
-  const initializedRef = useRef(false);
+  // Deduplicate: track last time we fired markRead per conversation
+  const lastMarkedRef = useRef<Record<string, number>>({});
 
-  // Compute unread: use max(firestoreLastReadAt, optimisticReadAt) per convo
-  const unreadByConvo: Record<string, number> = {};
-  for (const c of conversations) {
-    const firestoreLastRead = (c.lastReadAt ?? {})[username] ?? 0;
-    const localLastRead = optimisticReadAt[c.id] ?? 0;
-    const effectiveLastRead = Math.max(firestoreLastRead, localLastRead);
-    if (c.lastAt > effectiveLastRead && c.lastSenderUsername && c.lastSenderUsername !== username) {
-      unreadByConvo[c.id] = 1;
-    }
-  }
-  const totalUnread = Object.keys(unreadByConvo).length;
-
-  // Fire in-app toasts and browser notifications for new messages from others
-  useEffect(() => {
-    if (!username || conversations.length === 0) return;
-
-    if (!initializedRef.current) {
-      // Seed without firing — these are messages already there on first load
-      for (const c of conversations) prevLastAtRef.current.set(c.id, c.lastAt);
-      initializedRef.current = true;
-      return;
-    }
-
-    for (const c of conversations) {
-      const prev = prevLastAtRef.current.get(c.id) ?? 0;
-      if (c.lastAt > prev && c.lastSenderUsername && c.lastSenderUsername !== username) {
-        const senderName = (c.participantNames ?? {})[c.lastSenderUsername] ?? c.lastSenderUsername;
-        const body = c.lastMessage?.slice(0, 100) ?? "";
-
-        // In-app notification center toast
-        addNotification({
-          type: "message",
-          title: senderName,
-          message: body,
-          duration: 5000,
-        });
-
-        // Browser push notification when tab is in background
-        if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
-          try {
-            new Notification(`Message from ${senderName}`, {
-              body,
-              icon: "/logo.png",
-              tag: `msg-${c.id}`,
-            });
-          } catch { /* ignore */ }
-        }
-      }
-      prevLastAtRef.current.set(c.id, c.lastAt);
-    }
-  }, [conversations, username, addNotification]);
+  const isUnread = currentConversationId
+    ? (optimisticReadAt[currentConversationId] ?? 0) === 0
+    : false;
 
   const markRead = useCallback((conversationId: string) => {
     if (!username) return;
-    // Immediately clear the dot — don't wait for Firestore round-trip
-    setOptimisticReadAt(prev => ({ ...prev, [conversationId]: Date.now() }));
-    // Server-side write via Admin SDK — persists across devices
+
+    // Don't re-mark if we already did within the last 5 seconds
+    const now = Date.now();
+    if ((lastMarkedRef.current[conversationId] ?? 0) > now - 5000) return;
+    lastMarkedRef.current[conversationId] = now;
+
+    setOptimisticReadAt(prev => ({ ...prev, [conversationId]: now }));
+
     fetch(`/api/conversations/${conversationId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,8 +54,20 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => { /* ignore during auth transitions */ });
   }, [username]);
 
+  const setCurrentConversation = useCallback((conversationId: string | null) => {
+    setCurrentConversationId(conversationId);
+    // When switching away, clear the optimistic read state for the old convo
+    // so the next open re-evaluates freshly
+  }, []);
+
   return (
-    <UnreadContext.Provider value={{ loading, totalUnread, unreadByConvo, markRead, conversations }}>
+    <UnreadContext.Provider value={{
+      loading: false,
+      currentConversationId,
+      isUnread,
+      markRead,
+      setCurrentConversation,
+    }}>
       {children}
     </UnreadContext.Provider>
   );

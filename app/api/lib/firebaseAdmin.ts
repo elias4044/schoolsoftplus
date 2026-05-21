@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+import { MetricServiceClient } from "@google-cloud/monitoring";
 
 const rawBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -6,14 +7,13 @@ if (!rawBase64) {
   throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.");
 }
 
-let serviceAccount: admin.ServiceAccount;
-try {
-  const decoded = Buffer.from(rawBase64, "base64").toString("utf8");
-  serviceAccount = JSON.parse(decoded) as admin.ServiceAccount;
-} catch (err) {
-  console.error("Failed to decode and parse Firebase service account key.");
-  throw err;
-}
+const raw = JSON.parse(Buffer.from(rawBase64, "base64").toString("utf8"));
+
+const serviceAccount: admin.ServiceAccount = {
+  projectId: raw.project_id,
+  clientEmail: raw.client_email,
+  privateKey: raw.private_key,
+};
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -22,6 +22,12 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.firestore();
-// Ignore undefined properties in documents to avoid Firestore errors when
-// optional fields are omitted during saves.
 db.settings({ ignoreUndefinedProperties: true });
+
+export const monitoringClient = new MetricServiceClient({
+  projectId: serviceAccount.projectId,
+  credentials: {
+    client_email: serviceAccount.clientEmail,
+    private_key: serviceAccount.privateKey,
+  },
+});
