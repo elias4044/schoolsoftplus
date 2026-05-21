@@ -5,8 +5,7 @@ import { MessageSquare, ChevronRight, Lock, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import type { WidgetSize } from "@/lib/widgets/types";
-import { useUnread } from "@/lib/unread-context";
-import type { RTConversation } from "@/lib/useMessages";
+import { useConversations, type RTConversation } from "@/lib/useMessages";
 
 interface Props { size: WidgetSize }
 
@@ -51,7 +50,7 @@ function ConvAvatar({ conv, myUsername }: { conv: RTConversation; myUsername: st
 
 export default function MessagesWidget({ size }: Props) {
   const { session } = useAuth();
-  const { conversations, loading } = useUnread();
+  const { conversations, loading } = useConversations(session?.username ?? "");
 
   const myUsername = session?.username ?? "";
 

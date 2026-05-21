@@ -65,7 +65,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useMessages, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard, FlashDeckShareCard } from "@/lib/useMessages";
+import { useMessages, useConversations, RTConversation, RTMessage, ReplyTo, ShareCard, NoteShareCard, GradeShareCard, FlashDeckShareCard } from "@/lib/useMessages";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/useSession";
@@ -188,15 +188,15 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
 ───────────────────────────────────────────────────────────── */
 const EMOJI_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
     { label: "Recent", icon: "🕐", emojis: [] }, // filled from localStorage at runtime
-    { label: "Smileys", icon: "😀", emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿"] },
-    { label: "Gestures", icon: "👋", emojis: ["👋","🤚","🖐️","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🫀","🫁","🧠","🦷","🦴","👀","👁️","👅","👄","🫦"] },
-    { label: "Hearts", icon: "❤️", emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","☮️","✝️","☪️","🕉️","☸️","✡️","🔯","🕎","☯️","☦️","🛐","⛎","♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓","🆔","⚛️","🉑","☢️","☣️","📴","📳","🈶","🈚","🈸","🈺","🈷️","✴️","🆚","💮","🉐","㊙️","㊗️","🈴","🈵","🈹","🈲","🅰️","🅱️","🆎","🆑","🅾️","🆘","❌","⭕","🛑","⛔","📛","🚫"] },
-    { label: "Animals", icon: "🐶", emojis: ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"] },
-    { label: "Food", icon: "🍕", emojis: ["🍕","🍔","🍟","🌭","🍿","🧂","🥓","🥚","🍳","🧇","🥞","🧈","🍞","🥐","🥖","🥨","🥯","🧀","🥗","🥙","🥪","🌮","🌯","🫔","🥫","🍱","🍘","🍙","🍚","🍛","🍜","🍝","🍠","🍢","🍣","🍤","🍥","🥮","🍡","🥟","🥠","🥡","🍦","🍧","🍨","🍩","🍪","🎂","🍰","🧁","🥧","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾"] },
-    { label: "Activities", icon: "⚽", emojis: ["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🎱","🏓","🏸","🥊","🥋","🎽","⛸️","🛷","🎿","🏂","🪂","🏋️","🤸","🤺","🤼","🤾","🏌️","🏇","🧘","🏄","🚣","🧗","🚵","🚴","🏆","🥇","🥈","🥉","🎖️","🏅","🎗️","🎫","🎟️","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰"] },
-    { label: "Travel", icon: "✈️", emojis: ["✈️","🚀","🛸","🚁","🛺","🚕","🚗","🚙","🚌","🚎","🚐","🚑","🚒","🚓","🚔","🚖","🚘","🚍","🚋","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚲","🛴","🛵","🏍️","🚨","🚥","🚦","🛑","🚧","⚓","🪝","⛽","🛶","🚤","🛥️","🛳️","⛴️","🚢","🏖️","🏝️","🏜️","🏕️","⛰️","🗻","🏔️","🌋","🗾","🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","🗼","🗽","🗿","🗺️","🧭"] },
-    { label: "Objects", icon: "💡", emojis: ["💡","🔦","🕯️","🪔","🧱","💎","🔑","🗝️","🔐","🔒","🔓","🚪","🛋️","🪑","🚽","🚿","🛁","🧴","🪒","🧹","🧺","🧻","🧼","🧽","🧯","🛒","🚬","⚰️","🗑️","📦","📫","📪","📬","📭","📮","📯","📜","📃","📄","📑","🗒️","🗓️","📆","📅","📇","📈","📉","📊","📋","📌","📍","🗃️","🗄️","🗑️","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘","📙","📚","📖","🔖","🔗","📎","🖇️","📐","📏","🧮","✂️","🗃️","🖊️","🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔬","🔭","📡","💊","🩺","🩻","🩹","🩼","🦽","🦼","🩴"] },
-    { label: "Symbols", icon: "💬", emojis: ["💬","💭","🗯️","💢","💥","💫","⭐","🌟","✨","🎉","🎊","🎈","🎀","🎁","🔥","💧","🌊","🌈","⚡","❄️","🌀","🌁","🌫️","🌪️","🌬️","☔","⛈️","⛅","☁️","🌤️","🌥️","🌦️","🌧️","🌨️","🌩️","🌙","⭐","🌟","💫","✨","🌠","🌌","☀️","🌝","🌛","🌜","🌚","🌕","🌖","🌗","🌘","🌑","🌒","🌓","🌔","🌙","🌏","🌍","🌎","♾️","⚜️","🔱","📛","🔰","♻️","✅","❎","🆗","🆙","🆒","🆕","🆓","🔜","🔚","🔛","🔝","🔞","📵","🚳","🚭","🚯","🚱","🚷","❗","❕","❓","❔","‼️","⁉️","⚠️"] },
+    { label: "Smileys", icon: "😀", emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "☺️", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿"] },
+    { label: "Gestures", icon: "👋", emojis: ["👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "🫀", "🫁", "🧠", "🦷", "🦴", "👀", "👁️", "👅", "👄", "🫦"] },
+    { label: "Hearts", icon: "❤️", emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️", "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓", "🆔", "⚛️", "🉑", "☢️", "☣️", "📴", "📳", "🈶", "🈚", "🈸", "🈺", "🈷️", "✴️", "🆚", "💮", "🉐", "㊙️", "㊗️", "🈴", "🈵", "🈹", "🈲", "🅰️", "🅱️", "🆎", "🆑", "🅾️", "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫"] },
+    { label: "Animals", icon: "🐶", emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🙉", "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐞", "🐜", "🦟", "🦗", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏", "🐪", "🐫", "🦒", "🦘", "🐃", "🐂", "🐄", "🐎", "🐖", "🐏", "🐑", "🦙", "🐐", "🦌", "🐕", "🐩", "🦮", "🐈", "🐓", "🦃", "🦤", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦨", "🦡", "🦫", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"] },
+    { label: "Food", icon: "🍕", emojis: ["🍕", "🍔", "🍟", "🌭", "🍿", "🧂", "🥓", "🥚", "🍳", "🧇", "🥞", "🧈", "🍞", "🥐", "🥖", "🥨", "🥯", "🧀", "🥗", "🥙", "🥪", "🌮", "🌯", "🫔", "🥫", "🍱", "🍘", "🍙", "🍚", "🍛", "🍜", "🍝", "🍠", "🍢", "🍣", "🍤", "🍥", "🥮", "🍡", "🥟", "🥠", "🥡", "🍦", "🍧", "🍨", "🍩", "🍪", "🎂", "🍰", "🧁", "🥧", "🍫", "🍬", "🍭", "🍮", "🍯", "🍼", "🥛", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾"] },
+    { label: "Activities", icon: "⚽", emojis: ["⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🎱", "🏓", "🏸", "🥊", "🥋", "🎽", "⛸️", "🛷", "🎿", "🏂", "🪂", "🏋️", "🤸", "🤺", "🤼", "🤾", "🏌️", "🏇", "🧘", "🏄", "🚣", "🧗", "🚵", "🚴", "🏆", "🥇", "🥈", "🥉", "🎖️", "🏅", "🎗️", "🎫", "🎟️", "🎪", "🤹", "🎭", "🎨", "🎬", "🎤", "🎧", "🎼", "🎹", "🥁", "🎷", "🎺", "🎸", "🪕", "🎻", "🎲", "♟️", "🎯", "🎳", "🎮", "🎰"] },
+    { label: "Travel", icon: "✈️", emojis: ["✈️", "🚀", "🛸", "🚁", "🛺", "🚕", "🚗", "🚙", "🚌", "🚎", "🚐", "🚑", "🚒", "🚓", "🚔", "🚖", "🚘", "🚍", "🚋", "🚂", "🚃", "🚄", "🚅", "🚆", "🚇", "🚈", "🚉", "🚊", "🚝", "🚞", "🚲", "🛴", "🛵", "🏍️", "🚨", "🚥", "🚦", "🛑", "🚧", "⚓", "🪝", "⛽", "🛶", "🚤", "🛥️", "🛳️", "⛴️", "🚢", "🏖️", "🏝️", "🏜️", "🏕️", "⛰️", "🗻", "🏔️", "🌋", "🗾", "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏨", "🏩", "🏪", "🏫", "🏬", "🏭", "🏯", "🏰", "🗼", "🗽", "🗿", "🗺️", "🧭"] },
+    { label: "Objects", icon: "💡", emojis: ["💡", "🔦", "🕯️", "🪔", "🧱", "💎", "🔑", "🗝️", "🔐", "🔒", "🔓", "🚪", "🛋️", "🪑", "🚽", "🚿", "🛁", "🧴", "🪒", "🧹", "🧺", "🧻", "🧼", "🧽", "🧯", "🛒", "🚬", "⚰️", "🗑️", "📦", "📫", "📪", "📬", "📭", "📮", "📯", "📜", "📃", "📄", "📑", "🗒️", "🗓️", "📆", "📅", "📇", "📈", "📉", "📊", "📋", "📌", "📍", "🗃️", "🗄️", "🗑️", "📁", "📂", "🗂️", "🗞️", "📰", "📓", "📔", "📒", "📕", "📗", "📘", "📙", "📚", "📖", "🔖", "🔗", "📎", "🖇️", "📐", "📏", "🧮", "✂️", "🗃️", "🖊️", "🖋️", "✒️", "🖌️", "🖍️", "📝", "✏️", "🔍", "🔎", "🔬", "🔭", "📡", "💊", "🩺", "🩻", "🩹", "🩼", "🦽", "🦼", "🩴"] },
+    { label: "Symbols", icon: "💬", emojis: ["💬", "💭", "🗯️", "💢", "💥", "💫", "⭐", "🌟", "✨", "🎉", "🎊", "🎈", "🎀", "🎁", "🔥", "💧", "🌊", "🌈", "⚡", "❄️", "🌀", "🌁", "🌫️", "🌪️", "🌬️", "☔", "⛈️", "⛅", "☁️", "🌤️", "🌥️", "🌦️", "🌧️", "🌨️", "🌩️", "🌙", "⭐", "🌟", "💫", "✨", "🌠", "🌌", "☀️", "🌝", "🌛", "🌜", "🌚", "🌕", "🌖", "🌗", "🌘", "🌑", "🌒", "🌓", "🌔", "🌙", "🌏", "🌍", "🌎", "♾️", "⚜️", "🔱", "📛", "🔰", "♻️", "✅", "❎", "🆗", "🆙", "🆒", "🆕", "🆓", "🔜", "🔚", "🔛", "🔝", "🔞", "📵", "🚳", "🚭", "🚯", "🚱", "🚷", "❗", "❕", "❓", "❔", "‼️", "⁉️", "⚠️"] },
 ];
 
 interface GifResult { id: string; title: string; preview: string; full: string; width: number; height: number; }
@@ -234,7 +234,7 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
         if (searchRef.current) clearTimeout(searchRef.current);
         searchRef.current = setTimeout(() => loadGifs(query), 400);
         return () => { if (searchRef.current) clearTimeout(searchRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [query]);
 
     return (
@@ -453,9 +453,15 @@ export default function MessagesPage() {
             .catch(() => setProfileExists(false));
     }, []);
 
-    const { conversations, loading: convoLoading, markRead } = useUnread();
+    const { conversations, loading: convoLoading } = useConversations(username);
+    const { markRead, setCurrentConversation } = useUnread();
     const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
     const { messages, loading: msgLoading } = useMessages(activeConvo?.id ?? null);
+
+    // Update unread context when active conversation changes
+    useEffect(() => {
+        setCurrentConversation(activeConvo?.id ?? null);
+    }, [activeConvo?.id, setCurrentConversation]);
 
     // Clear optimistic when switching conversations
     useEffect(() => {
@@ -633,7 +639,7 @@ export default function MessagesPage() {
         const saved = sessionStorage.getItem(`draft_${activeConvo.id}`);
         setDraft(saved ?? "");
         setImagePreview(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeConvo?.id]);
 
     useEffect(() => {
@@ -652,7 +658,7 @@ export default function MessagesPage() {
                 (m.content.toLowerCase().includes(q) || m.senderDisplayName.toLowerCase().includes(q))
             )
         );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [msgSearchQuery, messages]);
 
     /* Notifications — permission state */
@@ -661,17 +667,20 @@ export default function MessagesPage() {
     }, []);
 
     /* Mark read when a conversation is opened or receives a new unread message */
+    const lastSenderUsername = activeConvo?.lastSenderUsername;
+    const lastAt = activeConvo?.lastAt ?? 0;
+    const lastReadAt = activeConvo?.lastReadAt?.[username] ?? 0;
+
     useEffect(() => {
-        if (!activeConvo) return;
-        const lastReadAt = activeConvo.lastReadAt?.[username] ?? 0;
+        if (!activeConvo?.id) return;
         if (
-            activeConvo.lastSenderUsername &&
-            activeConvo.lastSenderUsername !== username &&
-            activeConvo.lastAt > lastReadAt
+            lastSenderUsername &&
+            lastSenderUsername !== username &&
+            lastAt > lastReadAt
         ) {
             markRead(activeConvo.id);
         }
-    }, [activeConvo, username, markRead]);
+    }, [activeConvo?.id, lastSenderUsername, lastAt, lastReadAt, username, markRead])
 
     /* Auto-scroll when near bottom */
     useEffect(() => {
@@ -873,14 +882,14 @@ export default function MessagesPage() {
             deriveKey(saved, id).then(key => {
                 encKeysRef.current.set(id, key);
                 setEncUnlockedIds(prev => new Set([...prev, id]));
-            }).catch(() => {/* ignore */});
+            }).catch(() => {/* ignore */ });
         } else {
             // Prompt user for password
             setEncPromptConvoId(id);
             setEncPromptPassword("");
             setEncPromptError("");
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeConvo?.id, activeConvo?.encrypted]);
 
     const unlockEncryptedConvo = async () => {
@@ -931,7 +940,7 @@ export default function MessagesPage() {
                 return next;
             });
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messages, activeConvo?.id, activeConvo?.encrypted, encUnlockedIds]);
 
     const groupInfoAction = async (action: string, payload?: Record<string, string>) => {
@@ -1263,114 +1272,114 @@ export default function MessagesPage() {
 
                     <div className="flex-1 overflow-y-auto">
                         {sidebarTab === "messages" ? (
-                          <>
-                            {/* Group invite banner */}
-                            {groupInvites.length > 0 && (
-                                <div className="px-3 py-2 border-b border-white/7 space-y-1.5">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
-                                        Group Invites ({groupInvites.length})
-                                    </p>
-                                    {groupInvites.map(inv => (
-                                        <div key={inv.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/15">
-                                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                                                style={{ background: "oklch(0.65 0.22 278 / 15%)" }}>
-                                                <Users className="w-3.5 h-3.5 text-primary" />
+                            <>
+                                {/* Group invite banner */}
+                                {groupInvites.length > 0 && (
+                                    <div className="px-3 py-2 border-b border-white/7 space-y-1.5">
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+                                            Group Invites ({groupInvites.length})
+                                        </p>
+                                        {groupInvites.map(inv => (
+                                            <div key={inv.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/15">
+                                                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                                                    style={{ background: "oklch(0.65 0.22 278 / 15%)" }}>
+                                                    <Users className="w-3.5 h-3.5 text-primary" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-medium truncate">{inv.groupName}</p>
+                                                    <p className="text-[9px] text-muted-foreground truncate">from {inv.invitedByDisplayName}</p>
+                                                </div>
+                                                <div className="flex gap-0.5">
+                                                    <button onClick={() => acceptGroupInvite(inv.id, true)}
+                                                        className="w-6 h-6 rounded-md flex items-center justify-center text-green-400 hover:bg-green-500/15 transition-colors">
+                                                        <Check className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button onClick={() => acceptGroupInvite(inv.id, false)}
+                                                        className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-medium truncate">{inv.groupName}</p>
-                                                <p className="text-[9px] text-muted-foreground truncate">from {inv.invitedByDisplayName}</p>
-                                            </div>
-                                            <div className="flex gap-0.5">
-                                                <button onClick={() => acceptGroupInvite(inv.id, true)}
-                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-green-400 hover:bg-green-500/15 transition-colors">
-                                                    <Check className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button onClick={() => acceptGroupInvite(inv.id, false)}
-                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                )}
 
-                            <div className="px-3 py-2.5 border-b border-white/7 shrink-0">
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                    <Input
-                                        value={convoFilter}
-                                        onChange={e => setConvoFilter(e.target.value)}
-                                        placeholder="Search conversations…"
-                                        className="pl-8 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
-                                    />
-                                </div>
-                            </div>
-
-                            {convoLoading ? (
-                                <div className="flex items-center justify-center h-24">
-                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : filteredConvos.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center">
-                                    <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
-                                    <p className="text-xs text-muted-foreground">
-                                        {convoFilter ? "No conversations match." : "No conversations yet. Start one!"}
-                                    </p>
-                                </div>
-                            ) : (
-                                <AnimatePresence initial={false}>
-                                    {filteredConvos.map((convo, i) => (
-                                        <ConvoItem
-                                            key={convo.id}
-                                            convo={convo}
-                                            name={partnerName(convo)}
-                                            subtitle={partnerSubtitle(convo)}
-                                            active={activeConvo?.id === convo.id}
-                                            username={username}
-                                            index={i}
-                                            pfpCache={pfpCache}
-                                            statusMap={statusMap}
-                                            onClick={() => {
-                                                setActiveConvo(convo);
-                                                setMobileShowChat(true);
-                                                setEditingId(null);
-                                            }}
+                                <div className="px-3 py-2.5 border-b border-white/7 shrink-0">
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                        <Input
+                                            value={convoFilter}
+                                            onChange={e => setConvoFilter(e.target.value)}
+                                            placeholder="Search conversations…"
+                                            className="pl-8 h-8 text-xs bg-white/5 border-white/10 focus:border-primary/40"
                                         />
-                                    ))}
-                                </AnimatePresence>
-                            )}
-                          </>
+                                    </div>
+                                </div>
+
+                                {convoLoading ? (
+                                    <div className="flex items-center justify-center h-24">
+                                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                    </div>
+                                ) : filteredConvos.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center">
+                                        <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
+                                        <p className="text-xs text-muted-foreground">
+                                            {convoFilter ? "No conversations match." : "No conversations yet. Start one!"}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <AnimatePresence initial={false}>
+                                        {filteredConvos.map((convo, i) => (
+                                            <ConvoItem
+                                                key={convo.id}
+                                                convo={convo}
+                                                name={partnerName(convo)}
+                                                subtitle={partnerSubtitle(convo)}
+                                                active={activeConvo?.id === convo.id}
+                                                username={username}
+                                                index={i}
+                                                pfpCache={pfpCache}
+                                                statusMap={statusMap}
+                                                onClick={() => {
+                                                    setActiveConvo(convo);
+                                                    setMobileShowChat(true);
+                                                    setEditingId(null);
+                                                }}
+                                            />
+                                        ))}
+                                    </AnimatePresence>
+                                )}
+                            </>
                         ) : (
-                          /* ── Friends tab ── */
-                          <FriendsPanel
-                              username={username}
-                              friends={friends}
-                              received={friendRequests}
-                              sent={sentFriendRequests}
-                              profileMap={friendProfileMap}
-                              statusMap={statusMap}
-                              friendSearchQuery={friendSearchQuery}
-                              friendSearchResults={friendSearchResults}
-                              friendSearching={friendSearching}
-                              friendRequestSending={friendRequestSending}
-                              isFriend={isFriend}
-                              pendingFrom={pendingFrom}
-                              sentTo={sentTo}
-                              onSearchChange={setFriendSearchQuery}
-                              onSendRequest={sendFriendReq}
-                              onRespond={respondFriendReq}
-                              onOpenDM={(targetUsername: string) => {
-                                  const u: UserSearchResult = {
-                                      username: targetUsername,
-                                      displayName: friendProfileMap[targetUsername]?.displayName ?? targetUsername,
-                                      schoolName: friendProfileMap[targetUsername]?.schoolName ?? "",
-                                      userType: "",
-                                  };
-                                  openDM(u);
-                                  setSidebarTab("messages");
-                              }}
-                          />
+                            /* ── Friends tab ── */
+                            <FriendsPanel
+                                username={username}
+                                friends={friends}
+                                received={friendRequests}
+                                sent={sentFriendRequests}
+                                profileMap={friendProfileMap}
+                                statusMap={statusMap}
+                                friendSearchQuery={friendSearchQuery}
+                                friendSearchResults={friendSearchResults}
+                                friendSearching={friendSearching}
+                                friendRequestSending={friendRequestSending}
+                                isFriend={isFriend}
+                                pendingFrom={pendingFrom}
+                                sentTo={sentTo}
+                                onSearchChange={setFriendSearchQuery}
+                                onSendRequest={sendFriendReq}
+                                onRespond={respondFriendReq}
+                                onOpenDM={(targetUsername: string) => {
+                                    const u: UserSearchResult = {
+                                        username: targetUsername,
+                                        displayName: friendProfileMap[targetUsername]?.displayName ?? targetUsername,
+                                        schoolName: friendProfileMap[targetUsername]?.schoolName ?? "",
+                                        userType: "",
+                                    };
+                                    openDM(u);
+                                    setSidebarTab("messages");
+                                }}
+                            />
                         )}
                     </div>
                 </motion.div>
@@ -1658,48 +1667,48 @@ export default function MessagesPage() {
                                                     </div>
                                                     {group.msgs.map((msg, i) => (
                                                         <div key={msg.id} id={`msg-${msg.id}`}>
-                                                        <MessageBubble
-                                                            msg={msg}
-                                                            displayContent={
-                                                                msg.sending
-                                                                    ? msg.content
-                                                                    : activeConvo?.encrypted
-                                                                        ? (decryptedCache[msg.id] ?? null)
-                                                                        : msg.content
-                                                            }
-                                                            replyToDisplayContent={
-                                                                activeConvo?.encrypted && msg.replyTo
-                                                                    ? (decryptedCache[msg.replyTo.messageId] ?? null)
-                                                                    : msg.replyTo?.content ?? null
-                                                            }
-                                                            isEncryptedConvo={activeConvo?.encrypted ?? false}
-                                                            isMe={msg.senderUsername === username}
-                                                            sameSender={i > 0 && group.msgs[i - 1].senderUsername === msg.senderUsername}
-                                                            isLastInGroup={
-                                                                i === group.msgs.length - 1 ||
-                                                                group.msgs[i + 1].senderUsername !== msg.senderUsername
-                                                            }
-                                                            isEditing={editingId === msg.id}
-                                                            editContent={editContent}
-                                                            editSaving={editSaving}
-                                                            username={username}
-                                                            isGroup={activeConvo?.type === "group"}
-                                                            canDelete={msg.senderUsername === username || activeConvo?.adminUsername === username}
-                                                            isMobile={isMobile}
-                                                            pfpUrl={pfpCache[msg.senderUsername] || activeConvo?.participantPfpUrls[msg.senderUsername] || ""}
-                                                            onAvatarClick={() => {
-                                                                if (msg.senderUsername !== username) setViewProfileUsername(msg.senderUsername);
-                                                            }}
-                                                            onMobileTap={() => setMobileActionMsg(msg)}
-                                                            onEditStart={() => { setEditingId(msg.id); setEditContent(activeConvo?.encrypted ? (decryptedCache[msg.id] ?? msg.content) : msg.content); }}
-                                                            onEditChange={setEditContent}
-                                                            onEditSubmit={() => submitEdit(msg.id)}
-                                                            onEditCancel={() => setEditingId(null)}
-                                                            onDelete={() => deleteMsg(msg.id)}
-                                                            onPin={() => togglePin(msg.id)}
-                                                            onReply={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
-                                                            onReact={emoji => toggleReaction(msg.id, emoji)}
-                                                        />
+                                                            <MessageBubble
+                                                                msg={msg}
+                                                                displayContent={
+                                                                    msg.sending
+                                                                        ? msg.content
+                                                                        : activeConvo?.encrypted
+                                                                            ? (decryptedCache[msg.id] ?? null)
+                                                                            : msg.content
+                                                                }
+                                                                replyToDisplayContent={
+                                                                    activeConvo?.encrypted && msg.replyTo
+                                                                        ? (decryptedCache[msg.replyTo.messageId] ?? null)
+                                                                        : msg.replyTo?.content ?? null
+                                                                }
+                                                                isEncryptedConvo={activeConvo?.encrypted ?? false}
+                                                                isMe={msg.senderUsername === username}
+                                                                sameSender={i > 0 && group.msgs[i - 1].senderUsername === msg.senderUsername}
+                                                                isLastInGroup={
+                                                                    i === group.msgs.length - 1 ||
+                                                                    group.msgs[i + 1].senderUsername !== msg.senderUsername
+                                                                }
+                                                                isEditing={editingId === msg.id}
+                                                                editContent={editContent}
+                                                                editSaving={editSaving}
+                                                                username={username}
+                                                                isGroup={activeConvo?.type === "group"}
+                                                                canDelete={msg.senderUsername === username || activeConvo?.adminUsername === username}
+                                                                isMobile={isMobile}
+                                                                pfpUrl={pfpCache[msg.senderUsername] || activeConvo?.participantPfpUrls[msg.senderUsername] || ""}
+                                                                onAvatarClick={() => {
+                                                                    if (msg.senderUsername !== username) setViewProfileUsername(msg.senderUsername);
+                                                                }}
+                                                                onMobileTap={() => setMobileActionMsg(msg)}
+                                                                onEditStart={() => { setEditingId(msg.id); setEditContent(activeConvo?.encrypted ? (decryptedCache[msg.id] ?? msg.content) : msg.content); }}
+                                                                onEditChange={setEditContent}
+                                                                onEditSubmit={() => submitEdit(msg.id)}
+                                                                onEditCancel={() => setEditingId(null)}
+                                                                onDelete={() => deleteMsg(msg.id)}
+                                                                onPin={() => togglePin(msg.id)}
+                                                                onReply={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
+                                                                onReact={emoji => toggleReaction(msg.id, emoji)}
+                                                            />
                                                         </div>
                                                     ))}
                                                 </div>
@@ -2564,9 +2573,9 @@ export default function MessagesPage() {
                         }}
                         friendStatus={
                             isFriend(viewProfileUsername) ? "friends"
-                            : sentTo(viewProfileUsername) ? "pending_sent"
-                            : pendingFrom(viewProfileUsername) ? "pending_received"
-                            : "none"
+                                : sentTo(viewProfileUsername) ? "pending_sent"
+                                    : pendingFrom(viewProfileUsername) ? "pending_received"
+                                        : "none"
                         }
                         onAddFriend={() => sendFriendReq(viewProfileUsername)}
                         onRespondFriend={(accept) => respondFriendReq(viewProfileUsername, accept)}
@@ -2812,8 +2821,8 @@ function FriendsPanel({
                         ) : (
                             friendSearchResults.filter(u => u.username !== username).map(u => {
                                 const alreadyFriend = isFriend(u.username);
-                                const hasSent       = !!sentTo(u.username);
-                                const hasIncoming   = !!pendingFrom(u.username);
+                                const hasSent = !!sentTo(u.username);
+                                const hasIncoming = !!pendingFrom(u.username);
                                 return (
                                     <div key={u.username} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5">
                                         <Avatar className="w-7 h-7 shrink-0">
@@ -2963,8 +2972,7 @@ function ConvoItem({
     username: string; index: number; pfpCache: Record<string, string>;
     statusMap: Record<string, UserStatus>; onClick: () => void;
 }) {
-    const { unreadByConvo } = useUnread();
-    const unread = unreadByConvo[convo.id] ?? 0;
+    // No longer track unread for all conversations; only the current one
 
     const dmPartner = convo.type === "dm" ? convo.participants.find(p => p !== username) : null;
     const partnerStatus: UserStatus = dmPartner ? (statusMap[dmPartner] ?? "offline") : "offline";
@@ -3002,17 +3010,11 @@ function ConvoItem({
                         style={{ background: statusColor(partnerStatus), borderColor: "var(--card)" }}
                     />
                 )}
-                {unread > 0 && (
-                    <motion.span
-                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full"
-                        style={{ background: "oklch(0.65 0.22 278)", boxShadow: "0 0 0 2px var(--card)" }}
-                    />
-                )}
+                {/* unread indicator removed — only tracking current conversation */}
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                    <span className={cn("text-sm truncate", unread > 0 ? "font-semibold" : "font-medium")}>
+                    <span className={cn("text-sm truncate", "font-medium")}>
                         {name}
                     </span>
                     <div className="flex items-center gap-1 shrink-0 ml-1">
@@ -3024,7 +3026,7 @@ function ConvoItem({
                         )}
                     </div>
                 </div>
-                <p className={cn("text-[11px] truncate", unread > 0 ? "text-foreground/80" : "text-muted-foreground")}>
+                <p className={cn("text-[11px] truncate", "text-muted-foreground")}>
                     {convo.lastMessage
                         ? (convo.lastSenderUsername === username ? "You: " : (convo.type === "group" ? (convo.participantNames[convo.lastSenderUsername]?.split(" ")[0] ?? convo.lastSenderUsername) + ": " : "")) + convo.lastMessage
                         : subtitle}
@@ -3045,14 +3047,14 @@ const SHARE_GRADE_STYLE: Record<string, { bg: string; color: string; border: str
     C: { bg: "oklch(0.65 0.18 210 / 22%)", color: "oklch(0.78 0.16 210)", border: "oklch(0.65 0.18 210 / 40%)" },
     D: { bg: "oklch(0.65 0.20 175 / 22%)", color: "oklch(0.75 0.18 175)", border: "oklch(0.65 0.20 175 / 40%)" },
     E: { bg: "oklch(0.65 0.22 148 / 22%)", color: "oklch(0.72 0.18 148)", border: "oklch(0.65 0.22 148 / 40%)" },
-    F: { bg: "oklch(1 0 0 / 8%)",           color: "oklch(0.55 0 0)",      border: "oklch(1 0 0 / 15%)"          },
-    "—": { bg: "oklch(1 0 0 / 6%)",         color: "oklch(0.50 0 0)",      border: "oklch(1 0 0 / 12%)"          },
+    F: { bg: "oklch(1 0 0 / 8%)", color: "oklch(0.55 0 0)", border: "oklch(1 0 0 / 15%)" },
+    "—": { bg: "oklch(1 0 0 / 6%)", color: "oklch(0.50 0 0)", border: "oklch(1 0 0 / 12%)" },
 };
 
 const STATUS_DOT: Record<string, string> = {
-    draft:     "oklch(0.75 0.10 80)",
+    draft: "oklch(0.75 0.10 80)",
     published: "oklch(0.72 0.18 148)",
-    archived:  "oklch(0.55 0.02 260)",
+    archived: "oklch(0.55 0.02 260)",
 };
 
 function NoteFullModal({ card, onClose }: { card: NoteShareCard; onClose: () => void }) {
@@ -3125,51 +3127,51 @@ function NoteCardBubble({ card, isMe }: { card: NoteShareCard; isMe: boolean }) 
     const dotColor = STATUS_DOT[card.status] ?? STATUS_DOT.draft;
     return (
         <>
-        <div
-            className="mt-1.5 rounded-2xl overflow-hidden cursor-pointer group/notecard"
-            style={{
-                background: isMe ? "oklch(0 0 0 / 22%)" : "oklch(1 0 0 / 6%)",
-                border: `1px solid ${isMe ? "oklch(1 0 0 / 14%)" : "oklch(1 0 0 / 10%)"}`,
-                minWidth: 230,
-                maxWidth: 310,
-            }}
-            onClick={() => setOpen(true)}
-        >
-            {/* Header row */}
             <div
-                className="flex items-center gap-2 px-3 py-2 border-b"
-                style={{ borderColor: isMe ? "oklch(1 0 0 / 12%)" : "oklch(1 0 0 / 7%)" }}
+                className="mt-1.5 rounded-2xl overflow-hidden cursor-pointer group/notecard"
+                style={{
+                    background: isMe ? "oklch(0 0 0 / 22%)" : "oklch(1 0 0 / 6%)",
+                    border: `1px solid ${isMe ? "oklch(1 0 0 / 14%)" : "oklch(1 0 0 / 10%)"}`,
+                    minWidth: 230,
+                    maxWidth: 310,
+                }}
+                onClick={() => setOpen(true)}
             >
-                <StickyNote className="w-3 h-3 shrink-0 opacity-60" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-55 flex-1">Note</span>
-                <span
-                    className="flex items-center gap-1 text-[9px] font-medium"
-                    style={{ color: dotColor }}
+                {/* Header row */}
+                <div
+                    className="flex items-center gap-2 px-3 py-2 border-b"
+                    style={{ borderColor: isMe ? "oklch(1 0 0 / 12%)" : "oklch(1 0 0 / 7%)" }}
                 >
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: dotColor }} />
-                    {card.status}
-                </span>
-            </div>
-            {/* Body */}
-            <div className="px-3 py-2.5">
-                <p className="text-sm font-semibold leading-snug mb-1 truncate">
-                    {card.title || "Untitled"}
-                </p>
-                {card.preview && (
-                    <p className="text-[11px] opacity-55 line-clamp-2 leading-relaxed">
-                        {card.preview}
+                    <StickyNote className="w-3 h-3 shrink-0 opacity-60" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-55 flex-1">Note</span>
+                    <span
+                        className="flex items-center gap-1 text-[9px] font-medium"
+                        style={{ color: dotColor }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: dotColor }} />
+                        {card.status}
+                    </span>
+                </div>
+                {/* Body */}
+                <div className="px-3 py-2.5">
+                    <p className="text-sm font-semibold leading-snug mb-1 truncate">
+                        {card.title || "Untitled"}
                     </p>
-                )}
-                <div className="flex items-center gap-1 mt-2 text-[10px] opacity-0 group-hover/notecard:opacity-60 transition-opacity"
-                    style={{ color: "oklch(0.72 0.18 148)" }}>
-                    <BookOpen className="w-2.5 h-2.5" />
-                    <span>View full note</span>
+                    {card.preview && (
+                        <p className="text-[11px] opacity-55 line-clamp-2 leading-relaxed">
+                            {card.preview}
+                        </p>
+                    )}
+                    <div className="flex items-center gap-1 mt-2 text-[10px] opacity-0 group-hover/notecard:opacity-60 transition-opacity"
+                        style={{ color: "oklch(0.72 0.18 148)" }}>
+                        <BookOpen className="w-2.5 h-2.5" />
+                        <span>View full note</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <AnimatePresence>
-            {open && <NoteFullModal card={card} onClose={() => setOpen(false)} />}
-        </AnimatePresence>
+            <AnimatePresence>
+                {open && <NoteFullModal card={card} onClose={() => setOpen(false)} />}
+            </AnimatePresence>
         </>
     );
 }
@@ -3232,17 +3234,17 @@ function GradeCardBubble({ card, isMe }: { card: GradeShareCard; isMe: boolean }
 }
 
 const DECK_BUBBLE_COLORS: Record<string, { from: string; to: string }> = {
-    violet:  { from: "oklch(0.65 0.22 278)",  to: "oklch(0.55 0.25 295)"  },
-    rose:    { from: "oklch(0.68 0.22 10)",   to: "oklch(0.58 0.26 340)"  },
-    amber:   { from: "oklch(0.78 0.17 75)",   to: "oklch(0.68 0.20 55)"   },
-    emerald: { from: "oklch(0.70 0.18 148)",  to: "oklch(0.60 0.22 165)"  },
-    sky:     { from: "oklch(0.72 0.17 220)",  to: "oklch(0.62 0.22 240)"  },
-    slate:   { from: "oklch(0.60 0.04 255)",  to: "oklch(0.48 0.05 265)"  },
+    violet: { from: "oklch(0.65 0.22 278)", to: "oklch(0.55 0.25 295)" },
+    rose: { from: "oklch(0.68 0.22 10)", to: "oklch(0.58 0.26 340)" },
+    amber: { from: "oklch(0.78 0.17 75)", to: "oklch(0.68 0.20 55)" },
+    emerald: { from: "oklch(0.70 0.18 148)", to: "oklch(0.60 0.22 165)" },
+    sky: { from: "oklch(0.72 0.17 220)", to: "oklch(0.62 0.22 240)" },
+    slate: { from: "oklch(0.60 0.04 255)", to: "oklch(0.48 0.05 265)" },
 };
 
 function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: boolean }) {
     const [importing, setImporting] = useState(false);
-    const [imported,  setImported]  = useState(false);
+    const [imported, setImported] = useState(false);
     const [importErr, setImportErr] = useState("");
     const c = DECK_BUBBLE_COLORS[card.color] ?? DECK_BUBBLE_COLORS.violet;
 
@@ -3251,7 +3253,7 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
         setImporting(true);
         setImportErr("");
         try {
-            const res  = await fetch("/api/flashcards/import", {
+            const res = await fetch("/api/flashcards/import", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ deckId: card.deckId }),
@@ -3334,9 +3336,9 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
                     disabled={importing || imported}
                     className={cn(
                         "w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all mt-2",
-                        imported  ? "opacity-60 cursor-default" :
-                        importing ? "opacity-50 cursor-wait" :
-                        "hover:opacity-90 active:scale-[0.98]"
+                        imported ? "opacity-60 cursor-default" :
+                            importing ? "opacity-50 cursor-wait" :
+                                "hover:opacity-90 active:scale-[0.98]"
                     )}
                     style={{
                         background: imported ? "oklch(1 0 0 / 8%)" : `linear-gradient(135deg, ${c.from}, ${c.to})`,
@@ -3344,8 +3346,8 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
                     }}
                 >
                     {importing ? <><Loader2 className="w-3 h-3 animate-spin" /> Importing...</> :
-                     imported  ? <><Check   className="w-3 h-3" /> Added to your decks</> :
-                                 <><Download className="w-3 h-3" /> Import deck</>}
+                        imported ? <><Check className="w-3 h-3" /> Added to your decks</> :
+                            <><Download className="w-3 h-3" /> Import deck</>}
                 </button>
             </div>
         </div>
@@ -3353,7 +3355,7 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
 }
 
 function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
-    if (card.type === "note")      return <NoteCardBubble      card={card} isMe={isMe} />;
+    if (card.type === "note") return <NoteCardBubble card={card} isMe={isMe} />;
     if (card.type === "flashdeck") return <FlashDeckCardBubble card={card} isMe={isMe} />;
     return <GradeCardBubble card={card} isMe={isMe} />;
 }
@@ -3672,7 +3674,7 @@ function MobileActionSheet({
     };
 
     const actions: SheetAction[] = [
-        { icon: CornerUpLeft, label: "Reply",                          onClick: () => { onReply(); onClose(); } },
+        { icon: CornerUpLeft, label: "Reply", onClick: () => { onReply(); onClose(); } },
         { icon: copied ? Check : Copy, label: copied ? "Copied!" : "Copy", onClick: copy },
         { icon: msg.pinned ? PinOff : Pin, label: msg.pinned ? "Unpin" : "Pin", onClick: () => { onPin(); onClose(); } },
         ...(isMe ? [{ icon: Pencil, label: "Edit", onClick: () => { onEdit(); onClose(); } } as SheetAction] : []),

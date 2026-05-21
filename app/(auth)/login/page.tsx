@@ -318,6 +318,8 @@ function LoginPageInner() {
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [passkeySupported, setPasskeySupported] = useState(false);
+  const [serviceDown, setServiceDown] = useState(false);
+  const [serviceDownMessage, setServiceDownMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exitActive, setExitActive] = useState(false);
   const [easterEgg, setEasterEgg] = useState(false);
@@ -336,6 +338,33 @@ function LoginPageInner() {
   useEffect(() => {
     setPasskeySupported(browserSupportsWebAuthn());
   }, []);
+
+  // Check service status from Firestore-backed API
+  const checkServiceStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/firebase");
+      if (!res.ok) {
+        setServiceDown(true);
+        setServiceDownMessage("Sorry, Schoolsoft+ is currently down due to high usage.");
+        return;
+      }
+      const data = await res.json().catch(() => ({ operational: false }));
+      if (!data.operational) {
+        // Prefer specific message for RESOURCE_EXHAUSTED
+        if (data.errorCode === "RESOURCE_EXHAUSTED" || data.error === "RESOURCE_EXHAUSTED") {
+          setServiceDownMessage("Sorry, Schoolsoft+ is currently down due to high usage (quota exceeded).");
+        } else {
+          setServiceDownMessage(data.message ?? "Sorry, Schoolsoft+ is currently unavailable.");
+        }
+        setServiceDown(true);
+      }
+    } catch (err) {
+      setServiceDown(true);
+      setServiceDownMessage("Sorry, Schoolsoft+ is currently down due to high usage.");
+    }
+  }, []);
+
+  useEffect(() => { checkServiceStatus(); }, [checkServiceStatus]);
 
   // Show AuthV2 error returned via ?authv2_error=... query param
   useEffect(() => {
@@ -465,6 +494,26 @@ function LoginPageInner() {
   };
 
   if (authLoading) return null;
+
+  if (serviceDown) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "var(--background)" }}>
+        <div className="max-w-lg w-full rounded-lg p-8 text-center border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <h2 className="text-2xl font-bold">Service unavailable</h2>
+          <p className="mt-3 text-sm text-muted-foreground">{serviceDownMessage ?? "Sorry, Schoolsoft+ is currently down due to high usage. Please try again later."}</p>
+          <div className="mt-6 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => { setServiceDown(false); setServiceDownMessage(null); checkServiceStatus(); }}
+              className="h-10 px-4 rounded-lg bg-primary text-white"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex overflow-hidden" style={{ background: "var(--background)" }}>
