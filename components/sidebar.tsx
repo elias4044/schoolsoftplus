@@ -10,16 +10,13 @@ import {
   UtensilsCrossed,
   Newspaper,
   BookOpen,
-  ClipboardList,
   StickyNote,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Bot,
   Timer,
-  Menu,
   X,
   UserCircle,
   MessageSquare,
@@ -29,6 +26,7 @@ import {
   GraduationCap,
   Layers,
   Gift,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -51,6 +49,7 @@ const NAV_ITEMS = [
   { href: "/subjects",  label: "Subjects",    icon: BookOpen,        shortcut: "Alt+5" },
   { href: "/countdown", label: "Countdown",   icon: Timer,           shortcut: "Alt+6" },
   { href: "/class",     label: "Class & Staff", icon: GraduationCap, shortcut: "Alt+7" },
+  { href: "/final-grades", label: "Final Grades", icon: Trophy, shortcut: "Alt+8" },
 ] as const;
 
 const BOTTOM_NAV = [
@@ -85,6 +84,7 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
         case "5": e.preventDefault(); router.push("/subjects");  break;
         case "6": e.preventDefault(); router.push("/countdown"); break;
         case "7": e.preventDefault(); router.push("/class");     break;
+        case "8": e.preventDefault(); router.push("/final-grades"); break;
         case "n":
         case "N": e.preventDefault(); router.push("/notes");      break;
         case "k":

@@ -61,6 +61,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /final_grades_v1/{username} {
+      allow read, write: if false;
+    }
+
     // ── Countdowns ────────────────────────────────────────
     match /countdowns_v1/{countdownId} {
       allow read, write: if false;
