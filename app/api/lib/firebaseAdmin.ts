@@ -23,11 +23,3 @@ if (!admin.apps.length) {
 
 export const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
-
-export const monitoringClient = new MetricServiceClient({
-  projectId: serviceAccount.projectId,
-  credentials: {
-    client_email: serviceAccount.clientEmail,
-    private_key: serviceAccount.privateKey,
-  },
-});

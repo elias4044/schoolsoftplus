@@ -5,9 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { markTransitionPending } from "@/lib/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Eye, EyeOff, ArrowRight, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, FlaskConical, ShieldCheck, KeyRound } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Loader2, CalendarDays, BookOpen, StickyNote, Search, ChevronDown, Check, ExternalLink, ShieldCheck, KeyRound, Sparkles, Clock3 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -27,6 +25,23 @@ interface School { name: string; id: string; }
 
 // How many items to render at most — keeps the DOM small for 3000+ entries
 const MAX_VISIBLE = 100;
+const AUTHV2_BENEFITS = [
+  {
+    icon: ShieldCheck,
+    title: "Official SchoolSoft sign-in",
+    body: "Your credentials are entered on SchoolSoft's own login page, not in SchoolSoft+.",
+  },
+  {
+    icon: Clock3,
+    title: "Longer-lived AuthV2 session",
+    body: "AuthV2 keeps the app signed in more reliably than the old cookie-only flow.",
+  },
+  {
+    icon: Sparkles,
+    title: "Better setup for passkeys",
+    body: "After your first AuthV2 sign-in, you can keep using passkeys for faster return visits.",
+  },
+] as const;
 
 
 // ---------------------------------------------------------------------------
@@ -47,19 +62,19 @@ function SchoolPicker({
   const [fetched, setFetched] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  const [recentSchools, setRecentSchools] = useState<School[]>([]);
+  const [recentSchools, setRecentSchools] = useState<School[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem(RECENT_SCHOOLS_KEY);
+      return stored ? (JSON.parse(stored) as School[]) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-
-  // Load recent schools from localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(RECENT_SCHOOLS_KEY);
-      if (stored) setRecentSchools(JSON.parse(stored) as School[]);
-    } catch { /* ignore */ }
-  }, []);
 
   // Fetch schools once on first open
   const loadSchools = useCallback(async () => {
@@ -95,9 +110,6 @@ function SchoolPicker({
     saveRecent(school);
     setOpen(false);
   }
-
-  // Reset keyboard focus whenever the search query changes
-  useEffect(() => { setFocusedIdx(-1); }, [query]);
 
   // Close on outside click
   useEffect(() => {
@@ -183,7 +195,10 @@ function SchoolPicker({
               <input
                 ref={inputRef}
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  setFocusedIdx(-1);
+                }}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Search your school…"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 text-foreground"
@@ -306,38 +321,35 @@ function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const authV2ErrorParam = searchParams.get("authv2_error");
 
   const [schoolId, setSchoolId] = useState(DEFAULT_SCHOOL_ID);
   const [schoolName, setSchoolName] = useState(DEFAULT_SCHOOL_NAME);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isAuthV2Loading, setIsAuthV2Loading] = useState(false);
   const [isAuthV2ExternalLoading, setIsAuthV2ExternalLoading] = useState(false);
+  const [isRefreshTokenLoading, setIsRefreshTokenLoading] = useState(false);
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeySupported] = useState(() => (
+    typeof window !== "undefined" ? browserSupportsWebAuthn() : false
+  ));
   const [serviceDown, setServiceDown] = useState(false);
   const [serviceDownMessage, setServiceDownMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(authV2ErrorParam);
   const [exitActive, setExitActive] = useState(false);
   const [easterEgg, setEasterEgg] = useState(false);
   const [taglineAlt, setTaglineAlt] = useState(false);
+  const [advancedLoginOpen, setAdvancedLoginOpen] = useState(false);
+  const [refreshTokenValue, setRefreshTokenValue] = useState("");
 
   const shiftHeldRef = useRef(false);
   const konamiBufferRef = useRef<string[]>([]);
   const logoClicksRef = useRef(0);
   const logoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingNavRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated, authLoading, router]);
-
-  useEffect(() => {
-    setPasskeySupported(browserSupportsWebAuthn());
-  }, []);
 
   // Check service status from Firestore-backed API
   const checkServiceStatus = useCallback(async () => {
@@ -358,19 +370,18 @@ function LoginPageInner() {
         }
         setServiceDown(true);
       }
-    } catch (err) {
+    } catch {
       setServiceDown(true);
       setServiceDownMessage("Sorry, Schoolsoft+ is currently down due to high usage.");
     }
   }, []);
 
-  useEffect(() => { checkServiceStatus(); }, [checkServiceStatus]);
-
-  // Show AuthV2 error returned via ?authv2_error=... query param
   useEffect(() => {
-    const authv2Error = searchParams.get("authv2_error");
-    if (authv2Error) setError(authv2Error);
-  }, [searchParams]);
+    const timeoutId = window.setTimeout(() => {
+      void checkServiceStatus();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [checkServiceStatus]);
 
   // Track Shift key state globally for the skip-transition shortcut
   useEffect(() => {
@@ -408,35 +419,15 @@ function LoginPageInner() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pendingNavRef.current) return;
-    setError(null);
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-school": schoolId },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body?.message ?? "Invalid credentials.");
-        return;
-      }
-      pendingNavRef.current = true;
-      const isLarge = window.innerWidth >= 1024;
-      if (isLarge && !shiftHeldRef.current) {
-        setExitActive(true); // curtain animates in → onAnimationComplete navigates
-      } else {
-        router.replace("/dashboard");
-      }
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
+  function completeLogin() {
+    const isLarge = window.innerWidth >= 1024;
+    if (isLarge && !shiftHeldRef.current) {
+      setExitActive(true);
+    } else {
+      router.replace("/dashboard");
     }
-  };
+  }
+
 
   const handlePasskeyLogin = async () => {
     setPasskeyError(null);
@@ -465,13 +456,7 @@ function LoginPageInner() {
       const completeData = await completeRes.json();
       if (!completeData.success) throw new Error(completeData.error ?? "Passkey login failed.");
 
-      // Navigate to dashboard
-      const isLarge = window.innerWidth >= 1024;
-      if (isLarge && !shiftHeldRef.current) {
-        setExitActive(true);
-      } else {
-        router.replace("/dashboard");
-      }
+      completeLogin();
     } catch (err) {
       setPasskeyError((err as Error).message);
     } finally {
@@ -491,6 +476,44 @@ function LoginPageInner() {
     setIsAuthV2ExternalLoading(true);
     // Navigate to the initiate route — it will set cookies then redirect to SchoolSoft
     window.location.href = `/api/auth/v2/initiate/external?school=${encodeURIComponent(schoolId)}`;
+  };
+
+  const handleRefreshTokenLogin = async () => {
+    const trimmedToken = refreshTokenValue.trim();
+    setError(null);
+
+    if (!trimmedToken) {
+      setError("Enter a refresh token first.");
+      setAdvancedLoginOpen(true);
+      return;
+    }
+
+    setIsRefreshTokenLoading(true);
+    try {
+      const res = await fetch("/api/auth/v2/refresh-token-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school: schoolId,
+          refreshToken: trimmedToken,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({ success: false, error: "Refresh token login failed." }));
+      if (!res.ok || !data.success) {
+        setError(data.error ?? "Refresh token login failed.");
+        setAdvancedLoginOpen(true);
+        return;
+      }
+
+      setRefreshTokenValue("");
+      completeLogin();
+    } catch {
+      setError("Network error. Please try again.");
+      setAdvancedLoginOpen(true);
+    } finally {
+      setIsRefreshTokenLoading(false);
+    }
   };
 
   if (authLoading) return null;
@@ -647,11 +670,11 @@ function LoginPageInner() {
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
             <p className="text-sm mt-1.5 text-muted-foreground">
-              Use your SchoolSoft credentials.
+              Continue with AuthV2 for the full SchoolSoft+ login flow.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <Field label="School" htmlFor="school">
               <SchoolPicker
                 value={schoolId}
@@ -660,41 +683,65 @@ function LoginPageInner() {
               />
             </Field>
 
-            <Field label="Username" htmlFor="username">
-              <Input
-                id="username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="h-10 text-sm bg-card"
-                placeholder="firstname.lastname"
-                autoComplete="username"
-                type="text"
-                required
-              />
-            </Field>
-
-            <Field label="Password" htmlFor="password">
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="pr-9 h-10 text-sm bg-card"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
+            {/* <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: "color-mix(in oklch, var(--primary) 18%, var(--border))",
+                background: "linear-gradient(180deg, color-mix(in oklch, var(--brand) 8%, transparent), color-mix(in oklch, var(--card) 94%, transparent))",
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                  style={{ background: "color-mix(in oklch, var(--primary) 14%, transparent)", color: "var(--primary)" }}
                 >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--primary)" }}>
+                      AuthV2
+                    </span>
+                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground" style={{ borderColor: "var(--border)" }}>
+                      Default sign-in
+                    </span>
+                  </div>
+                  <h2 className="mt-2 text-base font-semibold text-foreground">
+                    Sign in on SchoolSoft, then come straight back here.
+                  </h2>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    We&apos;ll send you to the official SchoolSoft login for <span className="text-foreground">{schoolName}</span>. After you finish there, SchoolSoft+ will keep using AuthV2 instead of the old username and password flow.
+                  </p>
+                </div>
               </div>
-            </Field>
+
+              <div className="mt-4 grid gap-2.5">
+                {AUTHV2_BENEFITS.map(({ icon: Icon, title, body }) => (
+                  <div
+                    key={title}
+                    className="flex items-start gap-3 rounded-xl border px-3 py-2.5"
+                    style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(1 0 0 / 2%)" }}
+                  >
+                    <Icon className="mt-0.5 w-4 h-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-xl border px-3 py-3" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(1 0 0 / 2%)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
+                  What happens next
+                </p>
+                <div className="mt-2 grid gap-1.5 text-sm text-muted-foreground">
+                  <p>1. Pick your school and continue to SchoolSoft.</p>
+                  <p>2. Enter your credentials there, or use your school&apos;s external provider.</p>
+                  <p>3. Return to SchoolSoft+ already signed in with AuthV2.</p>
+                </div>
+              </div>
+            </div> */}
 
             <AnimatePresence>
               {error && (
@@ -712,84 +759,123 @@ function LoginPageInner() {
               )}
             </AnimatePresence>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))" }}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.1 }}
+              className="space-y-3"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>Sign in <ArrowRight className="w-3.5 h-3.5" /></>
-              )}
-            </button>
-          </form>
+              <button
+                type="button"
+                onClick={handleAuthV2Login}
+                disabled={isAuthV2Loading}
+                className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all disabled:opacity-60"
+                style={{
+                  background: "linear-gradient(135deg, var(--primary), oklch(0.55 0.25 295))",
+                }}
+              >
+                {isAuthV2Loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Continue with SchoolSoft
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleAuthV2ExternalLogin}
+                disabled={isAuthV2ExternalLoading}
+                className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
+                style={{
+                  background: "color-mix(in oklch, var(--brand) 8%, transparent)",
+                  color: "var(--primary)",
+                }}
+              >
+                {isAuthV2ExternalLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Use external provider instead
+                  </>
+                )}
+              </button>
+            </motion.div>
 
-          {/*  AuthV2 separator  */}
-          <div className="mt-5 flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[10px] text-muted-foreground/50">or</span>
-            <div className="flex-1 h-px bg-border" />
+            <div
+              className="rounded-2xl border"
+              style={{ borderColor: "oklch(1 0 0 / 10%)", background: "oklch(1 0 0 / 2%)" }}
+            >
+              <button
+                type="button"
+                onClick={() => setAdvancedLoginOpen((open) => !open)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                aria-expanded={advancedLoginOpen}
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">Advanced login</p>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                    advancedLoginOpen && "rotate-180"
+                  )}
+                />
+              </button>
+
+              <AnimatePresence initial={false}>
+                {advancedLoginOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <Field label="Refresh token" htmlFor="refresh-token">
+                        <textarea
+                          id="refresh-token"
+                          value={refreshTokenValue}
+                          onChange={(e) => setRefreshTokenValue(e.target.value)}
+                          rows={4}
+                          spellCheck={false}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          className="min-h-24 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                          placeholder="Paste your AuthV2 refresh token"
+                        />
+                      </Field>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        Use a valid SchoolSoft AuthV2 refresh token for the selected school. SchoolSoft+ will create the same signed-in session as the normal AuthV2 flow.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRefreshTokenLogin}
+                        disabled={isRefreshTokenLoading}
+                        className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary/25 text-sm font-medium transition-all disabled:opacity-60 hover:border-primary/40 hover:bg-brand-dim"
+                        style={{
+                          background: "color-mix(in oklch, var(--brand) 8%, transparent)",
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {isRefreshTokenLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Sign in with refresh token"
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/*  AuthV2 login  */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.1 }}
-            className="mt-4"
-          >
-            {/* Experimental badge */}
-            <div className="flex items-center gap-1.5 mb-3">
-              <FlaskConical className="w-3 h-3 text-primary" />
-              <span className="text-[10px] font-medium text-primary">
-                Experimental
-              </span>
-              <span className="text-[10px] text-muted-foreground/60">
-                &middot; Schoolsoft OAuth Login (AuthV2)
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAuthV2Login}
-              disabled={isAuthV2Loading}
-              className="w-full mb-3 h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
-              style={{
-                background: "color-mix(in oklch, var(--brand) 6%, transparent)",
-                color: "var(--primary)",
-              }}
-            >
-              {isAuthV2Loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Login through SchoolSoft
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handleAuthV2ExternalLogin}
-              disabled={isAuthV2ExternalLoading}
-              className="w-full h-10 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all disabled:opacity-60 border border-primary/25 hover:border-primary/40 hover:bg-brand-dim"
-              style={{
-                background: "color-mix(in oklch, var(--brand) 8%, transparent)",
-                color: "var(--primary)",
-              }}
-            >
-              {isAuthV2ExternalLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Login with external provider
-                </>
-              )}
-            </button>
-          </motion.div>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground/75">
+            Need a username and password? You&apos;ll still use them on the official SchoolSoft page after continuing. They&apos;re just no longer collected directly on this screen.
+          </p>
 
           {/* Passkey sign-in */}
           {passkeySupported && (
@@ -797,8 +883,15 @@ function LoginPageInner() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.15 }}
-              className="mt-3"
+              className="mt-5 rounded-2xl border p-4"
+              style={{ borderColor: "var(--border)", background: "oklch(1 0 0 / 2%)" }}
             >
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-foreground">Already set up a passkey?</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Returning users can skip the SchoolSoft redirect and sign in right away.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handlePasskeyLogin}
@@ -1016,3 +1109,4 @@ function Field({
     </div>
   );
 }
+

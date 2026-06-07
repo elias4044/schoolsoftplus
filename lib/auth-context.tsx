@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshInFlight = useRef(false);
 
-  // login() is a no-op — the browser already has the cookies set by /api/login.
-  // Callers should simply redirect to /dashboard after a successful login fetch.
+  // login() is a no-op — the browser already has the cookies set by the auth flow.
+  // Callers should simply redirect to /dashboard after authentication succeeds.
   const login = useCallback(() => {
     router.replace("/dashboard");
   }, [router]);
