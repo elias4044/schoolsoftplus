@@ -25,11 +25,19 @@
 
 ## What is SchoolSoft+?
 
-SchoolSoft+ is an independent, open-source web app that gives your existing **SchoolSoft** account a dramatically better interface. Same data — modern experience.
+SchoolSoft+ is an independent, open-source web app that gives your existing **SchoolSoft** account a dramatically better and smoother interface. Same data — modern experience.
 
 > **Not affiliated with SchoolSoft AB.** This project proxies SchoolSoft's login flow on your behalf and never stores your password.
 
 **Why?** Because SchoolSoft's interface is slow, cluttered, and stuck in 2010. SchoolSoft+ is everything it should have been.
+
+---
+
+## Screenshots
+
+<img src="public/preview_dashboard.png" alt="SchoolSoft+ dashboard">
+<img src="public/preview_grades.png">
+<img src="public/preview_profile.png">
 
 ---
 
@@ -111,6 +119,8 @@ cd schoolsoftplus
 
 # 2. Install
 npm install
+# OR (requires bun)
+bun install
 
 # 3. Configure
 cp .env.example .env.local
@@ -118,6 +128,8 @@ cp .env.example .env.local
 
 # 4. Run
 npm run dev
+# OR (requires bun)
+bun run dev
 # → http://localhost:3000
 ```
 
