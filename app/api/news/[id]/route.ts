@@ -10,6 +10,32 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+interface Attachment {
+  fileId: number;
+  name: string;
+  type: string;
+}
+
+// Rewrites SchoolSoft's showFileImage.jsp URLs into our own proxy URLs,
+// using the attachments array to resolve fileId -> name/type. (Credits to Claude ❤️‍🩹)
+function rewriteNewsImages(
+  description: string,
+  attachments: Attachment[],
+): string {
+  const byFileId = new Map(attachments.map((a) => [a.fileId, a]));
+
+  return description.replace(
+    /src="showFileImage\.jsp\?[^"]*fileid=(\d+)[^"]*"/g,
+    (fullMatch, fileIdStr) => {
+      const attachment = byFileId.get(Number(fileIdStr));
+      if (!attachment) return fullMatch; // no match, leave original src alone
+
+      const proxyUrl = `/api/file?id=${fileIdStr}&type=${attachment.type.toLowerCase()}`;
+      return `src="${proxyUrl}"`;
+    },
+  );
+}
+
 // -- GET /api/news  ------------------------------------------------------------
 export async function GET(req: NextRequest, context: RouteContext) {
   const { searchParams } = new URL(req.url);
@@ -18,7 +44,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   if (!id) {
-    NextResponse.json({ error: "Missing ID" });
+    NextResponse.json({ error: "Missing ID" }, {status: 400});
   }
 
   const sess = await requireSession(req);
@@ -59,11 +85,20 @@ export async function GET(req: NextRequest, context: RouteContext) {
       { headers: { Authorization: "Bearer " + sess.token } },
     );
 
-    // TODO: Figure out attachments & images
+    const news = res.data;
 
-    // Example res:
-    // Note that the description is pure HTML
-    /* 
+    return NextResponse.json({
+      ...news,
+      description: rewriteNewsImages(news.description, news.attachments ?? []),
+    });
+  } catch (err) {
+    return handleApiError(err, "news");
+  }
+}
+
+// Example res:
+// Note that the description is pure HTML
+/* 
     
         {
         "id": 332375,
@@ -164,8 +199,3 @@ export async function GET(req: NextRequest, context: RouteContext) {
             "orgId": 18
             }
   */
-    return NextResponse.json(res.data);
-  } catch (err) {
-    return handleApiError(err, "news");
-  }
-}

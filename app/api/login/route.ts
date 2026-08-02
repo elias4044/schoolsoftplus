@@ -77,10 +77,6 @@ export async function POST(req: NextRequest) {
     const hashCookie = setCookie.find((c) => c.includes("hash="));
     const usertypeCookie = setCookie.find((c) => c.includes("usertype="));
 
-    // For debugging print the hash and session
-    console.log(`[login] sessionCookie: ${sessionCookie}`);
-    console.log(`[login] hashCookie: ${hashCookie}`);
-    console.log(`[login] usertypeCookie: ${usertypeCookie}`);
 
     // -- Update Firestore stats ------------------------------------------------
     const statsRef = db.collection("stats").doc("loginStats");
