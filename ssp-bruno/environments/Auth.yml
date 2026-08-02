@@ -1,0 +1,5 @@
+name: Auth
+variables:
+  - secret: true
+    name: ssp_cookie
+    description: SchoolSoft+ Cookie

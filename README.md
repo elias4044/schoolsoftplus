@@ -15,7 +15,8 @@
     <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" alt="Next.js" />
     <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript" alt="TypeScript" />
     <img src="https://img.shields.io/badge/Tailwind_CSS-v4-0ea5e9?style=flat-square&logo=tailwindcss" alt="Tailwind" />
-    <img src="https://img.shields.io/badge/version-1.4.4-8b5cf6?style=flat-square" alt="Version" />
+    <img src="https://img.shields.io/badge/version-1.4.5-8b5cf6?style=flat-square" alt="Version" />
+    <img src="https://img.shields.io/badge/Lines_of_code-50k%2B-white?style=flat-square">
   </p>
 
   <br/>
@@ -50,10 +51,11 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | **Schedule** | Clean weekly timetable with subject colours and week navigation |
 | **Lunch menu** | Weekly lunch menu fetched and rendered automatically |
 | **News** | School news feed with full article view |
-| **Subjects** | Subject list with teacher info and related assignments |
+| **Subjects** | Subject list with teacher info and related assignments, with advanced analytics |
 | **Countdown** | Custom countdown timers to any date — displayed as a dashboard widget |
 | **Notes** | Personal rich-text notes with public shareable links |
 | **Class & Staff** | Browse your class list and staff directory with search, section filters, and CSV export |
+| **Final Grades** | Gain advanced insights on how your grades have been moving over years with tips and more |
 
 ### Social & Messaging
 | Feature | Description |
@@ -65,6 +67,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | **Online status** | Per-user presence: Online (< 3 min), In SchoolSoft+ (3–15 min), Offline (> 15 min) |
 | **GIF support** | Giphy-powered GIF picker in all chats including encrypted ones |
 | **People search** | Search any SchoolSoft+ user, view their profile, add friends |
+| **Referrals** | Invite others to join SchoolSoft+ and join the leaderboard |
 
 ### AI & Productivity
 | Feature | Description |

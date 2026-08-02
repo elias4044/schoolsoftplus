@@ -1,3 +1,5 @@
+// This route is deprecated, please refer to AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2) (/auth folder)
+
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { db } from "@/app/api/lib/firebaseAdmin";

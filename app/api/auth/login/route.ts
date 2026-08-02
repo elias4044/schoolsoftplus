@@ -19,9 +19,9 @@ const SS_REDIRECT  = "com.schoolsoftplus.app://";
    There is NO server-side state — no session, no Firebase doc.
 
    Query parameters:
-     school       – school slug           (default: "engelska")
-     orgid        – school org ID         (default: "18")
-     redirect_uri – your app's deep-link  (default: "com.schoolsoft.eapp://")
+     school       - school slug           (default: "engelska")
+     orgid        - school org ID         (default: "18")
+     redirect_uri - your app's deep-link  (default: "com.schoolsoft.eapp://")
                     e.g. "com.myfork://auth"
                     SchoolSoft will redirect here with ?code=X&state=Y.
                     Your app intercepts it, then calls POST /api/mobile/token.
@@ -67,11 +67,11 @@ export async function GET(req: NextRequest) {
 
    Request body (JSON):
      {
-       username: string   – SchoolSoft username
-       password: string   – SchoolSoft password
-       school?:  string   – school slug (default "engelska")
+       username: string   - SchoolSoft username
+       password: string   - SchoolSoft password
+       school?:  string   - school slug (default "engelska")
                             can also be supplied via X-School header
-       orgid?:   string   – school org ID (default "18")
+       orgid?:   string   - school org ID (default "18")
      }
 
    Response (200):
