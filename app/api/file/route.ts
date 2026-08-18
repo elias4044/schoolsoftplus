@@ -7,7 +7,7 @@ import axios from "axios";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type");
+  const type = searchParams.get("type"); // Not needed, does nothing at the moment (might change in the future)
   const id = searchParams.get("id");
   const responseType = searchParams.get("responseType"); // Direct file, temp URL or redirect - "url" for temp url, "redirect" for redirect.
 
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
   try {
     let fileType = "attachment";
-    if (type?.toLowerCase() === "image") fileType = "image";
+    //if (type?.toLowerCase() === "image") fileType = "image";
 
     const res = await api.get(
       `/eva/api/v1/resource/${fileType}/${id}`,
