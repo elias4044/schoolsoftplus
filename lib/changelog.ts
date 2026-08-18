@@ -1,4 +1,4 @@
-export type ChangelogTag = "feature" | "improvement" | "fix" | "security" | "breaking";
+export type ChangelogTag = 'feature' | 'improvement' | 'fix' | 'security' | 'breaking';
 
 export interface ChangelogItem {
   text: string;
@@ -23,376 +23,857 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.5.0",
-    date: "2026-05-06",
-    title: "Voice Calls, Notification Center & Cross-Device Unread Sync",
+    version: '1.6.0',
+    date: '2026-08-18',
+    title: 'Complete rework of the news page',
     summary:
-      "A major social upgrade: 1-to-1 voice calls land in early beta, built entirely with WebRTC — no third-party app required. A new global notification center surfaces in-app toasts and a history bell everywhere in the dashboard. Unread message state is now backed by Firestore so switching devices or browsers gives you the correct dots immediately.",
-    tags: ["feature", "improvement", "fix"],
+      'Since the day this project started, the news page has never been fully implemented - until today. Finally, a complete news page, including search, filtering, details, HTML parsing and full file handling, and so much more...',
+    tags: ['feature', 'improvement', 'fix'],
     highlight: true,
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.5.0",
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.5.1',
     sections: [
       {
-        title: "Voice Calls (Early Beta)",
+        title: 'News page',
         items: [
-          { text: "1-to-1 voice calls directly in any DM — click the phone icon in the chat header to ring someone", tag: "feature" },
-          { text: "Built on WebRTC (RTCPeerConnection) with Google STUN servers — audio travels peer-to-peer, never through our servers", tag: "feature" },
-          { text: "Firebase Firestore used for signaling (SDP offer/answer + ICE candidates) — no separate signaling server needed", tag: "feature" },
-          { text: "Incoming call notifications appear on every page — accept or decline without leaving what you're doing", tag: "feature" },
-          { text: "Floating global call panel — stays visible and usable while you navigate anywhere in the app", tag: "feature" },
-          { text: "Mute toggle with live mute indicator in the call UI", tag: "feature" },
-          { text: "Calls auto-clean up from Firestore on hang-up or decline — no lingering signaling data", tag: "improvement" },
-          { text: "45-second ring timeout with automatic cleanup if neither party answers", tag: "improvement" },
-          { text: "Call documents have a server-side TTL (expireAt) as a safety net for orphaned call records", tag: "improvement" },
-          { text: "Requires HTTPS or localhost (browser WebRTC security requirement)", tag: "feature" },
-          { text: "Early beta — bugs are expected. Please report any issues via the Feedback page", tag: "feature" },
+          {
+            text: 'Search and filter through all your news to quickly find what you are looking for',
+            tag: 'feature',
+          },
+          { text: 'View all news posts with ease', tag: 'feature' },
+          { text: 'Print any of the posts, with a click of a button', tag: 'feature' },
+          {
+            text: 'View and download any file/image with my new file handling and proxying',
+            tag: 'feature',
+          },
         ],
       },
       {
-        title: "Global Notification Center",
+        title: 'AuthV2',
         items: [
-          { text: "New notification bell in the dashboard header (both desktop and mobile) — shows unread count badge", tag: "feature" },
-          { text: "Toast stack appears top-right for transient notifications — success, error, info, warning, and message types", tag: "feature" },
-          { text: "Bell dropdown shows full notification history with timestamps and per-item dismiss", tag: "feature" },
-          { text: "Mark-all-read and clear-all actions in the bell panel", tag: "feature" },
-          { text: "Incoming message toasts fire automatically on every page, not just the messages page", tag: "improvement" },
-          { text: "Toast auto-dismiss: info/success/warning after 4 s, errors persist until manually dismissed", tag: "improvement" },
-          { text: "Native browser Notification fired when a new message arrives and the tab is in the background", tag: "improvement" },
+          {
+            text: 'A complete switch to AuthV2',
+            tag: 'feature',
+          },
+          {
+            text: "As you may have noticed, you can't login using username & password. This is due to the switch to AuthV2, which is more secure and unlocks so much more for us to do.",
+            tag: 'feature',
+          },
+          {
+            text: 'Previously, you would be logged out within one hour, which can be very annoying. With this new technology, that limit is gone.',
+            tag: 'feature',
+          },
+          {
+            text: 'Read much more at https://developer.ssp.elias4044.com/docs/auth-v2',
+            tag: 'feature',
+          },
         ],
       },
       {
-        title: "Cross-Device Unread Sync",
+        title: 'Class list & flashcards',
         items: [
-          { text: "Unread message state is now stored in Firestore (lastReadAt map per conversation) — no longer local to the device", tag: "improvement" },
-          { text: "Opening a conversation on one device marks it as read on all your devices instantly via Firestore realtime", tag: "improvement" },
-          { text: "Optimistic local update clears the unread dot immediately on the current device — no waiting for the round-trip", tag: "improvement" },
-          { text: "Removed all localStorage-based unread tracking — previously switching browsers or devices would show stale dots", tag: "fix" },
-          { text: "Unread counting now happens in a global provider so the sidebar badge stays accurate on every page", tag: "improvement" },
+          {
+            text: 'Quickly view all teachers and students in your school with filtering and search.',
+            tag: 'feature',
+          },
+          {
+            text: 'Tired of those slow apps like Quizlet? Now, build directly into SchoolSoft+, you can create and practice, all at no cost and no ads.',
+            tag: 'feature',
+          },
+          { text: 'Create flashcards in seconds with the help of AI', tag: 'feature' },
         ],
       },
       {
-        title: "Bug Fixes & Polish",
+        title: 'Even more',
         items: [
-          { text: "Fixed mark-as-read API returning 400 for DM conversations (was incorrectly gated behind a group-only check)", tag: "fix" },
-          { text: "Fixed notification toasts appearing at the bottom-left — now consistently shown top-right near the bell", tag: "fix" },
-          { text: "Fixed pfpCache reference-before-initialization error on the messages page", tag: "fix" },
-          { text: "Fixed Firestore permission-denied on voice call list queries — switched to a safe list rule that doesn't access resource.data", tag: "fix" },
-          { text: "Mobile chat header is now always sticky so call and action buttons remain visible while scrolling", tag: "fix" },
-          { text: "Encrypted messages now correctly show decrypted content in pinned messages panel, reply quotes, copy buttons, and edit prefill", tag: "fix" },
+          {
+            text: 'Import your grades and study your downfall, right in SchoolSoft+. Advanced and clear analytics, synced to your account.',
+            tag: 'feature',
+          },
+          {
+            text: 'Would you reccomend SchoolSoft+ to someone else? If that is the case, send them your own special link and join the leaderboard and earn custom badges, just by inviting your friends.',
+            tag: 'feature',
+          },
+          {
+            text: 'And a lot of bug fixes and smaller things that just makes everyday life a little bit smoother.',
+            tag: 'feature',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.6",
-    date: "2026-05-03",
-    title: "Class & Staff Pages, Design Overhaul & Developer Portal",
+    version: '1.5.0',
+    date: '2026-05-06',
+    title: 'Voice Calls, Notification Center & Cross-Device Unread Sync',
     summary:
-      "A packed release: new Class and Staff pages give you a full view of your classmates and teachers. The entire app got a theming overhaul with 6 background themes and 6 accent colours, all configurable from Settings. A brand-new SchoolSoft+ Developer portal lets third-party developers explore the public API. Several bug fixes are also included.",
-    tags: ["feature", "improvement", "fix"],
-    highlight: false, // Didnt forget to set this to false this time 🙂
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.6",
-    sections: [
-      {
-        title: "Class & Staff Pages",
-        items: [
-          { text: "New /class page — view all students in your class with names, usernames, and profile pictures", tag: "feature" },
-          { text: "New /staff route — browse all teachers and staff at your school with roles and contact info", tag: "feature" },
-          { text: "Both pages are accessible from the sidebar with keyboard shortcuts", tag: "feature" },
-          { text: "Clicking a student or staff card opens their full public profile modal", tag: "improvement" },
-        ],
-      },
-      {
-        title: "Design System & Theming",
-        items: [
-          { text: "6 new background themes: Midnight, Abyss, Dim, Warm, Forest, Ocean", tag: "feature" },
-          { text: "6 accent colour options: Violet, Blue, Cyan, Green, Rose, Amber", tag: "feature" },
-          { text: "Theme and accent are persisted in localStorage and applied before first paint — no flash", tag: "improvement" },
-          { text: "Theme and accent pickers with visual previews added to the Settings → Appearance section", tag: "feature" },
-          { text: "All CSS variables are now scoped via data-theme and data-accent attributes on <html>", tag: "improvement" },
-          { text: "Login page fully redesigned — immersive split-panel layout with ambient orbs and a 3-D app mockup", tag: "improvement" },
-        ],
-      },
-      {
-        title: "SchoolSoft+ Developer Portal",
-        items: [
-          { text: "New public developer portal at /developer — explore the SchoolSoft+ public API", tag: "feature" },
-          { text: "Interactive API reference with endpoint docs, request/response examples, and authentication guide", tag: "feature" },
-          { text: "Dark, immersive design consistent with the rest of the app", tag: "improvement" },
-        ],
-      },
-      {
-        title: "Bug Fixes",
-        items: [
-          { text: "Fixed open-source page being horizontally cut off due to fixed-positioned ambient orbs", tag: "fix" },
-          { text: "Fixed several layout and spacing issues across dashboard widgets", tag: "fix" },
-          { text: "Fixed theme not persisting correctly on hard reload in some browsers", tag: "fix" },
-        ],
-      },
-    ],
-  },
-  {
-    version: "1.4.5",
-    date: "2026-04-28",
-    title: "Messaging Overhaul — Encryption, Images, GIFs & More",
-    summary:
-      "A major upgrade to the messaging system. Group chats can now be end-to-end encrypted using AES-GCM-256 with a shared password. Image and GIF sending is fully integrated with an inline picker, clipboard paste, and live preview. Emoji reactions got a built-in picker with recent tracking, and the whole compose experience was polished with draft persistence, message search, and smarter message grouping.",
-    tags: ["feature", "improvement", "security"],
+      'A major social upgrade: 1-to-1 voice calls land in early beta, built entirely with WebRTC — no third-party app required. A new global notification center surfaces in-app toasts and a history bell everywhere in the dashboard. Unread message state is now backed by Firestore so switching devices or browsers gives you the correct dots immediately.',
+    tags: ['feature', 'improvement', 'fix'],
     highlight: false,
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.5",
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.5.0',
     sections: [
       {
-        title: "End-to-End Encryption",
+        title: 'Voice Calls (Early Beta)',
         items: [
-          { text: "Optional E2EE when creating a group chat — toggle encryption and set a shared password", tag: "feature" },
-          { text: "Keys are derived in-browser using PBKDF2 with 310,000 iterations — the password never reaches the server", tag: "security" },
-          { text: "Messages are encrypted with AES-GCM-256 before leaving your device; only ciphertext is stored", tag: "security" },
-          { text: "Encrypted groups enforce a 100-character message limit (plaintext only, images are not encrypted)", tag: "feature" },
-          { text: "Lock icon and 'Encrypted' badge shown throughout the UI for encrypted conversations", tag: "improvement" },
-          { text: "Password prompt on first open of an encrypted group — key is cached in memory for the session", tag: "feature" },
+          {
+            text: '1-to-1 voice calls directly in any DM — click the phone icon in the chat header to ring someone',
+            tag: 'feature',
+          },
+          {
+            text: 'Built on WebRTC (RTCPeerConnection) with Google STUN servers — audio travels peer-to-peer, never through our servers',
+            tag: 'feature',
+          },
+          {
+            text: 'Firebase Firestore used for signaling (SDP offer/answer + ICE candidates) — no separate signaling server needed',
+            tag: 'feature',
+          },
+          {
+            text: "Incoming call notifications appear on every page — accept or decline without leaving what you're doing",
+            tag: 'feature',
+          },
+          {
+            text: 'Floating global call panel — stays visible and usable while you navigate anywhere in the app',
+            tag: 'feature',
+          },
+          { text: 'Mute toggle with live mute indicator in the call UI', tag: 'feature' },
+          {
+            text: 'Calls auto-clean up from Firestore on hang-up or decline — no lingering signaling data',
+            tag: 'improvement',
+          },
+          {
+            text: '45-second ring timeout with automatic cleanup if neither party answers',
+            tag: 'improvement',
+          },
+          {
+            text: 'Call documents have a server-side TTL (expireAt) as a safety net for orphaned call records',
+            tag: 'improvement',
+          },
+          {
+            text: 'Requires HTTPS or localhost (browser WebRTC security requirement)',
+            tag: 'feature',
+          },
+          {
+            text: 'Early beta — bugs are expected. Please report any issues via the Feedback page',
+            tag: 'feature',
+          },
         ],
       },
       {
-        title: "Image & GIF Sending",
+        title: 'Global Notification Center',
         items: [
-          { text: "Attach images from your device using the paperclip button — up to 10 MB, JPEG/PNG/GIF/WebP/AVIF/BMP", tag: "feature" },
-          { text: "Paste an image directly from the clipboard into the compose box to upload instantly", tag: "feature" },
-          { text: "Animated image preview strip shows before sending — remove with one click", tag: "feature" },
-          { text: "Built-in GIF picker powered by Giphy — search or browse trending GIFs in a compact grid", tag: "feature" },
-          { text: "Images and GIFs render inline in the message thread at up to 300 px width — click to open full size", tag: "feature" },
-          { text: "Images are hosted via ImgBB; the raw URL is hidden — only the image is shown", tag: "improvement" },
+          {
+            text: 'New notification bell in the dashboard header (both desktop and mobile) — shows unread count badge',
+            tag: 'feature',
+          },
+          {
+            text: 'Toast stack appears top-right for transient notifications — success, error, info, warning, and message types',
+            tag: 'feature',
+          },
+          {
+            text: 'Bell dropdown shows full notification history with timestamps and per-item dismiss',
+            tag: 'feature',
+          },
+          { text: 'Mark-all-read and clear-all actions in the bell panel', tag: 'feature' },
+          {
+            text: 'Incoming message toasts fire automatically on every page, not just the messages page',
+            tag: 'improvement',
+          },
+          {
+            text: 'Toast auto-dismiss: info/success/warning after 4 s, errors persist until manually dismissed',
+            tag: 'improvement',
+          },
+          {
+            text: 'Native browser Notification fired when a new message arrives and the tab is in the background',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "Emoji Picker",
+        title: 'Cross-Device Unread Sync',
         items: [
-          { text: "New built-in emoji picker — no external library, zero extra bundle weight", tag: "feature" },
-          { text: "Nine categories: Smileys, Gestures, Hearts, Animals, Food, Activities, Travel, Objects, Symbols", tag: "feature" },
-          { text: "Recently used emojis are tracked in localStorage and surfaced as a 'Recent' category", tag: "feature" },
-          { text: "Search field filters across all categories instantly", tag: "improvement" },
+          {
+            text: 'Unread message state is now stored in Firestore (lastReadAt map per conversation) — no longer local to the device',
+            tag: 'improvement',
+          },
+          {
+            text: 'Opening a conversation on one device marks it as read on all your devices instantly via Firestore realtime',
+            tag: 'improvement',
+          },
+          {
+            text: 'Optimistic local update clears the unread dot immediately on the current device — no waiting for the round-trip',
+            tag: 'improvement',
+          },
+          {
+            text: 'Removed all localStorage-based unread tracking — previously switching browsers or devices would show stale dots',
+            tag: 'fix',
+          },
+          {
+            text: 'Unread counting now happens in a global provider so the sidebar badge stays accurate on every page',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "Compose & UX Improvements",
+        title: 'Bug Fixes & Polish',
         items: [
-          { text: "Character counter — amber warning at 180 chars, red block at 200 (unless using standard non-encrypted mode which allows up to 2000)", tag: "improvement" },
-          { text: "Draft persistence per conversation — switching convos and coming back restores your unsent text", tag: "feature" },
-          { text: "Message search panel — toggle from the conversation header to find any message by keyword, click to jump to it", tag: "feature" },
-          { text: "Timestamps now only appear on the last message of a consecutive group, not on every bubble", tag: "improvement" },
-          { text: "Sender name in group chats only appears on the first message in a run — cleaner reading flow", tag: "improvement" },
-          { text: "Link rendering — URLs in messages become clickable links automatically", tag: "improvement" },
+          {
+            text: 'Fixed mark-as-read API returning 400 for DM conversations (was incorrectly gated behind a group-only check)',
+            tag: 'fix',
+          },
+          {
+            text: 'Fixed notification toasts appearing at the bottom-left — now consistently shown top-right near the bell',
+            tag: 'fix',
+          },
+          {
+            text: 'Fixed pfpCache reference-before-initialization error on the messages page',
+            tag: 'fix',
+          },
+          {
+            text: "Fixed Firestore permission-denied on voice call list queries — switched to a safe list rule that doesn't access resource.data",
+            tag: 'fix',
+          },
+          {
+            text: 'Mobile chat header is now always sticky so call and action buttons remain visible while scrolling',
+            tag: 'fix',
+          },
+          {
+            text: 'Encrypted messages now correctly show decrypted content in pinned messages panel, reply quotes, copy buttons, and edit prefill',
+            tag: 'fix',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.4",
-    date: "2026-04-26",
-    title: "Enhanced Profiles, Group Chats & Share Cards",
+    version: '1.4.6',
+    date: '2026-05-03',
+    title: 'Class & Staff Pages, Design Overhaul & Developer Portal',
     summary:
-      "Profiles are now fully customisable with cover images, profile pictures, social links, accent colours, and privacy controls. A new People discovery page lets you browse and message classmates. Group chats let you create named rooms with multiple members. Notes and grades can now be shared directly into any conversation as rich interactive cards.",
-    tags: ["feature", "improvement"],
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.4",
+      'A packed release: new Class and Staff pages give you a full view of your classmates and teachers. The entire app got a theming overhaul with 6 background themes and 6 accent colours, all configurable from Settings. A brand-new SchoolSoft+ Developer portal lets third-party developers explore the public API. Several bug fixes are also included.',
+    tags: ['feature', 'improvement', 'fix'],
+    highlight: false, // Didnt forget to set this to false this time 🙂
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.6',
     sections: [
       {
-        title: "Expanded Profiles",
+        title: 'Class & Staff Pages',
         items: [
-          { text: "Upload a profile picture and cover/banner image via ImgBB — click either to replace", tag: "feature" },
-          { text: "New fields: pronouns, bio (500 chars), location, website", tag: "feature" },
-          { text: "Social links section — GitHub, X/Twitter, Instagram, LinkedIn", tag: "feature" },
-          { text: "Accent colour picker with 8 presets and a custom hex input — affects your profile card, buttons, and DM header", tag: "feature" },
-          { text: "Privacy toggle — choose whether anyone or nobody can initiate DMs with you", tag: "feature" },
-          { text: "Member since and last updated timestamps in the read-only account info section", tag: "improvement" },
-          { text: "Cover image and avatar are instantly previewed before saving", tag: "improvement" },
-          { text: "Profile data is now propagated across the app — display name, avatar, and accent reflect everywhere", tag: "improvement" },
+          {
+            text: 'New /class page — view all students in your class with names, usernames, and profile pictures',
+            tag: 'feature',
+          },
+          {
+            text: 'New /staff route — browse all teachers and staff at your school with roles and contact info',
+            tag: 'feature',
+          },
+          {
+            text: 'Both pages are accessible from the sidebar with keyboard shortcuts',
+            tag: 'feature',
+          },
+          {
+            text: 'Clicking a student or staff card opens their full public profile modal',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "People Discovery Page",
+        title: 'Design System & Theming',
         items: [
-          { text: "New /people page (Alt+U) — search for any SchoolSoft+ user by username", tag: "feature" },
-          { text: "Search results show avatar, display name, pronouns, bio snippet, school, location, and role badge", tag: "feature" },
-          { text: "Click a result card to view the full public profile modal", tag: "feature" },
-          { text: "Quick Message button on each card opens or creates a DM conversation instantly", tag: "feature" },
-          { text: "Clicking the avatar or name in a DM conversation header also opens the profile modal", tag: "improvement" },
+          {
+            text: '6 new background themes: Midnight, Abyss, Dim, Warm, Forest, Ocean',
+            tag: 'feature',
+          },
+          {
+            text: '6 accent colour options: Violet, Blue, Cyan, Green, Rose, Amber',
+            tag: 'feature',
+          },
+          {
+            text: 'Theme and accent are persisted in localStorage and applied before first paint — no flash',
+            tag: 'improvement',
+          },
+          {
+            text: 'Theme and accent pickers with visual previews added to the Settings → Appearance section',
+            tag: 'feature',
+          },
+          {
+            text: 'All CSS variables are now scoped via data-theme and data-accent attributes on <html>',
+            tag: 'improvement',
+          },
+          {
+            text: 'Login page fully redesigned — immersive split-panel layout with ambient orbs and a 3-D app mockup',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "Public Profile Modal",
+        title: 'SchoolSoft+ Developer Portal',
         items: [
-          { text: "Reusable profile modal shows cover banner, avatar, name, pronouns, bio, location, website, and social links", tag: "feature" },
-          { text: "Accent colour is applied throughout the modal — header strip, Message button, links", tag: "improvement" },
-          { text: "Available from the People page, DM conversation header, and anywhere else a username appears", tag: "feature" },
+          {
+            text: 'New public developer portal at /developer — explore the SchoolSoft+ public API',
+            tag: 'feature',
+          },
+          {
+            text: 'Interactive API reference with endpoint docs, request/response examples, and authentication guide',
+            tag: 'feature',
+          },
+          {
+            text: 'Dark, immersive design consistent with the rest of the app',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "Group Chats",
+        title: 'Bug Fixes',
         items: [
-          { text: "Create named group conversations with any number of SchoolSoft+ users", tag: "feature" },
-          { text: "Group info panel — edit group name and description, view and manage members", tag: "feature" },
-          { text: "Admins can add or remove members and transfer admin rights", tag: "feature" },
-          { text: "Members can leave a group at any time", tag: "feature" },
-          { text: "Group avatar uses a distinct icon and the group name appears in the conversation list", tag: "improvement" },
-        ],
-      },
-      {
-        title: "Note & Grade Share Cards",
-        items: [
-          { text: "Share any note directly to a conversation using the Send button in the Notes editor toolbar or the message icon in the note list", tag: "feature" },
-          { text: "Share a grade estimate from any assignment detail page using the animated Share button", tag: "feature" },
-          { text: "Share picker is a bottom-sheet modal with a preview panel — see exactly what will be sent before selecting a conversation", tag: "feature" },
-          { text: "Multi-send support — send the same card to multiple conversations without closing the picker", tag: "feature" },
-          { text: "Note cards in messages show title, status badge (Draft / Published / Archived), and a two-line preview", tag: "feature" },
-          { text: "Click a note card to open the full note content in a markdown-rendered modal — no ownership required", tag: "feature" },
-          { text: "Full note markdown is stored in the message at send time so both sender and recipient can always read it", tag: "improvement" },
-          { text: "Grade cards show the letter grade square (colour-coded A–F), assignment title, subject, and point total", tag: "feature" },
-          { text: "Per-conversation error and success state in the share picker", tag: "improvement" },
+          {
+            text: 'Fixed open-source page being horizontally cut off due to fixed-positioned ambient orbs',
+            tag: 'fix',
+          },
+          { text: 'Fixed several layout and spacing issues across dashboard widgets', tag: 'fix' },
+          {
+            text: 'Fixed theme not persisting correctly on hard reload in some browsers',
+            tag: 'fix',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.3",
-    date: "2026-04-25",
-    title: "AI Writing Tools & School Picker",
+    version: '1.4.5',
+    date: '2026-04-28',
+    title: 'Messaging Overhaul — Encryption, Images, GIFs & More',
     summary:
-      "The AI has been completely reworked — freeform chat is replaced with focused, useful features: inline writing tools built into the Notes editor and a quick-action Insights panel for your schedule, assignments, and lunch. Login now includes a searchable school picker with every SchoolSoft school.",
-    tags: ["feature", "improvement"],
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.3",
+      'A major upgrade to the messaging system. Group chats can now be end-to-end encrypted using AES-GCM-256 with a shared password. Image and GIF sending is fully integrated with an inline picker, clipboard paste, and live preview. Emoji reactions got a built-in picker with recent tracking, and the whole compose experience was polished with draft persistence, message search, and smarter message grouping.',
+    tags: ['feature', 'improvement', 'security'],
+    highlight: false,
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.5',
     sections: [
       {
-        title: "AI Writing Tools in Notes",
+        title: 'End-to-End Encryption',
         items: [
-          { text: "New 'AI Tools' toolbar button in the Notes editor opens an inline action panel", tag: "feature" },
-          { text: "11 focused writing actions: Improve writing, Fix grammar, Expand, Shorten, Make formal, Make casual, Continue writing, Key points, Summarize, Suggest title, Explain", tag: "feature" },
-          { text: "Actions are context-aware — select text to target just that passage, or apply to the whole note", tag: "feature" },
-          { text: "AI suggestions appear in a preview panel before being applied — accept or discard with one click", tag: "feature" },
-          { text: "Undo AI button appears after accepting a suggestion so you can instantly revert", tag: "feature" },
-          { text: "Actions are grouped into Editing, Tone, and Generate categories for quick scanning", tag: "improvement" },
-          { text: "Dedicated /api/ai/note endpoint — returns only what was asked, no preambles or filler", tag: "improvement" },
+          {
+            text: 'Optional E2EE when creating a group chat — toggle encryption and set a shared password',
+            tag: 'feature',
+          },
+          {
+            text: 'Keys are derived in-browser using PBKDF2 with 310,000 iterations — the password never reaches the server',
+            tag: 'security',
+          },
+          {
+            text: 'Messages are encrypted with AES-GCM-256 before leaving your device; only ciphertext is stored',
+            tag: 'security',
+          },
+          {
+            text: 'Encrypted groups enforce a 100-character message limit (plaintext only, images are not encrypted)',
+            tag: 'feature',
+          },
+          {
+            text: "Lock icon and 'Encrypted' badge shown throughout the UI for encrypted conversations",
+            tag: 'improvement',
+          },
+          {
+            text: 'Password prompt on first open of an encrypted group — key is cached in memory for the session',
+            tag: 'feature',
+          },
         ],
       },
       {
-        title: "AI Insights Panel",
+        title: 'Image & GIF Sending',
         items: [
-          { text: "The sidebar AI panel is redesigned as a focused Insights panel — freeform chat removed", tag: "improvement" },
-          { text: "Five quick-action cards: This Week's Assignments, Today's Schedule, Lunch This Week, School News, Study Tips", tag: "feature" },
-          { text: "Each card fetches live school data and generates a concise AI summary in one tap", tag: "feature" },
-          { text: "Results are displayed as cards with Refresh and Copy actions", tag: "feature" },
-          { text: "Dedicated /api/ai/insight endpoint fetches all required data sources in parallel before calling the model", tag: "improvement" },
+          {
+            text: 'Attach images from your device using the paperclip button — up to 10 MB, JPEG/PNG/GIF/WebP/AVIF/BMP',
+            tag: 'feature',
+          },
+          {
+            text: 'Paste an image directly from the clipboard into the compose box to upload instantly',
+            tag: 'feature',
+          },
+          {
+            text: 'Animated image preview strip shows before sending — remove with one click',
+            tag: 'feature',
+          },
+          {
+            text: 'Built-in GIF picker powered by Giphy — search or browse trending GIFs in a compact grid',
+            tag: 'feature',
+          },
+          {
+            text: 'Images and GIFs render inline in the message thread at up to 300 px width — click to open full size',
+            tag: 'feature',
+          },
+          {
+            text: 'Images are hosted via ImgBB; the raw URL is hidden — only the image is shown',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "School Selection",
+        title: 'Emoji Picker',
         items: [
-          { text: "Login page now has a searchable school picker instead of a manual text field", tag: "feature" },
-          { text: "Loads all SchoolSoft schools (3000+) from a new /api/schools endpoint — no auth required", tag: "feature" },
-          { text: "Schools are fetched lazily on first open and cached server-side for one hour", tag: "improvement" },
-          { text: "Live client-side search filters instantly; only 100 items rendered at a time to keep the UI fast", tag: "improvement" },
-          { text: "Default school is Internationella Engelska Skolan - IES Halmstad", tag: "improvement" },
-          { text: "School names are used as unique keys since they are the only guaranteed-unique field", tag: "fix" },
+          {
+            text: 'New built-in emoji picker — no external library, zero extra bundle weight',
+            tag: 'feature',
+          },
+          {
+            text: 'Nine categories: Smileys, Gestures, Hearts, Animals, Food, Activities, Travel, Objects, Symbols',
+            tag: 'feature',
+          },
+          {
+            text: "Recently used emojis are tracked in localStorage and surfaced as a 'Recent' category",
+            tag: 'feature',
+          },
+          { text: 'Search field filters across all categories instantly', tag: 'improvement' },
+        ],
+      },
+      {
+        title: 'Compose & UX Improvements',
+        items: [
+          {
+            text: 'Character counter — amber warning at 180 chars, red block at 200 (unless using standard non-encrypted mode which allows up to 2000)',
+            tag: 'improvement',
+          },
+          {
+            text: 'Draft persistence per conversation — switching convos and coming back restores your unsent text',
+            tag: 'feature',
+          },
+          {
+            text: 'Message search panel — toggle from the conversation header to find any message by keyword, click to jump to it',
+            tag: 'feature',
+          },
+          {
+            text: 'Timestamps now only appear on the last message of a consecutive group, not on every bubble',
+            tag: 'improvement',
+          },
+          {
+            text: 'Sender name in group chats only appears on the first message in a run — cleaner reading flow',
+            tag: 'improvement',
+          },
+          {
+            text: 'Link rendering — URLs in messages become clickable links automatically',
+            tag: 'improvement',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.2",
-    date: "2026-04-25",
-    title: "In-App Feedback",
+    version: '1.4.4',
+    date: '2026-04-26',
+    title: 'Enhanced Profiles, Group Chats & Share Cards',
     summary:
-      "Submit bug reports, feature requests, and questions directly from inside SchoolSoft+ — no GitHub account required. Issues are created on GitHub and linked to your SSP username automatically.",
-    tags: ["feature", "improvement"],
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.2",
+      'Profiles are now fully customisable with cover images, profile pictures, social links, accent colours, and privacy controls. A new People discovery page lets you browse and message classmates. Group chats let you create named rooms with multiple members. Notes and grades can now be shared directly into any conversation as rich interactive cards.',
+    tags: ['feature', 'improvement'],
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.4',
     sections: [
       {
-        title: "Feedback Page",
+        title: 'Expanded Profiles',
         items: [
-          { text: "New /feedback page accessible from the sidebar (Alt+F)", tag: "feature" },
-          { text: "Submit bug reports, feature requests, or questions without a GitHub account", tag: "feature" },
-          { text: "Issues are created server-side using a GitHub token and linked to your SSP username", tag: "feature" },
-          { text: "Three pre-filled markdown templates: Bug Report, Feature Request, Question / Other", tag: "feature" },
-          { text: "In-app form with title field, markdown body editor, and live character counter", tag: "feature" },
-          { text: "Success banner with a direct link to the newly created GitHub issue", tag: "feature" },
-          { text: "Browse open and closed issues directly inside the app", tag: "feature" },
-          { text: "Filter issues by label (bug, feature request, question) and search by title", tag: "improvement" },
-          { text: "Pagination for long issue lists", tag: "improvement" },
-          { text: "Colour-coded label badges matching GitHub label colours", tag: "improvement" },
+          {
+            text: 'Upload a profile picture and cover/banner image via ImgBB — click either to replace',
+            tag: 'feature',
+          },
+          { text: 'New fields: pronouns, bio (500 chars), location, website', tag: 'feature' },
+          { text: 'Social links section — GitHub, X/Twitter, Instagram, LinkedIn', tag: 'feature' },
+          {
+            text: 'Accent colour picker with 8 presets and a custom hex input — affects your profile card, buttons, and DM header',
+            tag: 'feature',
+          },
+          {
+            text: 'Privacy toggle — choose whether anyone or nobody can initiate DMs with you',
+            tag: 'feature',
+          },
+          {
+            text: 'Member since and last updated timestamps in the read-only account info section',
+            tag: 'improvement',
+          },
+          {
+            text: 'Cover image and avatar are instantly previewed before saving',
+            tag: 'improvement',
+          },
+          {
+            text: 'Profile data is now propagated across the app — display name, avatar, and accent reflect everywhere',
+            tag: 'improvement',
+          },
+        ],
+      },
+      {
+        title: 'People Discovery Page',
+        items: [
+          {
+            text: 'New /people page (Alt+U) — search for any SchoolSoft+ user by username',
+            tag: 'feature',
+          },
+          {
+            text: 'Search results show avatar, display name, pronouns, bio snippet, school, location, and role badge',
+            tag: 'feature',
+          },
+          { text: 'Click a result card to view the full public profile modal', tag: 'feature' },
+          {
+            text: 'Quick Message button on each card opens or creates a DM conversation instantly',
+            tag: 'feature',
+          },
+          {
+            text: 'Clicking the avatar or name in a DM conversation header also opens the profile modal',
+            tag: 'improvement',
+          },
+        ],
+      },
+      {
+        title: 'Public Profile Modal',
+        items: [
+          {
+            text: 'Reusable profile modal shows cover banner, avatar, name, pronouns, bio, location, website, and social links',
+            tag: 'feature',
+          },
+          {
+            text: 'Accent colour is applied throughout the modal — header strip, Message button, links',
+            tag: 'improvement',
+          },
+          {
+            text: 'Available from the People page, DM conversation header, and anywhere else a username appears',
+            tag: 'feature',
+          },
+        ],
+      },
+      {
+        title: 'Group Chats',
+        items: [
+          {
+            text: 'Create named group conversations with any number of SchoolSoft+ users',
+            tag: 'feature',
+          },
+          {
+            text: 'Group info panel — edit group name and description, view and manage members',
+            tag: 'feature',
+          },
+          { text: 'Admins can add or remove members and transfer admin rights', tag: 'feature' },
+          { text: 'Members can leave a group at any time', tag: 'feature' },
+          {
+            text: 'Group avatar uses a distinct icon and the group name appears in the conversation list',
+            tag: 'improvement',
+          },
+        ],
+      },
+      {
+        title: 'Note & Grade Share Cards',
+        items: [
+          {
+            text: 'Share any note directly to a conversation using the Send button in the Notes editor toolbar or the message icon in the note list',
+            tag: 'feature',
+          },
+          {
+            text: 'Share a grade estimate from any assignment detail page using the animated Share button',
+            tag: 'feature',
+          },
+          {
+            text: 'Share picker is a bottom-sheet modal with a preview panel — see exactly what will be sent before selecting a conversation',
+            tag: 'feature',
+          },
+          {
+            text: 'Multi-send support — send the same card to multiple conversations without closing the picker',
+            tag: 'feature',
+          },
+          {
+            text: 'Note cards in messages show title, status badge (Draft / Published / Archived), and a two-line preview',
+            tag: 'feature',
+          },
+          {
+            text: 'Click a note card to open the full note content in a markdown-rendered modal — no ownership required',
+            tag: 'feature',
+          },
+          {
+            text: 'Full note markdown is stored in the message at send time so both sender and recipient can always read it',
+            tag: 'improvement',
+          },
+          {
+            text: 'Grade cards show the letter grade square (colour-coded A–F), assignment title, subject, and point total',
+            tag: 'feature',
+          },
+          {
+            text: 'Per-conversation error and success state in the share picker',
+            tag: 'improvement',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.1",
-    date: "2026-04-25",
-    title: "Changelog Page",
+    version: '1.4.3',
+    date: '2026-04-25',
+    title: 'AI Writing Tools & School Picker',
     summary:
-      "A dedicated changelog page and in-app modal so you can always see what is new in SchoolSoft+ — available on the landing page, inside the dashboard sidebar, and at /changelog for anyone not logged in.",
-    tags: ["feature", "improvement"],
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.1",
+      'The AI has been completely reworked — freeform chat is replaced with focused, useful features: inline writing tools built into the Notes editor and a quick-action Insights panel for your schedule, assignments, and lunch. Login now includes a searchable school picker with every SchoolSoft school.',
+    tags: ['feature', 'improvement'],
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.3',
     sections: [
       {
-        title: "Changelog",
+        title: 'AI Writing Tools in Notes',
         items: [
-          { text: "New /changelog page listing every release with expandable detail cards", tag: "feature" },
-          { text: "In-app changelog modal accessible from the sidebar via the 'What's new' button", tag: "feature" },
-          { text: "Version badge pill in the landing page header nav opens the modal inline", tag: "feature" },
-          { text: "Each release shows a version number, date, summary, and colour-coded tag pills (Feature, Improvement, Fix, Security, Breaking)", tag: "feature" },
-          { text: "Latest release is pinned to the top and highlighted with a gradient border and accent line", tag: "improvement" },
-          { text: "Direct link to the corresponding GitHub release on every entry", tag: "improvement" },
-          { text: "Modal uses a React portal so it renders above all page elements regardless of stacking context", tag: "fix" },
-          { text: "Changelog link added to the landing page footer", tag: "improvement" },
+          {
+            text: "New 'AI Tools' toolbar button in the Notes editor opens an inline action panel",
+            tag: 'feature',
+          },
+          {
+            text: '11 focused writing actions: Improve writing, Fix grammar, Expand, Shorten, Make formal, Make casual, Continue writing, Key points, Summarize, Suggest title, Explain',
+            tag: 'feature',
+          },
+          {
+            text: 'Actions are context-aware — select text to target just that passage, or apply to the whole note',
+            tag: 'feature',
+          },
+          {
+            text: 'AI suggestions appear in a preview panel before being applied — accept or discard with one click',
+            tag: 'feature',
+          },
+          {
+            text: 'Undo AI button appears after accepting a suggestion so you can instantly revert',
+            tag: 'feature',
+          },
+          {
+            text: 'Actions are grouped into Editing, Tone, and Generate categories for quick scanning',
+            tag: 'improvement',
+          },
+          {
+            text: 'Dedicated /api/ai/note endpoint — returns only what was asked, no preambles or filler',
+            tag: 'improvement',
+          },
+        ],
+      },
+      {
+        title: 'AI Insights Panel',
+        items: [
+          {
+            text: 'The sidebar AI panel is redesigned as a focused Insights panel — freeform chat removed',
+            tag: 'improvement',
+          },
+          {
+            text: "Five quick-action cards: This Week's Assignments, Today's Schedule, Lunch This Week, School News, Study Tips",
+            tag: 'feature',
+          },
+          {
+            text: 'Each card fetches live school data and generates a concise AI summary in one tap',
+            tag: 'feature',
+          },
+          { text: 'Results are displayed as cards with Refresh and Copy actions', tag: 'feature' },
+          {
+            text: 'Dedicated /api/ai/insight endpoint fetches all required data sources in parallel before calling the model',
+            tag: 'improvement',
+          },
+        ],
+      },
+      {
+        title: 'School Selection',
+        items: [
+          {
+            text: 'Login page now has a searchable school picker instead of a manual text field',
+            tag: 'feature',
+          },
+          {
+            text: 'Loads all SchoolSoft schools (3000+) from a new /api/schools endpoint — no auth required',
+            tag: 'feature',
+          },
+          {
+            text: 'Schools are fetched lazily on first open and cached server-side for one hour',
+            tag: 'improvement',
+          },
+          {
+            text: 'Live client-side search filters instantly; only 100 items rendered at a time to keep the UI fast',
+            tag: 'improvement',
+          },
+          {
+            text: 'Default school is Internationella Engelska Skolan - IES Halmstad',
+            tag: 'improvement',
+          },
+          {
+            text: 'School names are used as unique keys since they are the only guaranteed-unique field',
+            tag: 'fix',
+          },
         ],
       },
     ],
   },
   {
-    version: "1.4.0",
-    date: "2026-04-25",
-    title: "Messaging and Social Profiles",
+    version: '1.4.2',
+    date: '2026-04-25',
+    title: 'In-App Feedback',
     summary:
-      "Real-time direct messaging between students, rich social profiles, emoji reactions, reply threads, and push notifications — SchoolSoft+ is now a full school social platform.",
-    tags: ["feature", "improvement"],
-    githubUrl: "https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.0",
+      'Submit bug reports, feature requests, and questions directly from inside SchoolSoft+ — no GitHub account required. Issues are created on GitHub and linked to your SSP username automatically.',
+    tags: ['feature', 'improvement'],
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.2',
     sections: [
       {
-        title: "Real-time Messaging",
+        title: 'Feedback Page',
         items: [
-          { text: "Brand-new direct message system — send and receive messages with any student at your school instantly", tag: "feature" },
-          { text: "Messages arrive in real-time via Firestore listeners — no page refresh needed", tag: "feature" },
-          { text: "Unread count badge shows in the sidebar, always up to date", tag: "feature" },
-          { text: "Keyboard shortcut Alt+M jumps straight to your inbox", tag: "feature" },
-          { text: "Emoji reactions — tap the reaction button on any message to respond with a single emoji", tag: "feature" },
-          { text: "Reply threads — quote any message to keep conversation context clear", tag: "feature" },
-          { text: "Message timestamps with smart relative formatting (\"just now\", \"5 min ago\", \"yesterday\")", tag: "improvement" },
-          { text: "Push notifications via the browser Notifications API — get a ping when someone messages you", tag: "feature" },
-          { text: "Conversation list with last-message preview and unread indicator", tag: "feature" },
+          { text: 'New /feedback page accessible from the sidebar (Alt+F)', tag: 'feature' },
+          {
+            text: 'Submit bug reports, feature requests, or questions without a GitHub account',
+            tag: 'feature',
+          },
+          {
+            text: 'Issues are created server-side using a GitHub token and linked to your SSP username',
+            tag: 'feature',
+          },
+          {
+            text: 'Three pre-filled markdown templates: Bug Report, Feature Request, Question / Other',
+            tag: 'feature',
+          },
+          {
+            text: 'In-app form with title field, markdown body editor, and live character counter',
+            tag: 'feature',
+          },
+          {
+            text: 'Success banner with a direct link to the newly created GitHub issue',
+            tag: 'feature',
+          },
+          { text: 'Browse open and closed issues directly inside the app', tag: 'feature' },
+          {
+            text: 'Filter issues by label (bug, feature request, question) and search by title',
+            tag: 'improvement',
+          },
+          { text: 'Pagination for long issue lists', tag: 'improvement' },
+          { text: 'Colour-coded label badges matching GitHub label colours', tag: 'improvement' },
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.4.1',
+    date: '2026-04-25',
+    title: 'Changelog Page',
+    summary:
+      'A dedicated changelog page and in-app modal so you can always see what is new in SchoolSoft+ — available on the landing page, inside the dashboard sidebar, and at /changelog for anyone not logged in.',
+    tags: ['feature', 'improvement'],
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.1',
+    sections: [
+      {
+        title: 'Changelog',
+        items: [
+          {
+            text: 'New /changelog page listing every release with expandable detail cards',
+            tag: 'feature',
+          },
+          {
+            text: "In-app changelog modal accessible from the sidebar via the 'What's new' button",
+            tag: 'feature',
+          },
+          {
+            text: 'Version badge pill in the landing page header nav opens the modal inline',
+            tag: 'feature',
+          },
+          {
+            text: 'Each release shows a version number, date, summary, and colour-coded tag pills (Feature, Improvement, Fix, Security, Breaking)',
+            tag: 'feature',
+          },
+          {
+            text: 'Latest release is pinned to the top and highlighted with a gradient border and accent line',
+            tag: 'improvement',
+          },
+          {
+            text: 'Direct link to the corresponding GitHub release on every entry',
+            tag: 'improvement',
+          },
+          {
+            text: 'Modal uses a React portal so it renders above all page elements regardless of stacking context',
+            tag: 'fix',
+          },
+          { text: 'Changelog link added to the landing page footer', tag: 'improvement' },
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.4.0',
+    date: '2026-04-25',
+    title: 'Messaging and Social Profiles',
+    summary:
+      'Real-time direct messaging between students, rich social profiles, emoji reactions, reply threads, and push notifications — SchoolSoft+ is now a full school social platform.',
+    tags: ['feature', 'improvement'],
+    githubUrl: 'https://github.com/elias4044/schoolsoftplus/releases/tag/v1.4.0',
+    sections: [
+      {
+        title: 'Real-time Messaging',
+        items: [
+          {
+            text: 'Brand-new direct message system — send and receive messages with any student at your school instantly',
+            tag: 'feature',
+          },
+          {
+            text: 'Messages arrive in real-time via Firestore listeners — no page refresh needed',
+            tag: 'feature',
+          },
+          { text: 'Unread count badge shows in the sidebar, always up to date', tag: 'feature' },
+          { text: 'Keyboard shortcut Alt+M jumps straight to your inbox', tag: 'feature' },
+          {
+            text: 'Emoji reactions — tap the reaction button on any message to respond with a single emoji',
+            tag: 'feature',
+          },
+          {
+            text: 'Reply threads — quote any message to keep conversation context clear',
+            tag: 'feature',
+          },
+          {
+            text: 'Message timestamps with smart relative formatting ("just now", "5 min ago", "yesterday")',
+            tag: 'improvement',
+          },
+          {
+            text: 'Push notifications via the browser Notifications API — get a ping when someone messages you',
+            tag: 'feature',
+          },
+          {
+            text: 'Conversation list with last-message preview and unread indicator',
+            tag: 'feature',
+          },
         ],
       },
       {
-        title: "Social Profiles",
+        title: 'Social Profiles',
         items: [
-          { text: "Every student now has a public profile page — show your name, school, a short bio, and profile colour", tag: "feature" },
-          { text: "Profile pages are accessible at /profile or by searching for any student in the DM compose screen", tag: "feature" },
-          { text: "Custom profile accent colour — personalise with a colour picker", tag: "feature" },
-          { text: "\"Message\" button on profile pages launches a conversation instantly", tag: "feature" },
-          { text: "Avatar initials with gradient background derived from your name", tag: "improvement" },
-          { text: "Profile settings moved to their own card in /settings for easier access", tag: "improvement" },
+          {
+            text: 'Every student now has a public profile page — show your name, school, a short bio, and profile colour',
+            tag: 'feature',
+          },
+          {
+            text: 'Profile pages are accessible at /profile or by searching for any student in the DM compose screen',
+            tag: 'feature',
+          },
+          {
+            text: 'Custom profile accent colour — personalise with a colour picker',
+            tag: 'feature',
+          },
+          {
+            text: '"Message" button on profile pages launches a conversation instantly',
+            tag: 'feature',
+          },
+          {
+            text: 'Avatar initials with gradient background derived from your name',
+            tag: 'improvement',
+          },
+          {
+            text: 'Profile settings moved to their own card in /settings for easier access',
+            tag: 'improvement',
+          },
         ],
       },
       {
-        title: "Notifications",
+        title: 'Notifications',
         items: [
-          { text: "New notifications system — in-app bell icon with a live unread count", tag: "feature" },
-          { text: "Notification entries for new messages, reactions, and replies", tag: "feature" },
-          { text: "\"Mark all read\" clears badge instantly", tag: "improvement" },
+          {
+            text: 'New notifications system — in-app bell icon with a live unread count',
+            tag: 'feature',
+          },
+          { text: 'Notification entries for new messages, reactions, and replies', tag: 'feature' },
+          { text: '"Mark all read" clears badge instantly', tag: 'improvement' },
         ],
       },
       {
-        title: "Fixes and Polish",
+        title: 'Fixes and Polish',
         items: [
-          { text: "Fixed mobile sidebar closing prematurely when navigating to messages", tag: "fix" },
-          { text: "Improved loading skeleton in conversation list to prevent layout shift", tag: "fix" },
-          { text: "Messages page is now fully responsive on small screens", tag: "improvement" },
+          {
+            text: 'Fixed mobile sidebar closing prematurely when navigating to messages',
+            tag: 'fix',
+          },
+          {
+            text: 'Improved loading skeleton in conversation list to prevent layout shift',
+            tag: 'fix',
+          },
+          { text: 'Messages page is now fully responsive on small screens', tag: 'improvement' },
         ],
       },
     ],
