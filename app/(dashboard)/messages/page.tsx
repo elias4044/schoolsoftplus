@@ -105,7 +105,7 @@ interface GroupInvite {
     invitedAt: number;
 }
 
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const QUICK_REACTIONS = ["👍", "❤️", "❤️‍🩹", "💔", "😂", "😮", "😢", "🔥"];
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -1797,7 +1797,7 @@ export default function MessagesPage() {
                                                     <div className="relative inline-block">
                                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img src={imagePreview.url} alt={imagePreview.name}
-                                                            className="h-20 w-auto max-w-[160px] rounded-lg object-cover border border-white/10"
+                                                            className="h-20 w-auto max-w-40 rounded-lg object-cover border border-white/10"
                                                         />
                                                         <button type="button"
                                                             onClick={() => setImagePreview(null)}
@@ -1806,7 +1806,7 @@ export default function MessagesPage() {
                                                             <X className="w-3 h-3 text-white" />
                                                         </button>
                                                     </div>
-                                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{imagePreview.name}</span>
+                                                    <span className="text-xs text-muted-foreground truncate max-w-30">{imagePreview.name}</span>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>

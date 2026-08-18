@@ -180,3 +180,46 @@ export async function fetchSchoolsoftSession(
     return null;
   }
 }
+
+/**
+ * Shared helper — POST to SchoolSoft's token endpoint.
+ * Returns the raw SchoolSoft token fields or null on failure.
+ */
+export async function exchangeCodeForToken(
+  school: string,
+  code: string,
+  verifier: string
+): Promise<Record<string, unknown> | null> {
+  const CLIENT_ID = "eApp";
+  const tokenUrl =
+    `https://sms.schoolsoft.se/${encodeURIComponent(school)}/rest-api/login/token` +
+    `?clientId=${encodeURIComponent(CLIENT_ID)}` +
+    `&grantType=code` +
+    `&code=${encodeURIComponent(code)}` +
+    `&codeVerifier=${encodeURIComponent(verifier)}`;
+
+  try {
+    const tokenRes = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { accept: "application/json" },
+    });
+
+    const text = await tokenRes.text();
+
+    if (tokenRes.status !== 200) {
+      console.warn(`[mobile] token exchange status ${tokenRes.status}`, text);
+      return null;
+    }
+
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      // Bare token string — wrap it
+      return text ? { access_token: text } : null;
+    }
+  } catch (err) {
+    console.error("[mobile] token exchange error:", (err as Error).message);
+    return null;
+  }
+}
+

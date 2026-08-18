@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { makePkcePair, makeState } from "@/app/api/lib/mobileAuth";
+import { makePkcePair, makeState, exchangeCodeForToken } from "@/app/api/lib/mobileAuth";
 import { trackLoginEvent } from "@/app/api/lib/statsHelper";
 
 const CLIENT_ID    = "eApp";
@@ -171,45 +171,4 @@ export async function POST(req: NextRequest) {
 
   // Return the SchoolSoft token response directly — the app manages tokens itself.
   return NextResponse.json({ success: true, ...tokenResult });
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Shared helper — POST to SchoolSoft's token endpoint.
-   Returns the raw SchoolSoft token fields or null on failure.
-───────────────────────────────────────────────────────────── */
-export async function exchangeCodeForToken(
-  school: string,
-  code: string,
-  verifier: string
-): Promise<Record<string, unknown> | null> {
-  const tokenUrl =
-    `https://sms.schoolsoft.se/${encodeURIComponent(school)}/rest-api/login/token` +
-    `?clientId=${encodeURIComponent(CLIENT_ID)}` +
-    `&grantType=code` +
-    `&code=${encodeURIComponent(code)}` +
-    `&codeVerifier=${encodeURIComponent(verifier)}`;
-
-  try {
-    const tokenRes = await fetch(tokenUrl, {
-      method: "POST",
-      headers: { accept: "application/json" },
-    });
-
-    const text = await tokenRes.text();
-
-    if (tokenRes.status !== 200) {
-      console.warn(`[mobile] token exchange status ${tokenRes.status}`, text);
-      return null;
-    }
-
-    try {
-      return JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      // Bare token string — wrap it
-      return text ? { access_token: text } : null;
-    }
-  } catch (err) {
-    console.error("[mobile] token exchange error:", (err as Error).message);
-    return null;
-  }
 }

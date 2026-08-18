@@ -30,7 +30,7 @@ function rewriteNewsImages(
       const attachment = byFileId.get(Number(fileIdStr));
       if (!attachment) return fullMatch; // no match, leave original src alone
 
-      const proxyUrl = `/api/file?id=${fileIdStr}&type=${attachment.type.toLowerCase()}`;
+      const proxyUrl = `/api/file?id=${fileIdStr}&type=${attachment.type.toLowerCase()}&responseType=redirect`;
       return `src="${proxyUrl}"`;
     },
   );
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   if (!id) {
-    NextResponse.json({ error: "Missing ID" }, {status: 400});
+    return NextResponse.json({ error: "Missing ID" }, { status: 400 });
   }
 
   const sess = await requireSession(req);

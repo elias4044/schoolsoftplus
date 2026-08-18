@@ -79,12 +79,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (responseType === "redirect") {
-      return NextResponse.redirect(new URL(headers.location), 303);
-    }
-
-    const asset = await axios.get(headers.location);
-    return new NextResponse(asset.data);
+    // Default to redirecting to the pre-signed Schoolsoft CDN URL
+    return NextResponse.redirect(new URL(headers.location), 307);
   } catch (err) {
     return handleApiError(err, "file");
   }

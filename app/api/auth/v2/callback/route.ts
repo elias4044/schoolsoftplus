@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { exchangeCodeForToken } from "@/app/api/auth/login/route";
-import { fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
+import { exchangeCodeForToken, fetchSchoolsoftSession } from "@/app/api/lib/mobileAuth";
 import { db } from "@/app/api/lib/firebaseAdmin";
 import { trackLoginEvent } from "@/app/api/lib/statsHelper";
 
