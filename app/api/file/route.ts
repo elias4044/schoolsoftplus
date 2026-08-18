@@ -1,10 +1,9 @@
 // Get files/images from SchoolSoft. Useful for "news".
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "../lib/schoolsoft";
+import { createSchoolsoftClient, requireSession } from "../lib/schoolsoft";
 import { handleApiError } from "../lib/apiError";
 import axios from "axios";
 
-const baseURL = "https://sms.schoolsoft.se/engelska/eva/api/v1/resource/"; // attachment|image/[id]
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -41,15 +40,17 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const api = createSchoolsoftClient(sess.school)
+
   try {
     let fileType = "attachment";
     if (type?.toLowerCase() === "image") fileType = "image";
 
-    const res = await axios.get(
-      `${baseURL}/${fileType}/${id}`,
-      {
+    const res = await api.get(
+      `/eva/api/v1/resource/${fileType}/${id}`,
+        {
         headers: {
-          Authorization: "Bearer " + sess.token,
+          Authorization: `Bearer ${sess.token}`,
         },
         maxRedirects: 0,
         validateStatus: (status) => status === 303 || status === 404,
