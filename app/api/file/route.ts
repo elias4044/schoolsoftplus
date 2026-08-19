@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 // Get files/images from SchoolSoft. Useful for "news".
 import { NextRequest, NextResponse } from 'next/server';
 import { createSchoolsoftClient, requireSession } from '../lib/schoolsoft';
@@ -7,7 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type'); // Not needed, does nothing at the moment (might change in the future)
   const id = searchParams.get('id');
-  const responseType = searchParams.get('responseType'); // Direct file, temp URL or redirect - "url" for temp url, "redirect" for redirect.
+  const responseType = searchParams.get('responseType'); // URL or direct file - "url" for URL, otherwise defaults to direct file.
 
   if (!id) {
     return NextResponse.json(
@@ -81,8 +83,33 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Default to redirecting to the pre-signed Schoolsoft CDN URL
-    return NextResponse.redirect(new URL(headers.location), 307);
+    const fileRes = await api.get(headers.location, {
+      responseType: 'stream',
+      headers: {
+        Authorization: `Bearer ${sess.token}`, // include if SchoolSoft still checks it; harmless if not needed
+      },
+      validateStatus: () => true,
+    });
+
+    if (fileRes.status !== 200) {
+      return NextResponse.json(
+        { error: 'Upstream fetch failed', status: fileRes.status },
+        { status: 502 }
+      );
+    }
+
+    const contentType =
+      typeof fileRes.headers['content-type'] === 'string'
+        ? fileRes.headers['content-type']
+        : 'application/octet-stream';
+
+    return new NextResponse(fileRes.data, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (err) {
     return handleApiError(err, 'file');
   }
