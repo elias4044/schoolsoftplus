@@ -57,27 +57,60 @@ export async function GET(req: NextRequest) {
 
     type Lesson = {
       eventId?: number | string;
+      name?: string;
+      subject?: string;
+      teacher?: string;
+      room?: string;
+      teachingGroup?: string;
       startDate?: string;
       endDate?: string;
+      eventColor?: string;
+      category?: string;
+      status?: number;
     };
 
-    // De-duplicate by startDate+endDate (same as before)
-    const uniqueLessons = new Map<string, unknown>();
+    // De-duplicate exact duplicate entries while preserving distinct simultaneous/overlapping lessons
+    // (e.g. 4 different languages running concurrently at the same time slot)
+    const uniqueLessons = new Map<string, Lesson>();
+    const teachingGroupsSet = new Set<string>();
+
     (raw as Lesson[]).forEach((lesson) => {
-      if (lesson?.eventId && lesson?.startDate) {
-        const key = `${lesson.startDate}-${lesson.endDate}`;
-        if (!uniqueLessons.has(key)) uniqueLessons.set(key, lesson);
+      if (lesson?.startDate && lesson?.endDate) {
+        if (lesson.teachingGroup) {
+          teachingGroupsSet.add(lesson.teachingGroup);
+        }
+
+        // Composite key ensures distinct concurrent classes are NOT dropped
+        const key = `${lesson.eventId ?? ""}|${lesson.startDate}|${lesson.endDate}|${lesson.name ?? lesson.subject ?? ""}|${lesson.room ?? ""}|${lesson.teacher ?? ""}|${lesson.teachingGroup ?? ""}`;
+        if (!uniqueLessons.has(key)) {
+          uniqueLessons.set(key, lesson);
+        }
       }
     });
 
-    const schedule = Array.from(uniqueLessons.values()).sort((a, b) => {
-      const la = a as Lesson;
-      const lb = b as Lesson;
-      return new Date(la.startDate!).getTime() - new Date(lb.startDate!).getTime();
+    let schedule = Array.from(uniqueLessons.values()).sort((a, b) => {
+      return new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime();
     });
 
+    // Optional filtering by class / teaching group
+    const groupParam = req.nextUrl.searchParams.get("group") ?? req.nextUrl.searchParams.get("class");
+    if (groupParam && groupParam !== "all") {
+      schedule = schedule.filter((l) =>
+        l.teachingGroup?.toLowerCase() === groupParam.toLowerCase() ||
+        l.name?.toLowerCase().includes(groupParam.toLowerCase())
+      );
+    }
+
+    const teachingGroups = Array.from(teachingGroupsSet).sort();
+
     trackScheduleView();
-    return NextResponse.json({ success: true, schedule, week });
+    return NextResponse.json({
+      success: true,
+      schedule,
+      week,
+      teachingGroups,
+      totalLessons: schedule.length,
+    });
   } catch (error) {
     return handleApiError(error, "schedule");
   }

@@ -1,367 +1,539 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, User, Users } from "lucide-react";
+import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Printer,
+  RotateCw,
+  Search,
+  X,
+  Columns3,
+  LayoutGrid,
+  Calendar,
+  Table,
+  Filter,
+  Users,
+  Clock,
+  Sparkles,
+  Layers,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import {
+  type ScheduleLesson,
+  type DaySchedule,
+  type ScheduleViewMode,
+  type PrintOptions,
+  DAYS,
+  getWeekBounds,
+  localDateKey,
+  timeToMinutes,
+  parseApiTimeStr,
+  calculateTimetableClusters,
+} from "@/components/schedule/schedule-types";
+import { ScheduleTimetable } from "@/components/schedule/ScheduleTimetable";
+import { ScheduleColumnsView } from "@/components/schedule/ScheduleColumnsView";
+import { ScheduleDayView } from "@/components/schedule/ScheduleDayView";
+import { ScheduleListView } from "@/components/schedule/ScheduleListView";
+import { SchedulePrintModal } from "@/components/schedule/SchedulePrintModal";
+import { SchedulePrintView } from "@/components/schedule/SchedulePrintView";
 
-interface Lesson {
-  eventId: number | string;
-  name: string;
-  teacher?: string;
-  room?: string;
-  teachingGroup?: string;
-  start: string;   // "HH:MM"
-  end: string;     // "HH:MM"
-  date: string;    // "YYYY-MM-DD"
-  eventColor?: string;
-  category?: string;
-  status?: number;
-}
+function SchedulePageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
-/* ── ISO week helpers ──────────────────────────────────────── */
-function isoWeek(date: Date): number {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  return (
-    1 +
-    Math.round(
-      ((d.getTime() - week1.getTime()) / 86_400_000 -
-        3 +
-        ((week1.getDay() + 6) % 7)) /
-        7
-    )
-  );
-}
-
-function getWeekBounds(offset: number) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff + offset * 7);
-  monday.setHours(0, 0, 0, 0);
-
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-
-  const week = isoWeek(monday);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-SE", { month: "short", day: "numeric" });
-
-  return {
-    monday,
-    friday,
-    week,
-    label: `Week ${week} · ${fmt(monday)} – ${fmt(friday)}, ${monday.getFullYear()}`,
-  };
-}
-
-function localDateKey(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function timeStr(raw: string) {
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? "" : d.toTimeString().slice(0, 5);
-}
-
-function toMinutes(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function durationLabel(start: string, end: string) {
-  const diff = toMinutes(end) - toMinutes(start);
-  if (diff <= 0) return null;
-  const h = Math.floor(diff / 60);
-  const m = diff % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
-
-function lessonAccent(hex?: string): string {
-  if (hex && /^#[0-9a-f]{6}$/i.test(hex)) return hex;
-  return "oklch(0.62 0.16 263)"; // primary fallback
-}
-
-/* ── Lesson card ───────────────────────────────────────────── */
-function LessonCard({ lesson, isOngoing }: { lesson: Lesson; isOngoing: boolean }) {
-  const dur = durationLabel(lesson.start, lesson.end);
-  const accent = lessonAccent(lesson.eventColor);
-
-  return (
-    <div
-      className={cn(
-        "rounded-lg overflow-hidden flex",
-        isOngoing
-          ? "bg-white/[0.07] ring-1 ring-white/15"
-          : "bg-white/4 hover:bg-white/6 transition-colors"
-      )}
-    >
-      {/* Left accent strip */}
-      <div
-        className="w-0.5 shrink-0 self-stretch"
-        style={{ background: accent }}
-      />
-
-      <div className="flex-1 min-w-0 px-2.5 py-2">
-        {/* Name row */}
-        <div className="flex items-start justify-between gap-2">
-          <p className={cn(
-            "text-xs font-semibold leading-snug truncate flex-1",
-            isOngoing ? "text-foreground" : "text-foreground/80"
-          )}>
-            {lesson.name}
-          </p>
-          {isOngoing && (
-            <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-              Now
-            </span>
-          )}
-        </div>
-
-        {/* Time + duration */}
-        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-          <Clock className="w-2.5 h-2.5 shrink-0" />
-          <span>{lesson.start}–{lesson.end}</span>
-          {dur && <span className="opacity-50">· {dur}</span>}
-        </div>
-
-        {/* Room / Teacher / Group — collapsed into one line when possible */}
-        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-          {lesson.room && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <MapPin className="w-2.5 h-2.5 shrink-0" />
-              {lesson.room}
-            </span>
-          )}
-          {lesson.teacher && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <User className="w-2.5 h-2.5 shrink-0" />
-              {lesson.teacher}
-            </span>
-          )}
-          {lesson.teachingGroup && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Users className="w-2.5 h-2.5 shrink-0" />
-              {lesson.teachingGroup}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Page ──────────────────────────────────────────────────── */
-export default function SchedulePage() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Week offset state (0 = current week, -1 = last week, +1 = next week)
   const [weekOffset, setWeekOffset] = useState(0);
-  const todayColRef = useRef<HTMLDivElement>(null);
+  const { monday, week, label, year } = getWeekBounds(weekOffset);
 
-  const { monday, week, label } = getWeekBounds(weekOffset);
+  // Data state
+  const [rawLessons, setRawLessons] = useState<any[]>([]);
+  const [teachingGroups, setTeachingGroups] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const nowTime = new Date();
-  const todayKey = localDateKey(nowTime);
-  const nowMinutes = nowTime.getHours() * 60 + nowTime.getMinutes();
+  // View & Filter state
+  const [viewMode, setViewMode] = useState<ScheduleViewMode>("timetable");
+  const [selectedGroup, setSelectedGroup] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
-  function isOngoing(l: Lesson) {
-    if (l.date !== todayKey) return false;
-    return nowMinutes >= toMinutes(l.start) && nowMinutes < toMinutes(l.end);
-  }
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  /* Scroll today's column into view on mobile when week loads */
-  useEffect(() => {
-    if (!loading && weekOffset === 0 && todayColRef.current) {
-      todayColRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
-  }, [loading, weekOffset]);
-
-  useEffect(() => {
-    setLoading(true);
-    setLessons([]);
-
-    apiFetch<{ success: boolean; schedule: any[] }>(`/api/schedule?week=${week}`)
-      .then((res) => {
-        const arr = Array.isArray(res?.schedule) ? res.schedule : [];
-        const mapped: Lesson[] = arr.map((ev) => ({
-          eventId: ev.eventId,
-          name: ev.name ?? ev.title ?? ev.subject ?? "Lesson",
-          teacher: ev.teacher || undefined,
-          room: ev.room || undefined,
-          teachingGroup: ev.teachingGroup || undefined,
-          start: timeStr(ev.startDate ?? ""),
-          end: timeStr(ev.endDate ?? ""),
-          date: ev.startDate ? localDateKey(new Date(ev.startDate)) : "",
-          eventColor: ev.eventColor || undefined,
-          category: ev.category,
-          status: ev.status,
-        }));
-        setLessons(mapped);
-      })
-      .catch(() => setLessons([]))
-      .finally(() => setLoading(false));
-  }, [week]);
-
-  const days = Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(d.getDate() + i);
-    const key = localDateKey(d);
-    const dayLessons = lessons
-      .filter((l) => l.date === key)
-      .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
-    return {
-      key,
-      label: DAYS[i],
-      short: d.toLocaleDateString("en-SE", { month: "short", day: "numeric" }),
-      isToday: key === todayKey,
-      lessons: dayLessons,
-    };
+  // Print options state
+  const [printOptions, setPrintOptions] = useState<PrintOptions>({
+    layout: "timetable",
+    orientation: "landscape",
+    colorTheme: "bw",
+    showTeachers: true,
+    showRooms: true,
+    showGroups: true,
+    showTimes: true,
+    selectedDay: "all",
+    title: "School Schedule",
+    subtitle: label,
   });
 
-  const totalLessons = days.reduce((s, d) => s + d.lessons.length, 0);
+  // Keep print subtitle updated with current week label
+  useEffect(() => {
+    setPrintOptions((prev) => ({
+      ...prev,
+      subtitle: label,
+    }));
+  }, [label]);
+
+  // Fetch schedule
+  const fetchSchedule = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setError(null);
+
+      try {
+        const query = selectedGroup !== "all" ? `&group=${encodeURIComponent(selectedGroup)}` : "";
+        const res = await apiFetch<{
+          success: boolean;
+          schedule?: any[];
+          teachingGroups?: string[];
+        }>(`/api/schedule?week=${week}${query}`);
+
+        const list = Array.isArray(res?.schedule) ? res.schedule : [];
+        setRawLessons(list);
+
+        if (res?.teachingGroups && res.teachingGroups.length > 0) {
+          setTeachingGroups(res.teachingGroups);
+        } else {
+          // Extract groups from lessons
+          const groups = new Set<string>();
+          list.forEach((l) => {
+            if (l.teachingGroup) groups.add(l.teachingGroup);
+          });
+          setTeachingGroups(Array.from(groups).sort());
+        }
+      } catch (err: any) {
+        setError(err?.message || "Failed to load schedule.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [week, selectedGroup]
+  );
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
+
+  // Process lessons into mapped typed lessons
+  const mappedLessons: ScheduleLesson[] = useMemo(() => {
+    return rawLessons.map((ev) => {
+      const startStr = parseApiTimeStr(ev.startDate ?? ev.start);
+      const endStr = parseApiTimeStr(ev.endDate ?? ev.end);
+      const dateStr = ev.startDate ? localDateKey(new Date(ev.startDate)) : "";
+      const startMin = timeToMinutes(startStr);
+      const endMin = timeToMinutes(endStr);
+      const durMin = Math.max(15, endMin - startMin);
+
+      return {
+        eventId: ev.eventId ?? `${startStr}-${endStr}-${ev.name}`,
+        name: ev.name ?? ev.title ?? ev.subject ?? "Lesson",
+        subject: ev.subject,
+        teacher: ev.teacher || ev.teacherName || undefined,
+        room: ev.room || ev.location || undefined,
+        teachingGroup: ev.teachingGroup || undefined,
+        start: startStr,
+        end: endStr,
+        date: dateStr,
+        startMinutes: startMin,
+        endMinutes: endMin,
+        durationMinutes: durMin,
+        eventColor: ev.eventColor,
+        category: ev.category,
+        status: ev.status,
+      };
+    });
+  }, [rawLessons]);
+
+  // Filter lessons by group if needed
+  const filteredLessons = useMemo(() => {
+    if (selectedGroup === "all") return mappedLessons;
+    return mappedLessons.filter(
+      (l) =>
+        l.teachingGroup?.toLowerCase() === selectedGroup.toLowerCase() ||
+        l.name.toLowerCase().includes(selectedGroup.toLowerCase())
+    );
+  }, [mappedLessons, selectedGroup]);
+
+  // Build 5 DaySchedule structures
+  const now = new Date();
+  const todayKey = localDateKey(now);
+
+  const days: DaySchedule[] = useMemo(() => {
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      const key = localDateKey(d);
+
+      const dayLessons = filteredLessons
+        .filter((l) => l.date === key)
+        .sort((a, b) => a.startMinutes - b.startMinutes);
+
+      const positioned = calculateTimetableClusters(dayLessons);
+
+      return {
+        key,
+        dayName: DAYS[i],
+        shortDate: d.toLocaleDateString("en-SE", { month: "short", day: "numeric" }),
+        fullDate: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        isToday: key === todayKey,
+        isPast: d < now && key !== todayKey,
+        lessons: dayLessons,
+        positionedLessons: positioned,
+      };
+    });
+  }, [monday, filteredLessons, todayKey, now]);
+
+  const totalLessons = useMemo(() => {
+    return days.reduce((acc, d) => acc + d.lessons.length, 0);
+  }, [days]);
+
+  // Count concurrent classes
+  const concurrentLessonsCount = useMemo(() => {
+    let count = 0;
+    days.forEach((d) => {
+      d.positionedLessons.forEach((pos) => {
+        if (pos.totalCols > 1) count++;
+      });
+    });
+    return count;
+  }, [days]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) {
+        if (e.key === "Escape") (e.target as HTMLElement).blur();
+        return;
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "h") {
+        setWeekOffset((o) => o - 1);
+      } else if (e.key === "ArrowRight" || e.key === "l") {
+        setWeekOffset((o) => o + 1);
+      } else if (e.key === "t" || e.key === "T") {
+        setWeekOffset(0);
+      } else if ((e.key === "p" || e.key === "P") && (e.metaKey || e.ctrlKey || !e.altKey)) {
+        e.preventDefault();
+        setPrintModalOpen(true);
+      } else if (e.key === "1") {
+        setViewMode("timetable");
+      } else if (e.key === "2") {
+        setViewMode("columns");
+      } else if (e.key === "3") {
+        setViewMode("day");
+      } else if (e.key === "4") {
+        setViewMode("list");
+      } else if (e.key === "/") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === "Escape") {
+        if (printModalOpen) setPrintModalOpen(false);
+        else if (searchQuery) setSearchQuery("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [printModalOpen, searchQuery]);
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-wrap items-center justify-between gap-3 mb-6"
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] md:h-screen overflow-hidden bg-background">
+      {/* ── Top Header & Controls Bar ──────────────────────────── */}
+      <header
+        id="schedule-interactive-ui-header"
+        className="px-4 md:px-6 py-3 border-b border-border bg-surface-1 shrink-0 z-10 no-print"
       >
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-primary" />
-            Schedule
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {label}
-            {!loading && totalLessons > 0 && (
-              <span className="ml-2 opacity-50">· {totalLessons} lessons</span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 btn-nav"
-            onClick={() => setWeekOffset((o) => o - 1)}
-            aria-label="Previous week"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-nav text-xs"
-            onClick={() => setWeekOffset(0)}
-            disabled={weekOffset === 0}
-          >
-            Today
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="w-8 h-8 btn-nav"
-            onClick={() => setWeekOffset((o) => o + 1)}
-            aria-label="Next week"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* Day columns */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {DAYS.map((d) => (
-            <div
-              key={d}
-              className="card-base p-3 space-y-2 animate-pulse"
-            >
-              <div className="h-4 w-20 rounded skeleton mb-3" />
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-lg skeleton" />
-              ))}
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Title, Week Controls & Action Tools */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Title & Total count */}
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 text-primary">
+                <CalendarDays className="w-4 h-4" />
+              </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                  Schedule
+                  {!loading && totalLessons > 0 && (
+                    <Badge variant="outline" className="text-[10px] bg-surface-2 border-border font-semibold">
+                      {totalLessons} lessons
+                    </Badge>
+                  )}
+                </h1>
+              </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {days.map((day, i) => (
-            <motion.div
-              key={day.key}
-              ref={day.isToday ? todayColRef : undefined}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className={cn(
-                "rounded-xl border flex flex-col min-h-0",
-                day.isToday
-                  ? "today-card"
-                  : "card-base"
-              )}
-            >
-              {/* Day header */}
-              <div className={cn(
-                "flex items-center justify-between px-3 py-2.5 border-b shrink-0",
-                day.isToday ? "border-primary/15" : "border-border"
-              )}>
-                <div>
-                  <p className={cn(
-                    "text-xs font-semibold",
-                    day.isToday ? "text-primary" : "text-foreground/90"
-                  )}>
-                    {day.label}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{day.short}</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {day.lessons.length > 0 && (
-                    <span className={cn(
-                      "text-[10px]",
-                      day.isToday ? "text-primary/60" : "text-muted-foreground"
-                    )}>
-                      {day.lessons.length}
-                    </span>
-                  )}
-                  {day.isToday && (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-                      Today
-                    </span>
-                  )}
-                </div>
+
+            {/* Week Navigation Center */}
+            <div className="flex items-center gap-1.5 bg-surface-2/80 p-1 rounded-xl border border-border">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-1"
+                onClick={() => setWeekOffset((o) => o - 1)}
+                title="Previous Week (← or H)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-7 px-2.5 rounded-lg text-xs font-semibold ${
+                  weekOffset === 0
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                    : "text-foreground hover:bg-surface-1"
+                }`}
+                onClick={() => setWeekOffset(0)}
+                title="Jump to Current Week (T)"
+              >
+                This Week
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-7 h-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-1"
+                onClick={() => setWeekOffset((o) => o + 1)}
+                title="Next Week (→ or L)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              <span className="text-xs font-semibold text-foreground/90 px-2 hidden sm:inline-block border-l border-border/80 ml-1">
+                {label}
+              </span>
+            </div>
+
+            {/* Right Tools: View Mode Switcher, Refresh & Print */}
+            <div className="flex items-center gap-2">
+              {/* View Switcher Tabs */}
+              <div className="flex items-center p-0.5 rounded-xl bg-surface-2 border border-border">
+                {[
+                  { id: "timetable", label: "Timetable", icon: Columns3, keyHint: "1" },
+                  { id: "columns", label: "Week", icon: LayoutGrid, keyHint: "2" },
+                  { id: "day", label: "Day", icon: Calendar, keyHint: "3" },
+                  { id: "list", label: "List", icon: Table, keyHint: "4" },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = viewMode === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setViewMode(tab.id as ScheduleViewMode)}
+                      className={`relative px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        isActive
+                          ? "text-primary-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={`${tab.label} View (Press ${tab.keyHint})`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeScheduleView"
+                          className="absolute inset-0 rounded-lg bg-primary"
+                          transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1">
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">{tab.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Lesson cards */}
-              <div className="flex-1 p-2 space-y-1.5 overflow-y-auto">
-                {day.lessons.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground/40 text-center py-8">
-                    No lessons
-                  </p>
-                ) : (
-                  day.lessons.map((l) => (
-                    <LessonCard key={l.eventId} lesson={l} isOngoing={isOngoing(l)} />
-                  ))
+              {/* Refresh Button */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fetchSchedule(true)}
+                disabled={loading || refreshing}
+                className="w-8 h-8 rounded-xl border-border bg-surface-2 text-muted-foreground hover:text-foreground"
+                title="Refresh schedule"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-primary" : ""}`} />
+              </Button>
+
+              {/* Print Button */}
+              <Button
+                size="sm"
+                onClick={() => setPrintModalOpen(true)}
+                className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                title="Print Schedule / Save PDF (P or ⌘P)"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Print</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Row 2: Class/Group Selector, Search & Concurrent Notice */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-0.5">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+              {/* Class / Teaching Group Dropdown */}
+              {teachingGroups.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <select
+                      value={selectedGroup}
+                      onChange={(e) => setSelectedGroup(e.target.value)}
+                      className="bg-surface-2 border border-border rounded-xl pl-3 pr-7 py-1 text-xs font-semibold text-foreground outline-none focus:border-primary/50 cursor-pointer appearance-none"
+                    >
+                      <option value="all">All Classes & Groups</option>
+                      {teachingGroups.map((grp) => (
+                        <option key={grp} value={grp}>
+                          {grp}
+                        </option>
+                      ))}
+                    </select>
+                    <Filter className="w-3 h-3 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Search Subject Input */}
+              <div className="relative w-48 sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Find subject, room, teacher… (/)"
+                  className="w-full bg-surface-2 border border-border rounded-xl pl-7 pr-7 py-1 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 )}
               </div>
-            </motion.div>
-          ))}
+            </div>
+
+            {/* Concurrent Classes Indicator Tag */}
+            {concurrentLessonsCount > 0 && (
+              <div className="hidden md:flex items-center gap-1.5 text-[11px] font-medium text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                <Layers className="w-3 h-3" />
+                <span>Supports parallel classes (Languages & Electives)</span>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </header>
+
+      {/* ── Main Schedule Content Area ─────────────────────────── */}
+      <main
+        id="schedule-interactive-ui"
+        className="flex-1 p-3 md:p-5 overflow-hidden flex flex-col no-print"
+      >
+        {loading ? (
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {DAYS.map((d) => (
+              <div key={d} className="rounded-2xl border border-border bg-surface-0 p-4 space-y-3 animate-pulse">
+                <div className="h-4 w-24 rounded bg-surface-2 mb-4" />
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-20 rounded-xl bg-surface-1" />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-surface-0 rounded-2xl border border-border">
+            <p className="text-xs text-destructive mb-3">{error}</p>
+            <Button size="sm" onClick={() => fetchSchedule()} className="text-xs">
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0">
+            {viewMode === "timetable" && (
+              <ScheduleTimetable
+                days={days}
+                searchQuery={searchQuery}
+                selectedGroup={selectedGroup}
+              />
+            )}
+
+            {viewMode === "columns" && (
+              <ScheduleColumnsView
+                days={days}
+                searchQuery={searchQuery}
+                selectedGroup={selectedGroup}
+              />
+            )}
+
+            {viewMode === "day" && (
+              <ScheduleDayView
+                days={days}
+                searchQuery={searchQuery}
+                selectedGroup={selectedGroup}
+              />
+            )}
+
+            {viewMode === "list" && (
+              <ScheduleListView
+                days={days}
+                searchQuery={searchQuery}
+                selectedGroup={selectedGroup}
+              />
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Print Modal Customizer */}
+      <SchedulePrintModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        days={days}
+        weekLabel={label}
+        options={printOptions}
+        onOptionsChange={setPrintOptions}
+      />
+
+      {/* Print Document Rendered exclusively for @media print */}
+      <SchedulePrintView
+        days={days}
+        options={printOptions}
+        weekLabel={label}
+      />
     </div>
+  );
+}
+
+export default function SchedulePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 max-w-5xl mx-auto space-y-4">
+          <div className="h-8 w-48 bg-surface-2 rounded-lg animate-pulse" />
+          <div className="h-64 w-full bg-surface-1 rounded-2xl border border-border animate-pulse" />
+        </div>
+      }
+    >
+      <SchedulePageContent />
+    </Suspense>
   );
 }
