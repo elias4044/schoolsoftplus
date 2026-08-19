@@ -65,6 +65,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    console.log('SchoolSoft redirect:', {
+      now: Date.now(),
+      nowISO: new Date().toISOString(),
+      location: headers.location,
+    });
+
     if (!headers.location) {
       throw new Error('No location was provided by SchoolSoft');
     }

@@ -1,13 +1,13 @@
-import admin from "firebase-admin";
-import { MetricServiceClient } from "@google-cloud/monitoring";
+import admin from 'firebase-admin';
+import { MetricServiceClient } from '@google-cloud/monitoring';
 
 const rawBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (!rawBase64) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.");
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
 }
 
-const raw = JSON.parse(Buffer.from(rawBase64, "base64").toString("utf8"));
+const raw = JSON.parse(Buffer.from(rawBase64, 'base64').toString('utf8'));
 
 const serviceAccount: admin.ServiceAccount = {
   projectId: raw.project_id,
@@ -22,6 +22,12 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.firestore();
-if (db) {
+const globalWithFirestore = global as typeof globalThis & {
+  firestoreSettingsInitialized?: boolean;
+};
+
+if (db && !globalWithFirestore.firestoreSettingsInitialized) {
   db.settings({ ignoreUndefinedProperties: true });
+
+  globalWithFirestore.firestoreSettingsInitialized = true
 }
