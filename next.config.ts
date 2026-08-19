@@ -1,33 +1,33 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const securityHeaders = [
   {
-    key: "X-DNS-Prefetch-Control",
-    value: "on",
+    key: 'X-DNS-Prefetch-Control',
+    value: 'on',
   },
   {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
   },
   {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
+    key: 'X-Frame-Options',
+    value: 'SAMEORIGIN',
   },
   {
-    key: "X-XSS-Protection",
-    value: "1; mode=block",
+    key: 'X-XSS-Protection',
+    value: '1; mode=block',
   },
   {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
   },
   {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(self), geolocation=(self)",
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(self), geolocation=(self)',
   },
   {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
   },
 ];
 
@@ -37,7 +37,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-   allowedDevOrigins: ['192.168.1.144'],
+  serverExternalPackages: ["firebase-admin"],
+
+  allowedDevOrigins: ['192.168.1.144'],
 
   // Compress responses
   compress: true,
@@ -46,14 +48,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: securityHeaders,
       },
     ];
   },
 
   images: {
-    formats: ["image/avif", "image/webp"],
+    formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
   },
 };

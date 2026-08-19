@@ -94,7 +94,6 @@ export async function refreshAuthV2Session({
   }
 
   const sessionInfo = await fetchSchoolsoftSession(normalizedSchool, ssToken);
-  console.log(sessionInfo)
   const canonicalUsername = sessionInfo?.username ?? "";
   const userId = sessionInfo?.userId?.toString() ?? "";
 

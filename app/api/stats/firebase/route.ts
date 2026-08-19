@@ -1,4 +1,4 @@
-// app/api/firestore-usage/route.ts
+// app/api/firebase/route.ts
 export const runtime = "nodejs";
 
 import { db } from "../../lib/firebaseAdmin";

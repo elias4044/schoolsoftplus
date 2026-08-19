@@ -1,0 +1,33 @@
+opencollection: 1.0.0
+
+info:
+  name: ssp-bruno
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  variables:
+    - name: local_url
+      value: http://localhost:3000
+      description: Local development
+    - name: ssp_url
+      value: https://ssp.elias4044.com
+      description: SchoolSoft+ URL
+    - name: ss_url
+      value: https://sms.schoolsoft.se
+      description: SchoolSoft URL
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

@@ -13,8 +13,18 @@ export default function NewsWidget({ size }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<{ success: boolean; data: NewsItem[] }>("/api/news")
-      .then(res => setNews(Array.isArray(res?.data) ? res.data : []))
+    apiFetch<any>("/api/news")
+      .then((res) => {
+        const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        const mapped = list.map((item: any) => ({
+          id: String(item.id),
+          title: item.title,
+          preview:
+            item.preview ||
+            (item.description ? item.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : null),
+        }));
+        setNews(mapped);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

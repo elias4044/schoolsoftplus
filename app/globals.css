@@ -340,4 +340,91 @@
     background: color-mix(in oklch, var(--brand) 15%, transparent);
     border: 1px solid color-mix(in oklch, var(--brand) 30%, transparent);
   }
+
+  /* News Rich Content Styling */
+  .news-content-prose {
+    color: var(--foreground);
+    line-height: 1.75;
+    word-break: break-word;
+  }
+  .news-content-prose p,
+  .news-content-prose .tinymce-p {
+    margin-bottom: 1rem;
+  }
+  .news-content-prose p:last-child,
+  .news-content-prose .tinymce-p:last-child {
+    margin-bottom: 0;
+  }
+  .news-content-prose a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 500;
+  }
+  .news-content-prose a:hover {
+    opacity: 0.85;
+  }
+  .news-content-prose ul {
+    list-style-type: disc;
+    padding-left: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .news-content-prose ol {
+    list-style-type: decimal;
+    padding-left: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .news-content-prose li {
+    margin-bottom: 0.35rem;
+  }
+  .news-content-prose h1,
+  .news-content-prose h2,
+  .news-content-prose h3,
+  .news-content-prose h4 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .news-content-prose h1 { font-size: 1.5rem; }
+  .news-content-prose h2 { font-size: 1.25rem; }
+  .news-content-prose h3 { font-size: 1.1rem; }
+  .news-content-prose blockquote {
+    border-left: 3px solid var(--primary);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--muted-foreground);
+    font-style: italic;
+  }
+  .news-content-prose img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    margin: 0.75rem 0;
+    display: inline-block;
+    cursor: zoom-in;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .news-content-prose img:hover {
+    border-color: oklch(1 0 0 / 25%);
+    transform: scale(1.01);
+  }
+  .news-content-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+  }
+  .news-content-prose th,
+  .news-content-prose td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+  }
+  .news-content-prose th {
+    background: var(--surface-2);
+    font-weight: 600;
+    text-align: left;
+  }
 }
