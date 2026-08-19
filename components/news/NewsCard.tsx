@@ -89,9 +89,8 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
               {item.author?.picture && (
                 <AvatarImage src={`/api/file?id=${item.author.id}&type=image`} alt={item.author.name} />
               )}
-              <AvatarFallback className="bg-surface-2 text-foreground/80">{initials}</AvatarFallback>
             </Avatar>
-            <span className="truncate max-w-[120px] text-foreground/75">
+            <span className="truncate max-w-30 text-foreground/75">
               {item.author?.name || "Teacher"}
             </span>
           </div>
