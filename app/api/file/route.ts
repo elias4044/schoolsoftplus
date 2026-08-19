@@ -51,12 +51,7 @@ export async function GET(req: NextRequest) {
       validateStatus: () => true, // temp for testing
       //validateStatus: (status) => status === 303 || status === 404,
     });
-    console.log('SchoolSoft response:', {
-      status: res.status,
-      location: res.headers.location,
-      headers: res.headers,
-      data: res.data,
-    });
+
 
     const headers = res.headers;
     if (res.status !== 303) {
@@ -67,11 +62,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log('SchoolSoft redirect:', {
-      now: Date.now(),
-      nowISO: new Date().toISOString(),
-      location: headers.location,
-    });
 
     if (!headers.location) {
       throw new Error('No location was provided by SchoolSoft');

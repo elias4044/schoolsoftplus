@@ -15,19 +15,31 @@ const serviceAccount: admin.ServiceAccount = {
   privateKey: raw.private_key,
 };
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
-
-export const db = admin.firestore();
 const globalWithFirestore = global as typeof globalThis & {
-  firestoreSettingsInitialized?: boolean;
+  __firestoreDb?: admin.firestore.Firestore;
 };
 
-if (db && !globalWithFirestore.firestoreSettingsInitialized) {
-  db.settings({ ignoreUndefinedProperties: true });
+function getDb() {
+  if (globalWithFirestore.__firestoreDb) {
+    return globalWithFirestore.__firestoreDb;
+  }
 
-  globalWithFirestore.firestoreSettingsInitialized = true
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+  const db = admin.firestore();
+
+  try {
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // Already configured elsewhere (e.g. concurrent hot-reload import) — safe to ignore.
+  }
+
+  globalWithFirestore.__firestoreDb = db;
+  return db;
 }
+
+export const db = getDb();
