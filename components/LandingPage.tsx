@@ -1,14 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, useEffect } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useSpring,
-  useScroll,
-  useTransform,
-  useReducedMotion,
-} from "framer-motion";
+import { motion, AnimatePresence, useInView, useSpring, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -36,29 +29,26 @@ import {
   Package,
 } from "lucide-react";
 import MessagingShowcase from "@/components/MessagingShowcase";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
 /* --- Reveal ----------------------------------------------- */
-function Reveal({
-  children,
-  delay = 0,
-  className = "",
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
+function Reveal({ children, delay = 0, className = "" }: {
+  children: React.ReactNode; delay?: number; className?: string;
 }) {
-  const shouldReduceMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-8% 0px" });
   return (
     <motion.div
-      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.98 }}
-      whileInView={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-6% 0px" }}
-      transition={{
-        duration: 0.35,
-        delay,
-        ease: [0.23, 1, 0.32, 1], // Emil Kowalski custom ease-out
-      }}
+      ref={ref}
+      initial={{ opacity: 0, y: 18 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
       className={className}
     >
       {children}
@@ -148,26 +138,25 @@ function NavDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition-all active:scale-[0.97] ${
-          open ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
+        className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition-colors ${
+          open ? "text-white bg-white/6" : "text-white/45 hover:text-white hover:bg-white/4"
         }`}
       >
         {label}
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18 }}>
           <ChevronDown className="w-3 h-3" />
         </motion.div>
       </button>
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.96 }}
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -3, scale: 0.96 }}
-            transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
-            style={{ transformOrigin: align === "right" ? "top right" : "top left" }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className={`absolute top-full mt-1.5 ${
               align === "right" ? "right-0" : "left-0"
-            } min-w-65 rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_20px_50px_oklch(0_0_0/0.7)] z-50`}
+            } min-w-65 rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_24px_60px_oklch(0_0_0/0.6)] z-50`}
           >
             <div className="p-1.5">
               {items.map((item, idx) => {
@@ -253,52 +242,46 @@ const LESSONS = [
 ];
 
 function HeroMockup() {
-  const shouldReduceMotion = useReducedMotion();
-  const rotX = useSpring(shouldReduceMotion ? 0 : 8, { stiffness: 120, damping: 20 });
-  const rotY = useSpring(shouldReduceMotion ? 0 : -8, { stiffness: 120, damping: 20 });
+  const rotX = useSpring(10, { stiffness: 110, damping: 22 });
+  const rotY = useSpring(-10, { stiffness: 110, damping: 22 });
 
   function onMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (shouldReduceMotion) return;
     const r = e.currentTarget.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width - 0.5;
     const ny = (e.clientY - r.top) / r.height - 0.5;
-    rotX.set(8 - ny * 14);
-    rotY.set(-8 + nx * 14);
+    rotX.set(10 - ny * 18);
+    rotY.set(-10 + nx * 18);
   }
-  function onLeave() {
-    if (shouldReduceMotion) return;
-    rotX.set(8);
-    rotY.set(-8);
-  }
+  function onLeave() { rotX.set(10); rotY.set(-10); }
 
   return (
     <motion.div
-      className="cursor-default select-none"
-      style={{ perspective: "1000px" }}
+      className="cursor-default"
+      style={{ perspective: "1100px" }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      initial={{ opacity: 0, y: 16, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.45, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.75, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
     >
       <motion.div
         style={{ rotateX: rotX, rotateY: rotY, transformStyle: "preserve-3d" }}
-        className="rounded-3xl border border-white/10 bg-[#0d0d0d] overflow-hidden w-72 shadow-[0_30px_70px_oklch(0_0_0/0.6)]"
+        className="rounded-3xl border border-white/10 bg-[#0d0d0d] overflow-hidden w-72 shadow-[0_40px_100px_oklch(0_0_0/0.7)]"
       >
         {/* window chrome */}
         <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/8 bg-white/3">
-          <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-          <span className="ml-auto text-[10px] text-white/30 font-medium">Wednesday - Today</span>
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(0.60 0.22 20)" }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(0.72 0.18 70)" }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(0.65 0.22 145)" }} />
+          <span className="ml-auto text-[10px] text-white/25 font-medium">Wednesday - Today</span>
         </div>
 
         {/* day label */}
         <div className="px-4 pt-3 pb-1.5 flex items-center justify-between">
           <span className="text-xs font-semibold text-white/80">Schedule</span>
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-white/35 font-medium">Live</span>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-[10px] text-white/30">Live</span>
           </div>
         </div>
 
@@ -307,15 +290,15 @@ function HeroMockup() {
           {LESSONS.map((l, i) => (
             <motion.div
               key={l.subject}
-              initial={{ opacity: 0, x: -6 }}
+              initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 + i * 0.06, ease: [0.23, 1, 0.32, 1] }}
-              className="flex items-center gap-3 rounded-xl bg-white/4 border border-white/8 px-3 py-2.5 hover:bg-white/6 transition-colors"
+              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
+              className="flex items-center gap-3 rounded-xl bg-white/4 border border-white/8 px-3 py-2.5"
             >
               <div className="w-1 h-8 rounded-full shrink-0" style={{ background: l.color }} />
               <div className="min-w-0">
                 <p className="text-xs font-medium leading-none mb-1 truncate text-white/90">{l.subject}</p>
-                <p className="text-[10px] text-white/40">{l.time} - {l.room}</p>
+                <p className="text-[10px] text-white/35">{l.time} - {l.room}</p>
               </div>
             </motion.div>
           ))}
@@ -323,14 +306,10 @@ function HeroMockup() {
 
         {/* footer bar */}
         <div className="border-t border-white/8 px-4 py-2.5 bg-white/2 flex items-center justify-between">
-          <span className="text-[10px] text-white/35">2 assignments due</span>
+          <span className="text-[10px] text-white/25">2 assignments due</span>
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: i === 0 ? "var(--primary)" : "oklch(1 0 0 / 15%)" }}
-              />
+              <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === 0 ? "oklch(0.62 0.16 263)" : "oklch(1 0 0 / 12%)" }} />
             ))}
           </div>
         </div>
@@ -339,82 +318,59 @@ function HeroMockup() {
   );
 }
 
-/* --- Feature Grid ----------------------------------------- */
+/* --- Feature scroller ------------------------------------- */
 const FEATURES = [
-  {
-    icon: CalendarDays,
-    color: "oklch(0.72 0.18 148)",
-    title: "Schedule",
-    body: "Your full timetable pulled directly from SchoolSoft. Day view, week view, always up to date with live classroom locations.",
-    bentoClass: "md:col-span-2",
-  },
-  {
-    icon: BookOpen,
-    color: "oklch(0.75 0.18 40)",
-    title: "Assignments",
-    body: "See what's due this week and next. Never miss a deadline because the school portal buried it.",
-    bentoClass: "md:col-span-1",
-  },
-  {
-    icon: UtensilsCrossed,
-    color: "oklch(0.78 0.16 55)",
-    title: "Lunch menu",
-    body: "Today's and the whole week's menu. Rendered cleanly, not in a PDF you have to zoom into.",
-    bentoClass: "md:col-span-1",
-  },
-  {
-    icon: Newspaper,
-    color: "oklch(0.70 0.18 320)",
-    title: "News",
-    body: "School announcements in a readable feed. No login walls, no slow loading.",
-    bentoClass: "md:col-span-1",
-  },
-  {
-    icon: MessageSquare,
-    color: "oklch(0.65 0.22 278)",
-    title: "Direct messages",
-    body: "Real-time DMs with classmates. Emoji reactions, reply threads, and unread notifications.",
-    bentoClass: "md:col-span-1",
-  },
-  {
-    icon: StickyNote,
-    color: "oklch(0.72 0.18 190)",
-    title: "Notes",
-    body: "Quick private notes tied to your account. Write during class, access anywhere.",
-    bentoClass: "md:col-span-1",
-  },
-  {
-    icon: Brain,
-    color: "oklch(0.65 0.22 278)",
-    title: "AI assistant",
-    body: "Ask about your schedule, assignments, or anything school-related. It has your context and answers instantly.",
-    bentoClass: "md:col-span-2",
-  },
+  { icon: CalendarDays,    color: "oklch(0.72 0.18 148)", title: "Schedule",        body: "Your full timetable pulled directly from SchoolSoft. Day view, week view, always up to date." },
+  { icon: BookOpen,        color: "oklch(0.75 0.18 40)",  title: "Assignments",     body: "See what's due this week and next. Never miss a deadline because the school portal buried it." },
+  { icon: UtensilsCrossed, color: "oklch(0.78 0.16 55)",  title: "Lunch menu",      body: "Today's and the whole week's menu. Rendered cleanly, not in a PDF you have to zoom into." },
+  { icon: Newspaper,       color: "oklch(0.70 0.18 320)", title: "News",            body: "School announcements in a readable feed. No login walls, no slow loading." },
+  { icon: MessageSquare,   color: "oklch(0.65 0.22 278)", title: "Direct messages", body: "Real-time DMs with classmates. Emoji reactions, reply threads, and unread notifications." },
+  { icon: StickyNote,      color: "oklch(0.72 0.18 190)", title: "Notes",           body: "Quick private notes tied to your account. Write during class, access anywhere." },
+  { icon: Brain,           color: "oklch(0.65 0.22 278)", title: "AI assistant",    body: "Ask about your schedule, assignments, or anything school-related. It has your context." },
 ];
 
-function FeatureGrid() {
-  const shouldReduceMotion = useReducedMotion();
-
+function FeatureScroller() {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(trackRef, { once: true, margin: "-10% 0px" });
   return (
-    <div className="max-w-5xl mx-auto px-6 pb-20">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {FEATURES.map(({ icon: Icon, color, title, body, bentoClass }, i) => (
+    <div className="relative">
+      <div
+        ref={trackRef}
+        className="flex gap-4 overflow-x-auto pb-6 px-[8vw]"
+        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+      >
+        {FEATURES.map(({ icon: Icon, color, title, body }, i) => (
           <motion.div
             key={title}
-            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-            whileInView={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true, margin: "-6% 0px" }}
-            transition={{ duration: 0.35, delay: i * 0.04, ease: [0.23, 1, 0.32, 1] }}
-            className={`rounded-2xl border border-white/8 bg-[#0d0d0d] p-6 flex flex-col justify-between gap-4 hover:border-white/18 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 ease-out shadow-sm ${bentoClass}`}
+            initial={{ opacity: 0, y: 28, scale: 0.96 }}
+            animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+            transition={{ duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+            className="w-70 md:w-[320px] shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
+            style={{ scrollSnapAlign: "start" }}
           >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}18`, color }}>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: `${color}20`, color }}>
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-base font-bold tracking-tight text-white mb-1.5">{title}</p>
-              <p className="text-xs text-white/50 leading-relaxed">{body}</p>
+              <p className="text-base font-bold tracking-tight text-white mb-2">{title}</p>
+              <p className="text-sm text-white/45 leading-relaxed">{body}</p>
             </div>
           </motion.div>
+        ))}
+        <div className="w-[4vw] shrink-0" />
+      </div>
+      <div className="pointer-events-none absolute left-0 top-0 bottom-6 w-16"
+        style={{ background: "linear-gradient(to right, #080808, transparent)" }} />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-6 w-24"
+        style={{ background: "linear-gradient(to left, #080808, transparent)" }} />
+      <div className="flex justify-center gap-1.5 mt-2 pb-2">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            className="w-1 h-1 rounded-full bg-white/20"
+            animate={{ opacity: [0.2, 0.8, 0.2] }}
+            transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.25 }}
+          />
         ))}
       </div>
     </div>
@@ -424,45 +380,40 @@ function FeatureGrid() {
 /* --- Main component --------------------------------------- */
 export default function LandingPage() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const shouldReduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "25%"]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.65], [1, 0]);
 
-  // Page-wide smooth scroll progress
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001,
-  });
-
-  // Hero section scroll interpolation (spring-smoothed, hardware accelerated)
-  const { scrollYProgress: heroScrollProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const smoothHeroProgress = useSpring(heroScrollProgress, {
-    stiffness: 85,
-    damping: 24,
-    restDelta: 0.001,
-  });
-  const heroY = useTransform(smoothHeroProgress, [0, 1], ["0px", shouldReduceMotion ? "0px" : "-44px"]);
-  const heroScale = useTransform(smoothHeroProgress, [0, 1], [1, shouldReduceMotion ? 1 : 0.98]);
-  const heroOpacity = useTransform(smoothHeroProgress, [0, 0.9], [1, 0.2]);
-
-  const headlineWords = "Your school day, organised properly.".split(" ");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ctx = gsap.context(() => {
+      gsap.to(".lp-orb-1", {
+        yPercent: -35, ease: "none",
+        scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: true },
+      });
+      gsap.to(".lp-orb-2", {
+        yPercent: -18, ease: "none",
+        scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: true },
+      });
+      gsap.fromTo(".lp-word", { opacity: 0, y: 42, rotateX: -30 }, {
+        opacity: 1, y: 0, rotateX: 0,
+        stagger: 0.07,
+        duration: 0.85,
+        ease: "power4.out",
+        delay: 0.15,
+      });
+    });
+    return () => ctx.revert();
+  }, []);
 
   return (
-    <div className="bg-[#080808] text-white overflow-hidden relative">
-      {/* Top scroll progress indicator */}
-      <motion.div
-        style={{ scaleX, transformOrigin: "left" }}
-        className="fixed top-0 left-0 right-0 h-0.5 bg-primary z-60 pointer-events-none"
-      />
+    <div className="bg-[#080808] text-white overflow-hidden">
 
       {/* -- Header -- */}
       <header className="sticky top-0 z-50 border-b border-white/8 bg-[#080808]/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-2">
           {/* Brand */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 mr-1 active:scale-[0.97] transition-transform">
+          <Link href="/" className="flex items-center gap-2 shrink-0 mr-1">
             <Image src="/logo.png" alt="SchoolSoft+ Logo" className="w-6 h-6" width={24} height={24} />
             <span className="font-semibold text-sm text-white/90">SchoolSoft+</span>
           </Link>
@@ -569,7 +520,7 @@ export default function LandingPage() {
           {/* CTA */}
           <Link
             href="/login"
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 active:scale-[0.97] transition-all shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white bg-primary/60 hover:bg-primary/70 transition-colors"
           >
             Sign in <ArrowRight className="w-3.5 h-3.5" />
           </Link>
@@ -577,68 +528,59 @@ export default function LandingPage() {
       </header>
 
       {/* -- Hero -- */}
-      <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden border-b border-white/5">
-        <motion.div
-          style={{ y: heroY, scale: heroScale, opacity: heroOpacity }}
-          className="relative z-10 w-full max-w-5xl mx-auto px-6 will-change-transform"
-        >
-          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center min-h-screen md:py-0 py-24">
+      <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+        {/* ambient orbs */}
+        <div className="lp-orb-1 absolute -top-32 -right-32 w-175 h-175 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, oklch(0.55 0.25 263 / 16%) 0%, transparent 70%)" }} />
+        <div className="lp-orb-2 absolute bottom-0 -left-40 w-125 h-125 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 148 / 10%) 0%, transparent 70%)" }} />
+        {/* dot grid */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+
+        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 w-full max-w-5xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center min-h-screen md:py-0 py-28">
 
             {/* Left: copy */}
             <div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.05 }}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur px-4 py-1.5 text-xs text-white/50 mb-8"
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "oklch(0.65 0.22 278)" }} />
+                Free - Open source - No tracking
+              </motion.div>
 
-
-              <div className="mb-5">
-                <motion.h1
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: {
-                      opacity: 1,
-                      transition: { staggerChildren: 0.04, delayChildren: 0.1 },
-                    },
-                  }}
-                  initial="hidden"
-                  animate="visible"
-                  className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.95]"
-                >
-                  {headlineWords.map((word, i) => (
-                    <motion.span
-                      key={i}
-                      variants={{
-                        hidden: { opacity: 0, y: 14 },
-                        visible: {
-                          opacity: 1,
-                          y: 0,
-                          transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] },
-                        },
-                      }}
-                      className="inline-block mr-[0.2em] last:mr-0"
-                    >
-                      {word}
-                    </motion.span>
+              <div className="perspective-midrange mb-5">
+                <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.95]">
+                  {"Your school day, organised properly.".split(/\s+/).map((word, i) => (
+                    <span key={i} className="lp-word inline-block mr-[0.2em] last:mr-0 opacity-0">{word}</span>
                   ))}
-                </motion.h1>
+                </h1>
               </div>
 
               <motion.p
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                className="text-sm md:text-base text-white/50 max-w-xl leading-relaxed mb-8"
+                transition={{ duration: 0.6, delay: 0.75 }}
+                className="text-sm md:text-base text-white/40 max-w-xl leading-relaxed mb-8"
               >
                 SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft into one clean interface -
                 with an AI assistant that knows your timetable and real-time direct messaging to stay connected with classmates.
               </motion.p>
 
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.55, ease: [0.23, 1, 0.32, 1] }}
+                transition={{ duration: 0.5, delay: 0.95 }}
                 className="flex flex-wrap items-center gap-3"
               >
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 active:scale-[0.97] transition-all shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+                  style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
                 >
                   Get started <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -646,7 +588,7 @@ export default function LandingPage() {
                   href="https://github.com/elias4044/schoolsoftplus"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-5 py-2.5 text-sm font-medium text-white/60 hover:text-white hover:border-white/20 active:scale-[0.97] transition-all"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-white/50 hover:text-white hover:border-white/20 transition-colors"
                 >
                   <Star className="w-3.5 h-3.5" /> GitHub
                 </a>
@@ -661,48 +603,52 @@ export default function LandingPage() {
           </div>
         </motion.div>
 
-        {/* Minimalist scroll cue */}
+        {/* scroll cue */}
         <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 select-none pointer-events-none"
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2 }}
         >
-          <div className="w-5 h-9 rounded-full border border-white/15 flex items-start justify-center p-1.5">
-            <motion.div
-              animate={{ y: [0, 8, 0], opacity: [0.8, 0.2, 0.8] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1 h-1.5 rounded-full bg-primary"
-            />
-          </div>
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            className="w-px h-10 rounded-full"
+            style={{ background: "linear-gradient(to bottom, oklch(0.65 0.22 278 / 60%), transparent)" }}
+          />
         </motion.div>
       </section>
 
+
       {/* -- Stats strip -- */}
       <section className="relative border-t border-white/5 py-16 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 60% 80% at 50% 50%, oklch(0.55 0.22 278 / 5%), transparent)" }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <Reveal className="mb-6">
-            <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium">By the numbers</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/25">By the numbers</p>
           </Reveal>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
               { key: "messages", label: "Messages sent between students", Icon: MessageSquare, color: "oklch(0.65 0.22 278)" },
               { key: "logins",   label: "Times students have logged in",  Icon: Users,         color: "oklch(0.72 0.18 148)" },
               { key: "schedule", label: "Schedule views loaded",          Icon: CalendarDays,  color: "oklch(0.75 0.18 40)"  },
             ].map((s, i) => (
-              <Reveal key={s.key} delay={i * 0.05}>
-                <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-5 flex flex-col gap-2 relative overflow-hidden hover:border-white/15 active:scale-[0.99] transition-all">
+              <Reveal key={s.key} delay={i * 0.07}>
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-5 flex flex-col gap-2 relative overflow-hidden">
+                  <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full blur-2xl pointer-events-none"
+                    style={{ background: `${s.color}18` }} />
                   <s.Icon className="w-4 h-4" style={{ color: s.color }} />
                   <p className="text-2xl md:text-3xl font-black tabular-nums tracking-tight" style={{ color: s.color }}>
                     <LiveCounter label={s.key} />
                   </p>
-                  <p className="text-[11px] text-white/40 leading-snug">{s.label}</p>
+                  <p className="text-[11px] text-white/30 leading-snug">{s.label}</p>
                 </div>
               </Reveal>
             ))}
           </div>
-          <Reveal delay={0.2}>
-            <Link href="/stats" className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white mt-4 active:scale-[0.97] transition-all">
+          <Reveal delay={0.3}>
+            <Link href="/stats" className="inline-flex items-center gap-1 text-xs text-white/30 hover:text-white mt-4 transition-colors">
               See all stats <ChevronRight className="w-3 h-3" />
             </Link>
           </Reveal>
@@ -716,29 +662,31 @@ export default function LandingPage() {
       <div className="border-t border-white/5">
         <div className="max-w-5xl mx-auto px-6 pt-16 pb-4">
           <Reveal>
-            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2 font-medium">What it does</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">What it does</p>
             <h2 className="text-2xl font-black tracking-tight">Everything in one place.</h2>
           </Reveal>
         </div>
-        <FeatureGrid />
+        <FeatureScroller />
       </div>
 
       {/* -- Dashboard -- */}
       <section className="relative border-t border-white/5 py-20 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 50% 60% at 80% 50%, oklch(0.55 0.18 40 / 7%), transparent)" }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <Reveal>
-              <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2 font-medium">Dashboard</p>
+              <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Dashboard</p>
               <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">Build your own view.</h2>
-              <p className="text-sm text-white/50 leading-relaxed mb-6">
-                The dashboard is a grid of widgets you choose. Add what you need, remove what you don&apos;t.
+              <p className="text-sm text-white/40 leading-relaxed mb-6">
+                The dashboard is a grid of widgets you choose. Add what you need, remove what you don't.
                 Layout is saved per account. No config files, no setup steps.
               </p>
               <div className="space-y-2.5">
                 {["Schedule widget", "Homework list", "Lunch preview", "News feed", "Countdown timers", "Notes pad", "Weather", "Goals"].map((w, i) => (
-                  <Reveal key={w} delay={i * 0.03}>
-                    <div className="flex items-center gap-2.5 text-sm text-white/50">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <Reveal key={w} delay={i * 0.04}>
+                    <div className="flex items-center gap-2.5 text-sm text-white/40">
+                      <div className="w-1 h-1 rounded-full" style={{ background: "oklch(0.65 0.22 278)" }} />
                       {w}
                     </div>
                   </Reveal>
@@ -746,15 +694,15 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal delay={0.1}>
-              <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-4 space-y-2 shadow-sm">
+              <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-4 space-y-2">
                 {[
                   { icon: CalendarDays,    label: "Schedule", color: "oklch(0.72 0.18 148)" },
                   { icon: BookOpen,        label: "Homework",  color: "oklch(0.75 0.18 40)"  },
                   { icon: UtensilsCrossed, label: "Lunch",    color: "oklch(0.78 0.16 55)"   },
                   { icon: Activity,        label: "Stats",    color: "oklch(0.65 0.22 278)"  },
                 ].map(({ icon: Icon, label, color }) => (
-                  <div key={label} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3 hover:bg-white/5 active:scale-[0.99] transition-all">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}18`, color }}>
+                  <div key={label} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${color}20`, color }}>
                       <Icon className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-sm font-medium text-white/80">{label}</span>
@@ -772,10 +720,12 @@ export default function LandingPage() {
 
       {/* -- How it works -- */}
       <section className="relative border-t border-white/5 py-20 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(oklch(1 0 0 / 2%) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <Reveal className="mb-10">
-            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2 font-medium">Setup</p>
-            <h2 className="text-3xl font-black tracking-tight">Three steps, then you&apos;re in.</h2>
+            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Setup</p>
+            <h2 className="text-3xl font-black tracking-tight">Three steps, then you're in.</h2>
           </Reveal>
           <div className="grid sm:grid-cols-3 gap-8">
             {[
@@ -783,14 +733,14 @@ export default function LandingPage() {
               { n: "2", title: "Pick your school",          desc: "Search for your school name. Works with any school running SchoolSoft in Sweden." },
               { n: "3", title: "Start using it",            desc: "Your schedule, assignments, lunch, and news load immediately. Set up your dashboard however you like." },
             ].map(({ n, title, desc }, i) => (
-              <Reveal key={n} delay={i * 0.06}>
+              <Reveal key={n} delay={i * 0.08}>
                 <div className="flex gap-4">
-                  <div className="shrink-0 w-8 h-8 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-sm font-black text-white/50">
+                  <div className="shrink-0 w-8 h-8 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-sm font-black text-white/40">
                     {n}
                   </div>
                   <div>
                     <p className="font-bold text-sm mb-1.5 text-white/80">{title}</p>
-                    <p className="text-xs text-white/40 leading-relaxed">{desc}</p>
+                    <p className="text-xs text-white/35 leading-relaxed">{desc}</p>
                   </div>
                 </div>
               </Reveal>
@@ -801,10 +751,12 @@ export default function LandingPage() {
 
       {/* -- Values -- */}
       <section className="relative border-t border-white/5 py-20 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 50% 60% at 20% 50%, oklch(0.50 0.22 148 / 7%), transparent)" }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <Reveal className="mb-8">
-            <h2 className="text-3xl font-black tracking-tight">What we don&apos;t do.</h2>
-            <p className="text-sm text-white/40 mt-1">Simple things that matter.</p>
+            <h2 className="text-3xl font-black tracking-tight">What we don't do.</h2>
+            <p className="text-sm text-white/35 mt-1">Simple things that matter.</p>
           </Reveal>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
@@ -812,13 +764,13 @@ export default function LandingPage() {
               { icon: Zap,    color: "oklch(0.75 0.18 40)",  title: "No password storage",  desc: "Your SchoolSoft credentials are used once at login. We hold a session token, not your password." },
               { icon: Scale,  color: "oklch(0.65 0.22 278)", title: "No ads, no upsells",   desc: "This is a free open-source project. There's no premium tier, no advertising, no data selling." },
             ].map(({ icon: Icon, color, title, desc }, i) => (
-              <Reveal key={title} delay={i * 0.05}>
-                <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-6 hover:border-white/15 active:scale-[0.99] transition-all">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-4 shrink-0" style={{ background: `${color}18`, color }}>
+              <Reveal key={title} delay={i * 0.07}>
+                <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-6">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-4" style={{ background: `${color}20`, color }}>
                     <Icon className="w-4 h-4" />
                   </div>
-                  <p className="font-bold text-sm mb-1.5 text-white/85">{title}</p>
-                  <p className="text-xs text-white/40 leading-relaxed">{desc}</p>
+                  <p className="font-bold text-sm mb-1.5 text-white/80">{title}</p>
+                  <p className="text-xs text-white/35 leading-relaxed">{desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -828,19 +780,21 @@ export default function LandingPage() {
 
       {/* -- Open source + Developer portal -- */}
       <section className="relative border-t border-white/5 py-20 px-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 60% 50% at 60% 50%, oklch(0.55 0.22 263 / 6%), transparent)" }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <Reveal>
             <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Code2 className="w-4 h-4 text-primary" />
+                  <Code2 className="w-4 h-4" style={{ color: "oklch(0.65 0.22 278)" }} />
                   <p className="font-bold text-sm text-white/90">Fully open source</p>
                 </div>
-                <p className="text-xs text-white/40 max-w-md leading-relaxed">
+                <p className="text-xs text-white/35 max-w-md leading-relaxed">
                   All the code is on GitHub under the MIT licence. Read it, fork it, report a bug, or submit a pull request.
                   Developer documentation and API references live at{" "}
                   <a href="https://developer.ssp.elias4044.com" target="_blank" rel="noopener noreferrer"
-                    className="text-white/70 underline underline-offset-2 hover:text-white transition-colors">
+                    className="text-white/60 underline underline-offset-2 hover:text-white transition-colors">
                     developer.ssp.elias4044.com
                   </a>.
                 </p>
@@ -848,21 +802,22 @@ export default function LandingPage() {
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <Link
                   href="/open-source"
-                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 active:scale-[0.97] transition-all shadow-sm"
+                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white"
+                  style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
                 >
                   <GitPullRequest className="w-3.5 h-3.5" /> Contribute
                 </Link>
                 <a
                   href="https://developer.ssp.elias4044.com"
                   target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-4 py-2 text-sm font-medium text-white/60 hover:text-white hover:border-white/20 active:scale-[0.97] transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white/50 hover:text-white hover:border-white/20 transition-colors"
                 >
                   <BookOpen className="w-3.5 h-3.5" /> Docs
                 </a>
                 <a
                   href="https://github.com/elias4044/schoolsoftplus"
                   target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-4 py-2 text-sm font-medium text-white/60 hover:text-white hover:border-white/20 active:scale-[0.97] transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white/50 hover:text-white hover:border-white/20 transition-colors"
                 >
                   <Star className="w-3.5 h-3.5" /> Star
                 </a>
@@ -874,23 +829,26 @@ export default function LandingPage() {
 
       {/* -- CTA -- */}
       <section className="relative border-t border-white/5 py-28 px-6 text-center overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, oklch(0.55 0.22 278 / 12%), transparent)" }} />
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-10% 0px" }}
-          transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: 0.7 }}
           className="relative z-10 max-w-xl mx-auto"
         >
-          <p className="text-xs uppercase tracking-widest text-white/30 mb-4 font-medium">Ready?</p>
+          <p className="text-xs uppercase tracking-widest text-white/25 mb-4">Ready?</p>
           <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-tight">
             30 seconds<br />to get started.
           </h2>
-          <p className="text-sm text-white/40 leading-relaxed mb-8 max-w-sm mx-auto">
+          <p className="text-sm text-white/35 leading-relaxed mb-8 max-w-sm mx-auto">
             Free for any Swedish school using SchoolSoft. Sign in, pick your school, and your schedule, AI, and classmates are all in one place.
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 active:scale-[0.97] transition-all shadow-sm"
+            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
           >
             Sign in with SchoolSoft <ArrowRight className="w-4 h-4" />
           </Link>
@@ -901,7 +859,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/8">
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
+            <Sparkles className="w-4 h-4" style={{ color: "oklch(0.65 0.22 278)" }} />
             <span className="text-sm font-bold text-white/80">SchoolSoft+</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/50">
