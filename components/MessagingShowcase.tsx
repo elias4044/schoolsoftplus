@@ -1,18 +1,21 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { motion, useInView, useScroll, useTransform, useSpring, AnimatePresence } from "framer-motion";
+import {
+  motion,
+  useInView,
+  useScroll,
+  useTransform,
+  useSpring,
+  AnimatePresence,
+  useReducedMotion,
+} from "framer-motion";
 import {
   Lock, ShieldCheck, MessageSquare, Users, Zap, Eye, EyeOff,
   ArrowRight, Key, Server, Wifi, CheckCircle2, ImageIcon, Smile,
   Reply, Pin, Hash, AtSign, Bell, Phone, Mic, MicOff, PhoneOff, FlaskConical,
 } from "lucide-react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+import Link from "next/link";
 
 /* ─── helpers ─────────────────────────────────────────────── */
 function useGsapRef<T extends HTMLElement>() {
@@ -68,10 +71,10 @@ function LiveChat({ active }: { active: boolean }) {
           >
             <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[11px] leading-relaxed ${
               m.mine
-                ? "text-white rounded-br-sm"
+                ? "text-primary-foreground rounded-br-sm"
                 : "bg-white/8 border border-white/10 text-white/90 rounded-bl-sm"
             }`}
-              style={m.mine ? { background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" } : undefined}
+              style={m.mine ? { background: "var(--primary)" } : undefined}
             >
               {!m.mine && <p className="text-[9px] font-semibold mb-0.5 text-purple-300/70">{m.from}</p>}
               {m.text}
@@ -331,10 +334,9 @@ function GroupChatMock() {
   );
 }
 
-/* ─── GSAP horizontal scroll section ─────────────────────── */
-function FeatureScroller() {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(trackRef, { once: true, margin: "-10% 0px" });
+/* ─── Feature Grid ────────────────────────────────────────── */
+function FeatureGrid() {
+  const shouldReduceMotion = useReducedMotion();
 
   const FEATURES = [
     {
@@ -376,53 +378,28 @@ function FeatureScroller() {
   ];
 
   return (
-    <div className="relative">
-      {/* scrollable track */}
-      <div
-        ref={trackRef}
-        className="flex gap-4 overflow-x-auto pb-6 px-[8vw]"
-        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-      >
+    <div className="max-w-5xl mx-auto px-6 pb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map(({ icon: Icon, color, title, body }, i) => (
           <motion.div
             key={title}
-            initial={{ opacity: 0, y: 28, scale: 0.96 }}
-            animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.55, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="w-75 md:w-85 shrink-0 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 flex flex-col gap-4"
-            style={{ scrollSnapAlign: "start" }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+            whileInView={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-6% 0px" }}
+            transition={{ duration: 0.35, delay: i * 0.04, ease: [0.23, 1, 0.32, 1] }}
+            className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-6 flex flex-col justify-between gap-4 hover:border-white/18 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 ease-out shadow-sm"
           >
             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ background: `${color}20`, color }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: `${color}18`, color }}
             >
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-base font-bold tracking-tight text-white mb-2">{title}</p>
-              <p className="text-sm text-white/45 leading-relaxed">{body}</p>
+              <p className="text-base font-bold tracking-tight text-white mb-1.5">{title}</p>
+              <p className="text-xs text-white/50 leading-relaxed">{body}</p>
             </div>
           </motion.div>
-        ))}
-        {/* trailing spacer */}
-        <div className="w-[4vw] shrink-0" />
-      </div>
-
-      {/* fade edges */}
-      <div className="pointer-events-none absolute left-0 top-0 bottom-6 w-16"
-        style={{ background: "linear-gradient(to right, #080808, transparent)" }} />
-      <div className="pointer-events-none absolute right-0 top-0 bottom-6 w-24"
-        style={{ background: "linear-gradient(to left, #080808, transparent)" }} />
-
-      {/* scroll hint dots */}
-      <div className="flex justify-center gap-1.5 mt-2 pb-2">
-        {[0,1,2].map(i => (
-          <motion.div
-            key={i}
-            className="w-1 h-1 rounded-full bg-white/20"
-            animate={{ opacity: [0.2, 0.8, 0.2] }}
-            transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.25 }}
-          />
         ))}
       </div>
     </div>
@@ -459,11 +436,13 @@ function BigStat({ value, label, suffix = "" }: { value: number | null; label: s
 export default function MessagingShowcase() {
   const heroRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
-  const chatInView = useInView(chatRef, { once: true, margin: "-20% 0px" });
+  const chatInView = useInView(chatRef, { once: true, margin: "-15% 0px" });
+  const shouldReduceMotion = useReducedMotion();
 
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 85, damping: 24, restDelta: 0.001 });
+  const y = useTransform(smoothProgress, [0, 1], ["0px", shouldReduceMotion ? "0px" : "-36px"]);
+  const opacity = useTransform(smoothProgress, [0, 0.85], [1, 0.2]);
 
   const [msgCount, setMsgCount] = useState<number | null>(null);
   useEffect(() => {
@@ -472,30 +451,7 @@ export default function MessagingShowcase() {
     }).catch(() => {});
   }, []);
 
-  /* GSAP parallax orbs */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const ctx = gsap.context(() => {
-      gsap.to(".orb-1", {
-        yPercent: -40, ease: "none",
-        scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: true },
-      });
-      gsap.to(".orb-2", {
-        yPercent: -20, ease: "none",
-        scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: true },
-      });
-
-      /* stagger in the headline words */
-      gsap.fromTo(".hero-word", { opacity: 0, y: 40, rotateX: -30 }, {
-        opacity: 1, y: 0, rotateX: 0,
-        stagger: 0.06,
-        duration: 0.9,
-        ease: "power4.out",
-        delay: 0.1,
-      });
-    });
-    return () => ctx.revert();
-  }, []);
+  const headlineWords = "Talk to your\nclassmates.".split(/\s+/);
 
   return (
     <div className="bg-[#080808] text-white overflow-hidden">
@@ -503,50 +459,69 @@ export default function MessagingShowcase() {
       {/* ══════════════════════════════════════
           HERO — full viewport
       ══════════════════════════════════════ */}
-      <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-        {/* ambient orbs */}
-        <div className="orb-1 absolute -top-32 -left-32 w-150 h-150 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, oklch(0.55 0.25 278 / 18%) 0%, transparent 70%)" }} />
-        <div className="orb-2 absolute -bottom-20 -right-20 w-125 h-125 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, oklch(0.60 0.20 310 / 12%) 0%, transparent 70%)" }} />
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-
-        <motion.div style={{ y, opacity }} className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto">
+      <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden border-b border-white/5">
+        <motion.div style={{ y, opacity }} className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto py-24 will-change-transform">
           {/* eyebrow */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.05 }}
+            transition={{ duration: 0.35, delay: 0.05, ease: [0.23, 1, 0.32, 1] }}
             className="inline-flex items-center gap-2 rounded-full border border-purple-500/25 bg-purple-500/10 px-4 py-1.5 text-xs text-purple-300/80 mb-8 backdrop-blur"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
             Built into SchoolSoft+ · No extra app
           </motion.div>
 
-          {/* headline — each word animated by GSAP */}
-          <div className="perspective-midrange mb-6">
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.95]">
-              {"Talk to your\nclassmates.".split(/\s+/).map((word, i) => (
-                <span key={i} className="hero-word inline-block mr-[0.22em] last:mr-0 opacity-0">{word}</span>
+          {/* headline */}
+          <div className="mb-6">
+            <motion.h2
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+                },
+              }}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.95]"
+            >
+              {headlineWords.map((word, i) => (
+                <motion.span
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0, y: 16 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { duration: 0.45, ease: [0.23, 1, 0.32, 1] },
+                    },
+                  }}
+                  className="inline-block mr-[0.22em] last:mr-0"
+                >
+                  {word}
+                </motion.span>
               ))}
-            </h2>
+            </motion.h2>
           </div>
 
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="text-base md:text-lg text-white/45 max-w-xl leading-relaxed mb-10"
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45, delay: 0.25, ease: [0.23, 1, 0.32, 1] }}
+            className="text-base md:text-lg text-white/50 max-w-xl leading-relaxed mb-10"
           >
             Real-time DMs, group chats with end-to-end encryption, reactions, images, GIFs.
             No phone number. No third-party app. Set up a display name once — then message anyone at your school.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-wrap justify-center gap-2 mb-12"
           >
             {[
@@ -557,34 +532,20 @@ export default function MessagingShowcase() {
               [Bell,          "Notifications","oklch(0.72 0.18 190)"],
               [AtSign,        "Everyone included","oklch(0.68 0.20 60)"],
             ].map(([icon, label, color], i) => (
-              <Pill key={label as string} icon={icon as React.ElementType} label={label as string} color={color as string} delay={1.0 + i * 0.06} />
+              <Pill key={label as string} icon={icon as React.ElementType} label={label as string} color={color as string} delay={0.4 + i * 0.05} />
             ))}
           </motion.div>
 
           {/* stat */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.4 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.6 }}
             className="flex flex-col items-center gap-1"
           >
             <BigStat value={msgCount} label="messages sent between students" />
           </motion.div>
-        </motion.div>
-
-        {/* scroll cue */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            className="w-px h-10 rounded-full"
-            style={{ background: "linear-gradient(to bottom, oklch(0.65 0.22 278 / 60%), transparent)" }}
-          />
         </motion.div>
       </section>
 
@@ -592,21 +553,18 @@ export default function MessagingShowcase() {
           LIVE CHAT DEMO
       ══════════════════════════════════════ */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 60% 50% at 80% 50%, oklch(0.55 0.22 278 / 8%), transparent)" }} />
-
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-15% 0px" }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             >
-              <p className="text-[10px] uppercase tracking-widest text-white/30 mb-3">Direct messages</p>
+              <p className="text-[10px] uppercase tracking-widest text-white/30 mb-3 font-medium">Direct messages</p>
               <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight mb-4">
                 Feels instant.<br />
-                <span style={{ color: "oklch(0.70 0.22 278)" }}>Because it is.</span>
+                <span className="text-primary">Because it is.</span>
               </h3>
               <p className="text-sm text-white/40 leading-relaxed mb-6">
                 We use Firestore's realtime subscriptions. The moment someone sends a message, it's on your screen.
@@ -647,9 +605,8 @@ export default function MessagingShowcase() {
               <div className="flex-1 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-[10px] text-white/20">
                 Message Sofia…
               </div>
-              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}>
-                <ArrowRight className="w-3.5 h-3.5 text-white" />
+              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
+                <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
           </motion.div>
@@ -660,9 +617,6 @@ export default function MessagingShowcase() {
           E2EE DEEP DIVE
       ══════════════════════════════════════ */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 50% 60% at 20% 50%, oklch(0.50 0.22 148 / 8%), transparent)" }} />
-
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-start">
           <div>
             <motion.div
@@ -682,10 +636,10 @@ export default function MessagingShowcase() {
               </p>
               <p className="text-sm text-white/40 leading-relaxed mb-4">
                 Every message is encrypted <span className="text-white/70 font-medium">before it leaves your device</span>. What hits our server is ciphertext.
-                What's stored in our database is ciphertext. If we got hacked tomorrow, the attacker would get a pile of base64 garbage.
+                What&apos;s stored in our database is ciphertext. If we got hacked tomorrow, the attacker would get a pile of base64 garbage.
               </p>
               <p className="text-sm text-white/40 leading-relaxed mb-8">
-                The password never touches the server. We don't store a hash of it. There's no "forgot password" — if you lose it, the group's history is gone. That's the point.
+                The password never touches the server. We don&apos;t store a hash of it. There&apos;s no &ldquo;forgot password&rdquo; — if you lose it, the group&apos;s history is gone. That&apos;s the point.
               </p>
               <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-4 py-3">
                 <ShieldCheck className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
@@ -723,9 +677,6 @@ export default function MessagingShowcase() {
           GROUP CHAT SECTION
       ══════════════════════════════════════ */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 60% 50% at 60% 60%, oklch(0.55 0.18 310 / 8%), transparent)" }} />
-
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
@@ -788,9 +739,6 @@ export default function MessagingShowcase() {
           VOICE CALLS (EARLY BETA)
       ══════════════════════════════════════ */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 55% 60% at 30% 50%, oklch(0.55 0.18 190 / 9%), transparent)" }} />
-
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           {/* Call UI mock */}
           <motion.div
@@ -838,15 +786,19 @@ export default function MessagingShowcase() {
 
                 {/* sound bars */}
                 <div className="flex items-end gap-1 h-8">
-                  {[3, 5, 8, 6, 4, 7, 5, 3, 6, 4].map((h, i) => (
-                    <motion.div
-                      key={i}
-                      className="w-1 rounded-full"
-                      style={{ background: "oklch(0.65 0.18 190)", height: h * 3 }}
-                      animate={{ scaleY: [1, 0.3 + Math.random() * 0.7, 1] }}
-                      transition={{ duration: 0.5 + Math.random() * 0.4, repeat: Infinity, delay: i * 0.07, ease: "easeInOut" }}
-                    />
-                  ))}
+                  {[3, 5, 8, 6, 4, 7, 5, 3, 6, 4].map((h, i) => {
+                    const minScale = 0.3 + ((i * 3) % 6) * 0.1;
+                    const duration = 0.5 + ((i * 2) % 4) * 0.12;
+                    return (
+                      <motion.div
+                        key={i}
+                        className="w-1 rounded-full"
+                        style={{ background: "oklch(0.65 0.18 190)", height: h * 3 }}
+                        animate={{ scaleY: [1, minScale, 1] }}
+                        transition={{ duration, repeat: Infinity, delay: i * 0.07, ease: "easeInOut" }}
+                      />
+                    );
+                  })}
                 </div>
 
                 <p className="text-[11px] text-white/30 font-mono">0:23</p>
@@ -961,7 +913,7 @@ export default function MessagingShowcase() {
       </section>
 
       {/* ══════════════════════════════════════
-          HORIZONTAL FEATURE SCROLLER (GSAP)
+          FEATURE GRID
       ══════════════════════════════════════ */}
       <div className="border-t border-white/5">
         <div className="max-w-5xl mx-auto px-6 pt-16 pb-4">
@@ -972,42 +924,37 @@ export default function MessagingShowcase() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Everything, detailed</p>
-            <h3 className="text-2xl font-black tracking-tight text-white/90">Scroll through the features.</h3>
+            <h3 className="text-2xl font-black tracking-tight text-white/90">Built for real school communication.</h3>
           </motion.div>
         </div>
-        <FeatureScroller />
+        <FeatureGrid />
       </div>
 
       {/* ══════════════════════════════════════
           FINAL CTA
       ══════════════════════════════════════ */}
       <section className="relative border-t border-white/5 py-28 px-6 text-center overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, oklch(0.55 0.22 278 / 12%), transparent)" }} />
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-10% 0px" }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
           className="relative z-10 max-w-xl mx-auto"
         >
-          <p className="text-xs uppercase tracking-widest text-white/25 mb-4">Ready?</p>
+          <p className="text-xs uppercase tracking-widest text-white/30 mb-4 font-medium">Ready?</p>
           <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-tight">
             Set up a name.<br />Start messaging.
           </h3>
-          <p className="text-sm text-white/35 leading-relaxed mb-8">
-            Sign in with your SchoolSoft credentials, pick a display name, and you're in.
+          <p className="text-sm text-white/40 leading-relaxed mb-8">
+            Sign in with your SchoolSoft credentials, pick a display name, and you&apos;re in.
             30 seconds. Free. No ads. Open source.
           </p>
-          <motion.a
+          <Link
             href="/login"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white"
-            style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 active:scale-[0.97] transition-all shadow-sm"
           >
             Start messaging <ArrowRight className="w-4 h-4" />
-          </motion.a>
+          </Link>
         </motion.div>
       </section>
 
