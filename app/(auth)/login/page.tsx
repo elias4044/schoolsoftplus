@@ -816,7 +816,7 @@ function LoginPageInner() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <ExternalLink className="w-4 h-4" />
+                  <Lock className="w-4 h-4" />
                   <span>Sign in with SchoolSoft</span>
                   <ExternalLink className="w-3.5 h-3.5 opacity-60 ml-auto" />
                 </>
