@@ -36,6 +36,7 @@ import {
 } from "./news-types";
 import { NewsAttachmentCard } from "./NewsAttachmentCard";
 import { NewsImageLightbox } from "./NewsImageLightbox";
+import { extractNumbersDirectlyAfter } from "./NewsCard";
 
 interface NewsDetailReaderProps {
   newsId: number | null;
@@ -324,7 +325,7 @@ export function NewsDetailReader({
             <div className="flex items-center gap-3">
               <Avatar className="w-11 h-11 text-xs font-bold border border-border shrink-0">
                 {news.author?.picture && (
-                  <AvatarImage src={`/api/file?id=${news.author.id}&type=image`} alt={news.author.name} />
+                  <AvatarImage src={`https://sms.schoolsoft.se/engelska/jsp/student/pictureFile.jsp?teacherId=${extractNumbersDirectlyAfter(news.author.picture, "teacher")}`} alt={news.author.name} />
                 )}
                 <AvatarFallback className="bg-surface-2 text-foreground font-semibold">
                   {initials}

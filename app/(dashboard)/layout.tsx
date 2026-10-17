@@ -13,11 +13,12 @@ import { CallProvider } from "@/lib/call-context";
 import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
 import { Comfortaa } from "next/font/google";
 import { CinematicTransition } from "@/components/CinematicTransition";
+import Image from "next/image";
 import { Metadata } from "next";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 
-/* ── Improved loading screen ─────────────────────────────── */
+/* Improved loading screen */
 function LoadingScreen() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
@@ -27,27 +28,11 @@ function LoadingScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        {/* icon */}
-        <div className="relative w-16 h-16">
-          {/* Inner bg to mask ring into border */}
-          <div
-            className="absolute inset-0.75 rounded-[10px]"
-            style={{ background: "var(--background)" }}
-          />
-          {/* Icon center */}
-          <div
-            className="absolute inset-0.75 rounded-[10px] flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 20%), oklch(0.55 0.25 295 / 20%))",
-            }}
-          >
-            <Sparkles className="w-5 h-5" style={{ color: "oklch(0.65 0.22 278)" }} />
-          </div>
-        </div>
+
 
         {/* Brand name */}
         <motion.p
-          className={"text-base font-bold tracking-tight text-gradient " + comfortaa.className}
+          className={"text-xl font-bold tracking-tight text-gradient " + comfortaa.className}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -60,8 +45,7 @@ function LoadingScreen() {
           {[0, 1, 2].map(i => (
             <motion.div
               key={i}
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: "oklch(0.65 0.22 278)" }}
+              className="w-1.5 h-1.5 rounded-full bg-primary"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
               transition={{
                 duration: 1.1,
@@ -77,7 +61,7 @@ function LoadingScreen() {
   );
 }
 
-/* ── Mobile top header ───────────────────────────────────── */
+/* Mobile top header */
 function MobileHeader({
   onMenuOpen,
   onAiOpen,
@@ -116,7 +100,7 @@ function MobileHeader({
   );
 }
 
-/* ── Dashboard shell ─────────────────────────────────────── */
+/*  Dashboard shell  */
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const [aiOpen, setAiOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);

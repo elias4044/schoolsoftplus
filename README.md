@@ -4,7 +4,7 @@
   <h1>SchoolSoft+</h1>
 
   <p>
-    A fast, modern, AI-powered dashboard for your SchoolSoft account.<br/>
+    A fast & modern dashboard for your SchoolSoft account.<br/>
     Built by a student. For students.
   </p>
 
@@ -26,7 +26,7 @@
 
 ## What is SchoolSoft+?
 
-SchoolSoft+ is an independent, open-source web app that gives your existing **SchoolSoft** account a dramatically better and smoother interface. Same data — modern experience.
+SchoolSoft+ is an independent, open-source web app that gives your existing **SchoolSoft** account a dramatically better and smoother interface. Same data—modern experience.
 
 > **Not affiliated with SchoolSoft AB.** This project proxies SchoolSoft's login flow on your behalf and never stores your password.
 
@@ -109,7 +109,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 ### Prerequisites
 
 - Node.js 20+
-- A SchoolSoft account (student or teacher)
+- A SchoolSoft account (student)
 - Firebase project with Firestore enabled
 - Google Gemini API key (optional — only needed for AI features)
 
@@ -160,59 +160,21 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 schoolsoftplus/
 ├── app/
-│   ├── (auth)/                  # Login page (unauthenticated)
-│   ├── (dashboard)/             # Main app pages (authenticated)
-│   │   ├── dashboard/           # Customisable widget grid
-│   │   ├── schedule/            # Weekly timetable
-│   │   ├── lunch/               # Lunch menu
-│   │   ├── news/                # School news
-│   │   ├── subjects/            # Subject list
-│   │   ├── countdown/           # Countdown timers
-│   │   ├── notes/               # Rich-text notes
-│   │   ├── messages/            # Real-time messaging
-│   │   ├── people/              # SchoolSoft+ user search
-│   │   ├── class/               # Class & staff directory
-│   │   ├── profile/             # User profile
-│   │   └── settings/            # App settings
+│   ├── (auth)/ # Login page (unauthenticated)
+│   ├── (dashboard)/ # Main app pages (authenticated)
 │   ├── api/
-│   │   ├── login/ logout/       # Auth proxy
-│   │   ├── schedule/            # Timetable proxy
-│   │   ├── lunch/               # Lunch menu proxy
-│   │   ├── news/                # News proxy
-│   │   ├── subjects/            # Subjects proxy
-│   │   ├── people/              # class + staff HTML scrapers
-│   │   ├── conversations/       # Messaging — conversation CRUD
-│   │   ├── messages/            # Messaging — message CRUD
-│   │   ├── friends/             # Friends system
-│   │   ├── presence/            # Online status heartbeat
-│   │   ├── group-invites/       # Group invite flow
-│   │   ├── ai/                  # Gemini proxy + rate limiting
-│   │   ├── notes/               # Notes CRUD
-│   │   ├── stats/               # Public aggregate stats
-│   │   ├── users/               # User search
-│   │   └── lib/                 # Shared server helpers
-│   │       ├── firebaseAdmin.ts
-│   │       ├── schoolsoft.ts    # Axios client + session helpers
-│   │       ├── auth.ts          # Session validation
-│   │       ├── profileDb.ts
-│   │       ├── messagingDb.ts
-│   │       ├── friendsDb.ts
-│   │       ├── presenceDb.ts
-│   │       ├── groupInvitesDb.ts
-│   │       └── statsHelper.ts
-│   ├── stats/                   # Public stats page
-│   ├── changelog/               # Changelog page
-│   ├── open-source/             # Open source info
-│   ├── terms/                   # Terms & Privacy
-│   └── login-help/              # Login troubleshooting
+│   │   ├── login/ logout/ # Auth proxy (deprecated)
+│   │   ├── auth/ # All auth routes (AuthV2)
+│   │   └── lib/ # Shared server helpers
+│   │       ├── schoolsoft.ts # Axios client + session helpers
+│   │       └── auth.ts # Session validation
+│   ├── stats/ # Public stats page
+│   ├── changelog/ # Changelog page
+│   ├── open-source/ # Open source info
+│   ├── terms/ # Terms & Privacy
+│   └── login-help/ # Login troubleshooting
 ├── components/
-│   ├── sidebar.tsx              # Main nav + keyboard shortcuts
-│   ├── LandingPage.tsx          # Public landing page
-│   ├── ai-chat-panel.tsx        # AI assistant slide-out panel
-│   ├── NoteEditor.tsx           # Rich-text note editor
-│   ├── UserProfileModal.tsx     # Profile modal with friend actions
-│   ├── widgets/                 # Dashboard widget components
-│   └── ui/                      # shadcn/ui base components
+├── ssp-bruno # For Bruno HTTP client (API testing) 
 └── lib/
     ├── auth-context.tsx         # Auth state (login/logout)
     ├── useSession.ts            # Session hook
@@ -224,28 +186,10 @@ schoolsoftplus/
     ├── firebase.ts              # Firebase client SDK
     └── widgets/                 # Widget registry + layout hook
 ```
-
 ---
-
-## Firestore Collections
-
-| Collection | Purpose |
-|---|---|
-| `profiles_v1` | User display names, bios, profile pictures |
-| `conversations_v1` | Group and DM conversation metadata |
-| `messages_v1` | Individual messages (plain + E2EE ciphertext) |
-| `friendships_v1` | Friend requests and accepted friendships |
-| `presence_v1` | Per-user online status heartbeats |
-| `group_invites_v1` | Pending group join invitations |
-| `notes_v2` | User notes with optional public share tokens |
-| `countdowns_v1` | User countdown timers |
-| `stats` | Anonymous aggregate usage stats |
-
----
-
 ## Contributing
 
-Contributions are what make open source great — any PR is hugely appreciated.
+Contributions are what make open source great, any PR is hugely appreciated.
 
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
@@ -267,11 +211,11 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on the development wo
 
 ## Privacy & Security
 
-- Passwords are **never stored** — forwarded directly to SchoolSoft over HTTPS and immediately discarded
+- Passwords are **never stored** — authentication is handled fully through SchoolSoft.
 - Session tokens are stored as **httpOnly cookies** (inaccessible to JavaScript)
 - E2EE group chat keys are **never sent to the server** — derived client-side and stored only in `sessionStorage`
 - Only notes, messages, friend data, and anonymous aggregate stats are stored in Firebase
-- No advertising, no tracking, no third-party analytics
+- No advertising & no tracking
 
 See [Terms & Privacy](https://ssp.elias4044.com/terms) for full details.
 

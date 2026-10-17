@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper functions ───────────────────────────────────
+    // Helpers
 
     // Is the caller signed in (via Firebase custom token)?
     function isAuthed() {
@@ -27,18 +27,13 @@ service cloud.firestore {
           get(/databases/$(database)/documents/conversations_v1/$(convId)).data.participants;
     }
 
-    // ── Profiles ──────────────────────────────────────────
-    // Any authenticated user can read any profile (needed for search + DM name display).
-    // Only the profile owner can write their own document.
+    //  Profiles
     match /profiles_v1/{username} {
       allow read:  if isAuthed();
       allow write: if isOwner(username);
     }
 
-    // ── Conversations ──────────────────────────────────────
-    // Only participants can read a conversation.
-    // Participants may update only their own lastReadAt timestamp for cross-device read sync.
-    // All other writes go through the server-side API (Admin SDK bypasses rules).
+    // Conversations
     match /conversations_v1/{convId} {
       allow read:   if isParticipant(resource.data);
       // Allow participants to update ONLY the lastReadAt map (cross-device unread sync)
@@ -47,16 +42,13 @@ service cloud.firestore {
       allow write:  if false;
     }
 
-    // ── Messages ──────────────────────────────────────────
-    // Participants of the parent conversation can read messages.
-    // Writes go through the server-side API only.
+    // Messages
     match /messages_v1/{msgId} {
       allow read:  if isAuthed() && isParticipantOf(resource.data.conversationId);
       allow write: if false;
     }
 
-    // ── Notes ─────────────────────────────────────────────
-    // Entirely server-side; the client SDK never touches these.
+    // Notes
     match /notes_v2/{noteId} {
       allow read, write: if false;
     }
@@ -65,20 +57,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ── Countdowns ────────────────────────────────────────
+    // Countdowns
     match /countdowns_v1/{countdownId} {
       allow read, write: if false;
     }
 
-    // ── Stats ─────────────────────────────────────────────
-    // Publicly readable (used by the /stats page).
-    // Writes are server-only (Admin SDK bypasses rules).
+    // Stats
     match /stats/{docId} {
       allow read:  if true;
       allow write: if false;
     }
 
-    // ── Friendships ───────────────────────────────────────
+    //  Friendships 
     // A friendship document has userA and userB fields (both set to the username/uid).
     // Only the two parties involved can read their friendship doc.
     // All writes go through the server-side API (Admin SDK bypasses rules).
@@ -89,7 +79,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Presence ──────────────────────────────────────────
+    //  Presence 
     // Any authenticated user can read presence (needed for status dots).
     // Only the owner can write their own presence document.
     match /presence_v1/{username} {
@@ -97,7 +87,7 @@ service cloud.firestore {
       allow write: if isOwner(username);
     }
 
-    // ── Group Invites ─────────────────────────────────────
+    //  Group Invites 
     // The invited user and the inviter can read an invite document.
     // All writes go through the server-side API.
     match /group_invites_v1/{inviteId} {
@@ -107,7 +97,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Voice Calls (WebRTC signaling) ────────────────────
+    //  Voice Calls (WebRTC signaling) 
     // Both caller and callee can read/list call documents.
     // list: Firestore query rules must not rely on resource.data, so we allow
     //       any authenticated user to *list* — the where() clause in the client
@@ -145,7 +135,7 @@ service cloud.firestore {
         );
       }
     }
-    // ── Group Voice Calls (WebRTC signaling — mesh) ───────────
+    //  Group Voice Calls (WebRTC signaling — mesh) 
     // Any authenticated user may read/write active group call documents.
     // The conversationId in the document ties access to a conversation,
     // but we keep rules simple here since conversation membership is
@@ -169,9 +159,7 @@ service cloud.firestore {
         }
       }
     }
-    // ── Referrals ─────────────────────────────────────────
-    // Authenticated users can read their own referral doc (for the dashboard).
-    // All writes go through the server-side API (Admin SDK bypasses rules).
+    //  Referrals 
     match /referrals_v1/{username} {
       allow read: if isOwner(username);
       allow write: if false;
@@ -185,7 +173,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Default deny ──────────────────────────────────────
+    //  Default deny 
     match /{document=**} {
       allow read, write: if false;
     }

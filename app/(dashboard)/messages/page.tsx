@@ -81,9 +81,9 @@ import { useCallContext } from "@/lib/call-context";
 import { useActiveGroupCallForConversation } from "@/lib/useCall";
 import { GroupCallEncryptionNotice } from "@/components/CallPanel";
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Types
-───────────────────────────────────────────────────────────── */
+ */
 type Conversation = RTConversation;
 type Message = RTMessage;
 
@@ -107,17 +107,17 @@ interface GroupInvite {
 
 const QUICK_REACTIONS = ["👍", "❤️", "❤️‍🩹", "💔", "😂", "😮", "😢", "🔥"];
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Constants
-───────────────────────────────────────────────────────────── */
+ */
 const MAX_CHARS = 2000;
 const WARN_CHARS = 180;          // orange warning
 const HARD_UI_CHARS = 200;       // red + won't send without encryption
 const E2EE_MAX_CHARS = 100;      // hard limit in encrypted groups
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    URL / image rendering helpers
-───────────────────────────────────────────────────────────── */
+ */
 const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|webp|svg|avif|bmp)(\?.*)?$/i;
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
 
@@ -183,9 +183,9 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    EmojiPicker — lightweight inline emoji grid, no external lib
-───────────────────────────────────────────────────────────── */
+ */
 const EMOJI_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
     { label: "Recent", icon: "🕐", emojis: [] }, // filled from localStorage at runtime
     { label: "Smileys", icon: "😀", emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "☺️", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿"] },
@@ -395,9 +395,9 @@ function EmojiPicker({ onSelect, onClose, recentEmojis }: {
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Helpers
-───────────────────────────────────────────────────────────── */
+ */
 function initials(name: string) {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "??";
 }
@@ -420,9 +420,9 @@ function formatDate(ts: number) {
     return new Date(ts).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    useIsMobile — true when the primary input is touch / coarse
-───────────────────────────────────────────────────────────── */
+ */
 function useIsMobile() {
     const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
@@ -435,9 +435,9 @@ function useIsMobile() {
     return isMobile;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Main Page
-───────────────────────────────────────────────────────────── */
+ */
 export default function MessagesPage() {
     const { session, loading: sessionLoading } = useSession();
     const username = session?.username ?? "";
@@ -571,7 +571,7 @@ export default function MessagesPage() {
         });
     }, [conversations]);
 
-    // ── Voice calls (global context — CallPanel rendered in layout) ──
+    //  Voice calls (global context — CallPanel rendered in layout) 
     const { call, groupCall } = useCallContext();
     const [showEncCallWarning, setShowEncCallWarning] = useState(false);
 
@@ -1351,7 +1351,7 @@ export default function MessagesPage() {
                                 )}
                             </>
                         ) : (
-                            /* ── Friends tab ── */
+                            /*  Friends tab  */
                             <FriendsPanel
                                 username={username}
                                 friends={friends}
@@ -1922,7 +1922,7 @@ export default function MessagesPage() {
                                                 (!activeConvo.encrypted && draft.length > MAX_CHARS)
                                             }
                                                 className="w-9 h-9 shrink-0"
-                                                style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                                                style={{ background: "var(--primary)" }}
                                             >
                                                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                             </Button>
@@ -2401,7 +2401,7 @@ export default function MessagesPage() {
                                     </div>
                                 )}
 
-                                {/* ── E2EE Toggle ──────────────────────────────────── */}
+                                {/*  E2EE Toggle  */}
                                 <div className="space-y-3">
                                     <button
                                         type="button"
@@ -2515,7 +2515,7 @@ export default function MessagesPage() {
                                         (groupEncrypted && (groupEncPassword.length < 8 || groupEncPassword !== groupEncPasswordConfirm))
                                     }
                                     onClick={createGroup}
-                                    style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                                    style={{ background: "var(--primary)" }}
                                 >
                                     {groupCreating
                                         ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -2641,7 +2641,7 @@ export default function MessagesPage() {
                                 <Button size="sm" className="flex-1"
                                     disabled={!encPromptPassword || encPromptDeriving}
                                     onClick={unlockEncryptedConvo}
-                                    style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                                    style={{ background: "var(--primary)" }}
                                 >
                                     {encPromptDeriving
                                         ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2677,9 +2677,9 @@ export default function MessagesPage() {
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    ProfileGate — shown when the user has no profile yet
-───────────────────────────────────────────────────────────── */
+ */
 function ProfileGate() {
     const STEPS = [
         { icon: User, text: "Choose a display name" },
@@ -2748,7 +2748,7 @@ function ProfileGate() {
                 <a
                     href="/profile"
                     className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90 active:scale-95"
-                    style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                    style={{ background: "var(--primary)" }}
                 >
                     Set up your profile
                     <ArrowRight className="w-4 h-4" />
@@ -2769,9 +2769,9 @@ function ProfileGate() {
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    FriendsPanel
-───────────────────────────────────────────────────────────── */
+ */
 function FriendsPanel({
     username, friends, received, sent, profileMap, statusMap,
     friendSearchQuery, friendSearchResults, friendSearching, friendRequestSending,
@@ -2962,9 +2962,9 @@ function FriendsPanel({
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    ConvoItem
-───────────────────────────────────────────────────────────── */
+ */
 function ConvoItem({
     convo, name, subtitle, active, username, index, pfpCache, statusMap, onClick,
 }: {
@@ -2987,7 +2987,7 @@ function ConvoItem({
                 "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
                 active ? "bg-white/8" : "hover:bg-white/5"
             )}
-            style={active ? { boxShadow: "inset 2px 0 0 oklch(0.65 0.22 278)" } : undefined}
+            style={active ? { boxShadow: "inset 2px 0 0 var(--primary)" } : undefined}
         >
             <div className="relative shrink-0">
                 <Avatar className="w-9 h-9">
@@ -3036,9 +3036,9 @@ function ConvoItem({
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Share Card Bubble — rendered inside a MessageBubble
-───────────────────────────────────────────────────────────── */
+ */
 
 // Grade colours matching OVERALL_GRADE_STYLE in the assignment page
 const SHARE_GRADE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
@@ -3360,9 +3360,9 @@ function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
     return <GradeCardBubble card={card} isMe={isMe} />;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    MessageBubble
-───────────────────────────────────────────────────────────── */
+ */
 function MessageBubble({
     msg, displayContent, replyToDisplayContent, isEncryptedConvo, isMe, sameSender, isLastInGroup, isEditing, editContent, editSaving, username, isGroup, canDelete,
     isMobile, onMobileTap, pfpUrl, onAvatarClick,
@@ -3473,7 +3473,7 @@ function MessageBubble({
                                 isMobile && "cursor-pointer active:opacity-75 transition-opacity select-none",
                                 msg.sending && "opacity-60",
                             )}
-                            style={isMe ? { background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" } : undefined}
+                            style={isMe ? { background: "var(--primary)" } : undefined}
                             onClick={() => { if (isMobile) onMobileTap(); }}
                         >
                             {msg.shareCard ? (
@@ -3582,9 +3582,9 @@ function MessageBubble({
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    ActionBtn
-───────────────────────────────────────────────────────────── */
+ */
 function ActionBtn({ icon: Icon, label, onClick, danger }: {
     icon: React.ElementType; label: string; onClick: () => void; danger?: boolean;
 }) {
@@ -3607,9 +3607,9 @@ function ActionBtn({ icon: Icon, label, onClick, danger }: {
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    EmptyChat
-───────────────────────────────────────────────────────────── */
+ */
 function EmptyChat({ onNew }: { onNew: () => void }) {
     return (
         <motion.div
@@ -3619,12 +3619,11 @@ function EmptyChat({ onNew }: { onNew: () => void }) {
             className="flex flex-col items-center justify-center h-full gap-4 text-center px-8"
         >
             <motion.div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 20%), oklch(0.55 0.25 295 / 20%))" }}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center bg-primary"
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             >
-                <MessageSquare className="w-7 h-7 text-primary" />
+                <MessageSquare className="w-7 h-7 text-primary-foreground" />
             </motion.div>
             <div>
                 <p className="text-sm font-semibold">Your messages</p>
@@ -3633,24 +3632,19 @@ function EmptyChat({ onNew }: { onNew: () => void }) {
                 </p>
             </div>
             <Button size="sm" onClick={onNew}
-                style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                style={{ background: "var(--primary)" }}
             >
                 <UserPlus className="w-3.5 h-3.5 mr-2" />
                 New conversation
             </Button>
-            <div className="flex items-start gap-2 rounded-lg border border-white/8 bg-white/3 px-4 py-3 text-left max-w-xs">
-                <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-[10px] text-muted-foreground">
-                    You can only message users who have a Schoolsoft+ profile. Search by their exact username.
-                </p>
-            </div>
+
         </motion.div>
     );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    MobileActionSheet — bottom sheet for message actions on touch
-───────────────────────────────────────────────────────────── */
+ */
 interface SheetAction {
     icon: React.ElementType;
     label: string;
