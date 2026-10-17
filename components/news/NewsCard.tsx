@@ -19,6 +19,17 @@ interface NewsCardProps {
   onClick: () => void;
 }
 
+// credits to claude for this ❤️
+// Used to extract the teacher id from teacher pfp
+export function extractNumbersDirectlyAfter(text: string, word: string): string | null { // uh text is the full text, word is the string before the searched numbers
+  const escapedWord = word.replace(/[-\/\\^\$*+?.()|[\]{}]/g, '\\$&'); 
+  
+  const regex = new RegExp(`${escapedWord}:?\\s*(\\d+)`);
+  
+  const match = text.match(regex);
+  return match ? match[1] : null;
+}
+
 export function NewsCard({ item, isSelected = false, view = "grid", onClick }: NewsCardProps) {
   const dateInfo = formatNewsDate(item.creDate || item.toDate);
   const expiryInfo = getExpiryStatus(item.toDate);
@@ -87,7 +98,7 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
           <div className="flex items-center gap-1.5 min-w-0">
             <Avatar className="w-4 h-4 text-[8px] font-bold border border-border">
               {item.author?.picture && (
-                <AvatarImage src={`/api/file?id=${item.author.id}&type=image`} alt={item.author.name} />
+                <AvatarImage src={`https://sms.schoolsoft.se/engelska/jsp/student/pictureFile.jsp?teacherId=${extractNumbersDirectlyAfter(item.author.picture, "teacher")}`} alt={item.author.name} />
               )}
             </Avatar>
             <span className="truncate max-w-30 text-foreground/75">
@@ -166,9 +177,9 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
         <div className="flex items-center gap-2 min-w-0">
           <Avatar className="w-6 h-6 text-[9px] font-bold border border-border">
             {item.author?.picture && (
-              <AvatarImage src={`/api/file?id=${item.author.id}&type=image`} alt={item.author.name} />
+              <AvatarImage src={`https://sms.schoolsoft.se/engelska/jsp/student/pictureFile.jsp?teacherId=${extractNumbersDirectlyAfter(item.author.picture, "teacher")}`} alt={item.author.name} />
             )}
-            <AvatarFallback className="bg-surface-2 text-foreground/80">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-surface-2 text-foreground/80 text-[8px]">{initials}</AvatarFallback>
           </Avatar>
           <span className="text-xs text-foreground/80 truncate max-w-[140px]">
             {item.author?.name || "School Staff"}

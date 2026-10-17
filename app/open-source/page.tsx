@@ -21,7 +21,7 @@ import {
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
-/* ─── Reveal ───────────────────────────────────────────── */
+/*  Reveal  */
 function Reveal({
   children, delay = 0, className = "",
 }: { children: React.ReactNode; delay?: number; className?: string }) {
@@ -38,7 +38,7 @@ function Reveal({
   );
 }
 
-/* ─── Step ─────────────────────────────────────────────── */
+/*  Step  */
 function Step({ n, title, code, children }: { n: number; title: string; code?: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-4">
@@ -70,7 +70,6 @@ const TECH = [
   { label: "Tailwind CSS v4",  color: "oklch(0.72 0.16 200)" },
   { label: "Framer Motion",    color: "oklch(0.75 0.18 310)" },
   { label: "Firebase Admin",   color: "oklch(0.75 0.18 40)" },
-  { label: "httpOnly Cookies", color: "oklch(0.72 0.18 148)" },
   { label: "Google Gemini AI", color: "oklch(0.78 0.16 55)" },
   { label: "shadcn/ui",        color: "oklch(0.65 0.22 278)" },
 ];
@@ -120,7 +119,7 @@ const CONTRIB = [
   },
 ];
 
-/* ─── Page ─────────────────────────────────────────────── */
+/*  Page  */
 export default function OpenSourcePage() {
   const [stars, setStars] = useState<number | null>(null);
   const [forks, setForks] = useState<number | null>(null);
@@ -149,11 +148,6 @@ export default function OpenSourcePage() {
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: "#080808" }}>
 
-      {/* Fixed ambient orbs */}
-      <div className="os-orb-1 fixed top-[-180px] left-[-120px] w-[520px] h-[520px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, oklch(0.65 0.22 278 / 12%) 0%, transparent 70%)" }} />
-      <div className="os-orb-2 fixed bottom-[-200px] right-[-100px] w-[480px] h-[480px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, oklch(0.55 0.25 295 / 8%) 0%, transparent 70%)" }} />
 
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(8,8,8,0.88)", backdropFilter: "blur(18px)", borderColor: "rgba(255,255,255,0.07)" }}>
@@ -184,9 +178,6 @@ export default function OpenSourcePage() {
           {/* dot grid */}
           <div className="absolute inset-0 pointer-events-none"
             style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-          {/* ambient accent */}
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full pointer-events-none"
-            style={{ background: "radial-gradient(circle, oklch(0.65 0.22 278 / 10%) 0%, transparent 70%)" }} />
           <motion.div className="relative" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
             <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "oklch(0.65 0.22 278)" }}>MIT Licensed</p>
             <h1 className="text-3xl font-semibold tracking-tight mb-3 text-white">SchoolSoft+ is open source.</h1>
@@ -236,8 +227,6 @@ export default function OpenSourcePage() {
 
         {/* Tech stack */}
         <section className="py-10 border-b relative overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 60% 50% at 80% 50%, oklch(0.55 0.25 295 / 6%) 0%, transparent 70%)" }} />
           <Reveal className="mb-5">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>Tech stack</h2>
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>Built with modern, typed tooling.</p>
@@ -259,8 +248,6 @@ export default function OpenSourcePage() {
 
         {/* Contribute */}
         <section className="py-10 border-b relative overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 50% 60% at 10% 40%, oklch(0.65 0.22 278 / 5%) 0%, transparent 70%)" }} />
           <Reveal className="mb-6">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>How to contribute</h2>
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>Every contribution helps — no matter how small.</p>
@@ -321,8 +308,6 @@ export default function OpenSourcePage() {
 
         {/* Developer portal */}
         <section className="py-10 border-b relative overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 55% 70% at 100% 50%, oklch(0.65 0.22 278 / 7%) 0%, transparent 70%)" }} />
           <Reveal>
             <div className="rounded-2xl border p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5"
               style={{ background: "#0d0d0d", borderColor: "rgba(255,255,255,0.08)" }}>
@@ -353,8 +338,7 @@ export default function OpenSourcePage() {
                 <a
                   href="https://developer.ssp.elias4044.com"
                   target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary"
                 >
                   <BookOpen className="w-3.5 h-3.5" /> Open docs
                 </a>
@@ -454,8 +438,7 @@ export default function OpenSourcePage() {
             <a
               href="https://github.com/elias4044/schoolsoftplus"
               target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary"
             >
               <Code2 className="w-4 h-4" /> View on GitHub
             </a>

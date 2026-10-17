@@ -14,12 +14,12 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-/* ─── helpers ─────────────────────────────────────────────── */
+/*  helpers  */
 function useGsapRef<T extends HTMLElement>() {
   return useRef<T>(null);
 }
 
-/* ─── Animated conversation ───────────────────────────────── */
+/*  Animated conversation  */
 const MESSAGES = [
   { id: 1, from: "Sofia",    mine: false, text: "did you see the physics results 👀",           delay: 0 },
   { id: 2, from: "you",      mine: true,  text: "yeah… not great lol",                          delay: 0.6 },
@@ -125,7 +125,7 @@ function LiveChat({ active }: { active: boolean }) {
   );
 }
 
-/* ─── E2EE visualiser ─────────────────────────────────────── */
+/*  E2EE visualiser  */
 const E2EE_STEPS = [
   { icon: Key,          label: "Your device generates a key",    desc: "AES-GCM 256-bit — happens locally, never leaves your browser" },
   { icon: Lock,         label: "Message is encrypted client-side", desc: "Ciphertext only — not even our servers can read it" },
@@ -203,7 +203,7 @@ function E2EEFlow() {
   );
 }
 
-/* ─── Feature pill ────────────────────────────────────────── */
+/*  Feature pill  */
 function Pill({ icon: Icon, label, color, delay = 0 }: { icon: React.ElementType; label: string; color: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-5% 0px" });
@@ -223,7 +223,7 @@ function Pill({ icon: Icon, label, color, delay = 0 }: { icon: React.ElementType
   );
 }
 
-/* ─── Encrypted message preview ──────────────────────────── */
+/*  Encrypted message preview  */
 function EncryptedPreview() {
   const [revealed, setRevealed] = useState(false);
   const raw = "U2FsdGVkX1+9kX2mRhQZ4wAbc...=";
@@ -274,7 +274,7 @@ function EncryptedPreview() {
   );
 }
 
-/* ─── Group chat mock ─────────────────────────────────────── */
+/*  Group chat mock  */
 function GroupChatMock() {
   const members = ["Alex", "Sofia", "Marcus", "Emma", "You"];
   return (
@@ -331,7 +331,7 @@ function GroupChatMock() {
   );
 }
 
-/* ─── GSAP horizontal scroll section ─────────────────────── */
+/*  disabled  */
 function FeatureScroller() {
   const trackRef = useRef<HTMLDivElement>(null);
   const inView = useInView(trackRef, { once: true, margin: "-10% 0px" });
@@ -377,11 +377,9 @@ function FeatureScroller() {
 
   return (
     <div className="relative">
-      {/* scrollable track */}
       <div
         ref={trackRef}
-        className="flex gap-4 overflow-x-auto pb-6 px-[8vw]"
-        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full p-4"
       >
         {FEATURES.map(({ icon: Icon, color, title, body }, i) => (
           <motion.div
@@ -429,7 +427,7 @@ function FeatureScroller() {
   );
 }
 
-/* ─── Stats counter ───────────────────────────────────────── */
+/*  Stats counter  */
 function BigStat({ value, label, suffix = "" }: { value: number | null; label: string; suffix?: string }) {
   const [display, setDisplay] = useState("0");
   useEffect(() => {
@@ -455,7 +453,7 @@ function BigStat({ value, label, suffix = "" }: { value: number | null; label: s
   );
 }
 
-/* ─── Main export ─────────────────────────────────────────── */
+/*  Main export  */
 export default function MessagingShowcase() {
   const heroRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -500,13 +498,9 @@ export default function MessagingShowcase() {
   return (
     <div className="bg-[#080808] text-white overflow-hidden">
 
-      {/* ══════════════════════════════════════
-          HERO — full viewport
-      ══════════════════════════════════════ */}
       <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
         {/* ambient orbs */}
-        <div className="orb-1 absolute -top-32 -left-32 w-150 h-150 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, oklch(0.55 0.25 278 / 18%) 0%, transparent 70%)" }} />
+
         <div className="orb-2 absolute -bottom-20 -right-20 w-125 h-125 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(circle, oklch(0.60 0.20 310 / 12%) 0%, transparent 70%)" }} />
         <div className="absolute inset-0 pointer-events-none"
@@ -524,7 +518,6 @@ export default function MessagingShowcase() {
             Built into SchoolSoft+ · No extra app
           </motion.div>
 
-          {/* headline — each word animated by GSAP */}
           <div className="perspective-midrange mb-6">
             <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.95]">
               {"Talk to your\nclassmates.".split(/\s+/).map((word, i) => (
@@ -571,26 +564,11 @@ export default function MessagingShowcase() {
             <BigStat value={msgCount} label="messages sent between students" />
           </motion.div>
         </motion.div>
-
-        {/* scroll cue */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            className="w-px h-10 rounded-full"
-            style={{ background: "linear-gradient(to bottom, oklch(0.65 0.22 278 / 60%), transparent)" }}
-          />
-        </motion.div>
       </section>
 
-      {/* ══════════════════════════════════════
+      {/* 
           LIVE CHAT DEMO
-      ══════════════════════════════════════ */}
+       */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 60% 50% at 80% 50%, oklch(0.55 0.22 278 / 8%), transparent)" }} />
@@ -609,11 +587,11 @@ export default function MessagingShowcase() {
                 <span style={{ color: "oklch(0.70 0.22 278)" }}>Because it is.</span>
               </h3>
               <p className="text-sm text-white/40 leading-relaxed mb-6">
-                We use Firestore's realtime subscriptions. The moment someone sends a message, it's on your screen.
+                We use realtime subscriptions. The moment someone sends a message, it's on your screen.
                 No "refresh to see new messages". No 3-second delay. Just instant.
               </p>
               <p className="text-sm text-white/40 leading-relaxed">
-                Any student at your school can sign up. All it takes is setting a display name once — after that, DM anyone by username. You'll see when they were last online, unread counts, and get browser notifications when someone messages you while you're away.
+                Any student at your school can sign up. All it takes is setting a display name once — after that, DM anyone by username. You'll see if they are online and get browser notifications when someone messages you while you're away.
               </p>
             </motion.div>
           </div>
@@ -656,9 +634,9 @@ export default function MessagingShowcase() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
+      {/* 
           E2EE DEEP DIVE
-      ══════════════════════════════════════ */}
+       */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 50% 60% at 20% 50%, oklch(0.50 0.22 148 / 8%), transparent)" }} />
@@ -719,9 +697,9 @@ export default function MessagingShowcase() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
+      {/* 
           GROUP CHAT SECTION
-      ══════════════════════════════════════ */}
+       */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 60% 50% at 60% 60%, oklch(0.55 0.18 310 / 8%), transparent)" }} />
@@ -784,9 +762,9 @@ export default function MessagingShowcase() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
+      {/* 
           VOICE CALLS (EARLY BETA)
-      ══════════════════════════════════════ */}
+       */}
       <section className="relative border-t border-white/5 py-24 px-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 55% 60% at 30% 50%, oklch(0.55 0.18 190 / 9%), transparent)" }} />
@@ -960,10 +938,7 @@ export default function MessagingShowcase() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          HORIZONTAL FEATURE SCROLLER (GSAP)
-      ══════════════════════════════════════ */}
-      <div className="border-t border-white/5">
+      {/* <div className="border-t border-white/5">
         <div className="max-w-5xl mx-auto px-6 pt-16 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -976,11 +951,11 @@ export default function MessagingShowcase() {
           </motion.div>
         </div>
         <FeatureScroller />
-      </div>
+      </div> */}
 
-      {/* ══════════════════════════════════════
+      {/* 
           FINAL CTA
-      ══════════════════════════════════════ */}
+       */}
       <section className="relative border-t border-white/5 py-28 px-6 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, oklch(0.55 0.22 278 / 12%), transparent)" }} />
@@ -1003,8 +978,7 @@ export default function MessagingShowcase() {
             href="/login"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white"
-            style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))" }}
+            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white bg-primary"
           >
             Start messaging <ArrowRight className="w-4 h-4" />
           </motion.a>

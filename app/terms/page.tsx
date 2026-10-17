@@ -27,7 +27,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-/* ─── Reveal ───────────────────────────────────────────── */
+/* Reveal */
 function Reveal({ children, delay = 0, className = "" }: {
   children: React.ReactNode; delay?: number; className?: string;
 }) {
@@ -44,7 +44,7 @@ function Reveal({ children, delay = 0, className = "" }: {
   );
 }
 
-/* ─── Section ──────────────────────────────────────────── */
+/*  Section  */
 function Section({
   id, icon: Icon, title, color, children, delay = 0,
 }: {
@@ -75,7 +75,7 @@ function Section({
   );
 }
 
-/* ─── Bullet ───────────────────────────────────────────── */
+/*  Bullet  */
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
@@ -85,7 +85,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ─── Callout ──────────────────────────────────────────── */
+/*  Callout  */
 function Callout({ children, color = "oklch(0.65 0.22 278)" }: { children: React.ReactNode; color?: string }) {
   return (
     <div
@@ -97,7 +97,7 @@ function Callout({ children, color = "oklch(0.65 0.22 278)" }: { children: React
   );
 }
 
-/* ─── Code chip ────────────────────────────────────────── */
+/*  Code chip  */
 function Chip({ children }: { children: React.ReactNode }) {
   return (
     <code className="text-xs px-1.5 py-0.5 rounded-md font-mono"
@@ -107,7 +107,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ─── Table ────────────────────────────────────────────── */
+/*  Table  */
 function DarkTable({ cols, rows }: { cols: string[]; rows: string[][] }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 8%)" }}>
@@ -134,7 +134,7 @@ function DarkTable({ cols, rows }: { cols: string[]; rows: string[][] }) {
   );
 }
 
-/* ─── Page ─────────────────────────────────────────────── */
+/*  Page  */
 export default function TermsPage() {
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -167,9 +167,6 @@ export default function TermsPage() {
 
       {/* Hero */}
       <section ref={heroRef} className="relative pt-32 pb-16 px-6 text-center overflow-hidden">
-        {/* ambient orb */}
-        <div className="terms-orb-1 absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 278 / 12%) 0%, transparent 70%)" }} />
         {/* dot grid */}
         <div className="absolute inset-0 pointer-events-none"
           style={{ backgroundImage: "radial-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
@@ -185,17 +182,11 @@ export default function TermsPage() {
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur px-4 py-1.5 text-xs text-white/50 mb-8"
           >
             <Shield className="w-3 h-3" />
-            Last updated: April 25, 2026
+            Last updated: October 17, 2026
           </motion.div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-[0.95]">
-            Terms of Service{" "}
-            <span style={{ background: "linear-gradient(135deg, oklch(0.72 0.18 263), oklch(0.65 0.22 310))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              &amp; Privacy.
-            </span>
+            Terms of Service & Privacy
           </h1>
-          <p className="text-sm text-white/40 leading-relaxed max-w-lg mx-auto">
-            Plain-language. No legalese. Everything you need to know about how SchoolSoft+ works and how your data is handled.
-          </p>
         </motion.div>
       </section>
 
@@ -240,8 +231,8 @@ export default function TermsPage() {
             or Internationella Engelska Skolan.
           </p>
           <p>
-            SchoolSoft+ does not replace SchoolSoft — it reads data from it on your behalf, using your own credentials,
-            and displays it in a modern dashboard. All official data ultimately comes from SchoolSoft's servers.
+            SchoolSoft+ does not replace SchoolSoft. It reads data from it on your behalf, using your own credentials,
+            and displays it in a different dashboard. All official data ultimately comes from SchoolSoft's servers.
           </p>
           <p>
             SchoolSoft+ is <strong className="text-white/80">open source</strong> and released under the{" "}
@@ -260,28 +251,19 @@ export default function TermsPage() {
         <Section id="your-data" icon={Lock} title="2. Your credentials &amp; data" color="oklch(0.72 0.18 148)" delay={0.04}>
           <p>We take your privacy seriously. Here is exactly what happens when you log in:</p>
           <ul className="space-y-2 ml-1">
-            <Bullet>Your username and password are sent <strong className="text-white/80">directly to SchoolSoft's login endpoint</strong> over HTTPS — the same request your browser would make on the official site.</Bullet>
-            <Bullet><strong className="text-white/80">Your password is never stored</strong> — not in our database, not in any log, not anywhere. It is used once, forwarded, and discarded.</Bullet>
-            <Bullet>On a successful login, SchoolSoft returns session cookies (<Chip>JSESSIONID</Chip>, <Chip>hash</Chip>). We store these as <strong className="text-white/80">httpOnly cookies</strong> so they can never be read by JavaScript.</Bullet>
-            <Bullet>Cookies expire after <strong className="text-white/80">7 days</strong>. You can sign out at any time to clear them immediately.</Bullet>
-            <Bullet>We store your <strong className="text-white/80">username (lowercase)</strong> in Firebase for note and goal storage — see §4 below.</Bullet>
+            <Bullet>Authentication or Login <strong className="text-white/80">goes through SchoolSoft's site</strong> and is not handled by us — you never enter credentials on our website.</Bullet>
+            <Bullet><strong className="text-white/80">Your password is never even read</strong>. All we read ist your auth token which is a random string.</Bullet>
+            <Bullet>On a successful login, SchoolSoft returns session tokens (<Chip>token</Chip>, <Chip>refresh_token</Chip>). We store these as <strong className="text-white/80">httpOnly cookies</strong> so they can never be read by JavaScript.</Bullet>
+            <Bullet>Access tokens expire after <strong className="text-white/80">a short time</strong>. Refresh tokens takes around <strong className="text-white/80">30 days</strong>. You can sign out at any time to clear them immediately.</Bullet>
+            <Bullet>We store your <strong className="text-white/80">username</strong> in Firebase for user identification — see §4 below.</Bullet>
+            <Bullet>Your refresh token may be stored encrypted if <strong className="text-white/80">you create a passkey</strong> for passkey authentication.</Bullet>
           </ul>
           <Callout color="oklch(0.72 0.18 148)">We never sell, share, or monetise any of your personal information. Ever.</Callout>
         </Section>
 
         <Section id="cookies" icon={Cookie} title="3. Cookies &amp; storage" color="oklch(0.75 0.18 40)" delay={0.08}>
-          <p>SchoolSoft+ sets only the cookies it needs to function. No tracking, no advertising.</p>
-          <DarkTable
-            cols={["Cookie", "Purpose", "Expires"]}
-            rows={[
-              ["ssp_jsessionid", "SchoolSoft session token (httpOnly)", "7 days"],
-              ["ssp_hash",       "SchoolSoft auth hash (httpOnly)",     "7 days"],
-              ["ssp_usertype",   "User type flag (httpOnly)",           "7 days"],
-              ["ssp_school",     "Your school slug",                    "7 days"],
-              ["ssp_username",   "Your username (not sensitive)",       "7 days"],
-            ]}
-          />
-          <p>No third-party tracking cookies are set. Local storage is used only for your dashboard widget layout preferences.</p>
+          <p>SchoolSoft+ sets only the cookies it needs to function. No advertising.</p>
+          <p>Vercel Analytics may also use cookies or local storage.</p>
         </Section>
 
         <Section id="firebase" icon={Database} title="4. What we store in Firebase" color="oklch(0.72 0.16 263)" delay={0.12}>
@@ -319,8 +301,7 @@ export default function TermsPage() {
             <Bullet><strong className="text-white/80">Editable fields</strong>: display name (max 80 chars), bio (max 300 chars), location (max 80 chars), website URL, and profile picture URL.</Bullet>
             <Bullet><strong className="text-white/80">Session snapshot fields</strong> (read-only, refreshed from SchoolSoft on every profile save): first name, last name, email address, school name, and user type.</Bullet>
             <Bullet><strong className="text-white/80">Profile visibility</strong>: any authenticated SchoolSoft+ user can read your profile. Required for user-search and displaying names in conversations.</Bullet>
-            <Bullet>Profile picture URLs point to externally hosted images. We do not host images ourselves.</Bullet>
-            <Bullet>Your display name is automatically synced to all active conversations when you update it.</Bullet>
+            <Bullet>Profile picture URLs point to externally hosted images. We do not host images ourselves. Please refer to link <a href="https://imgbb.com/privacy" className="underline text-blue-400">ImgDB TOS</a></Bullet>
           </ul>
           <Callout color="oklch(0.72 0.18 190)">
             Do not put sensitive information (passwords, phone numbers, ID numbers) in your public profile fields.
@@ -390,7 +371,7 @@ export default function TermsPage() {
         <Section id="conduct" icon={AlertTriangle} title="10. Acceptable use" color="oklch(0.78 0.16 55)" delay={0.36}>
           <p>You agree not to:</p>
           <ul className="space-y-2 ml-1">
-            <Bullet>Attempt to scrape, crawl, or automate requests to SchoolSoft+ or to SchoolSoft through SchoolSoft+.</Bullet>
+            <Bullet>Attempt to scrape or crawl requests to SchoolSoft+ or to SchoolSoft through SchoolSoft+.</Bullet>
             <Bullet>Use the service to access another student's data without their consent.</Bullet>
             <Bullet>Attempt to reverse-engineer, decompile, or tamper with the service.</Bullet>
             <Bullet>Use the AI assistant or messaging feature to generate or send harmful, hateful, or illegal content.</Bullet>

@@ -631,8 +631,7 @@ function LoginPageInner() {
       {/* Left panel: Original 3D Hero Mockup (Scaled up & roomier)        */}
       {/* ----------------------------------------------------------------- */}
       <div
-        className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex lg:w-[54%] xl:p-14"
-        style={{ background: 'var(--card)', borderRight: '1px solid var(--border)' }}
+        className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex lg:w-[54%] xl:p-14 border-r-border border-r-[1] bg-background"
       >
         {/* dot grid */}
         <div
@@ -812,20 +811,18 @@ function LoginPageInner() {
       {/* ----------------------------------------------------------------- */}
       {/* Right panel: Fast, 1-Click Form (No walls of text)                */}
       {/* ----------------------------------------------------------------- */}
-      <div className="flex flex-1 flex-col justify-between p-6 sm:p-10 lg:p-12">
+      <div className="flex flex-1 flex-col justify-between p-6 bg-background sm:p-10 lg:p-12">
         {/* Mobile brand header */}
-        <div className="mb-6 flex items-center gap-3 lg:hidden">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{
-              background:
-                'linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 75%, oklch(0.4 0.3 285)))',
-            }}
-          >
-            <span className="text-xs font-bold text-white">S+</span>
-          </div>
-          <span className="text-foreground text-sm font-semibold">SchoolSoft+</span>
-        </div>
+        <Link href="/" className="relative flex items-center gap-3 lg:hidden">
+          <Image
+            src="/logo.png"
+            alt="SchoolSoft+ Logo"
+            className="h-6 w-6"
+            width={24}
+            height={24}
+          />
+          <span className="text-foreground/80 text-sm font-semibold">SchoolSoft+</span>
+        </Link>
 
         {/* Center Card */}
         <motion.div

@@ -111,7 +111,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full scroll-smooth`}
     >
       <body className="min-h-full antialiased">
         <AppThemeProvider>

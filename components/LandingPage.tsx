@@ -399,24 +399,18 @@ function FeatureScroller() {
   const trackRef = useRef<HTMLDivElement>(null);
   const inView = useInView(trackRef, { once: true, margin: '-10% 0px' });
   return (
-    <div className="relative">
+    <div className="relative flex justify-center align-middle">
       <div
         ref={trackRef}
-        className="flex gap-4 overflow-x-auto px-[8vw] pb-6"
-        style={{
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-        }}
+        className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full p-4'
       >
         {FEATURES.map(({ icon: Icon, color, title, body }, i) => (
           <motion.div
             key={title}
-            initial={{ opacity: 0, y: 28, scale: 0.96 }}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
             animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-            className="flex w-70 shrink-0 flex-col gap-4 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7 md:w-[320px]"
-            style={{ scrollSnapAlign: 'start' }}
+            transition={{ duration: 0.4, delay: i * 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="flex w-full shrink-0 flex-col gap-4 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7"
           >
             <div
               className="flex h-10 w-10 items-center justify-center rounded-2xl"
@@ -429,25 +423,6 @@ function FeatureScroller() {
               <p className="text-sm leading-relaxed text-white/45">{body}</p>
             </div>
           </motion.div>
-        ))}
-        <div className="w-[4vw] shrink-0" />
-      </div>
-      <div
-        className="pointer-events-none absolute top-0 bottom-6 left-0 w-16"
-        style={{ background: 'linear-gradient(to right, #080808, transparent)' }}
-      />
-      <div
-        className="pointer-events-none absolute top-0 right-0 bottom-6 w-24"
-        style={{ background: 'linear-gradient(to left, #080808, transparent)' }}
-      />
-      <div className="mt-2 flex justify-center gap-1.5 pb-2">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="h-1 w-1 rounded-full bg-white/20"
-            animate={{ opacity: [0.2, 0.8, 0.2] }}
-            transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.25 }}
-          />
         ))}
       </div>
     </div>
@@ -637,7 +612,7 @@ export default function LandingPage() {
           {/* CTA */}
           <Link
             href="/login"
-            className="bg-primary/60 hover:bg-primary/70 inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white transition-colors"
+            className="bg-primary hover:bg-primary/70 inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-bold text-white transition-colors"
           >
             Sign in <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -647,7 +622,7 @@ export default function LandingPage() {
       {/* -- Hero -- */}
       <section
         ref={heroRef}
-        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
+        className="relative bg-background flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
         {/* ambient orbs */}
         <div
@@ -678,22 +653,10 @@ export default function LandingPage() {
           <div className="grid min-h-screen items-center gap-10 py-28 md:grid-cols-2 md:gap-16 md:py-0">
             {/* Left: copy */}
             <div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.05 }}
-                className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/50 backdrop-blur"
-              >
-                <span
-                  className="h-1.5 w-1.5 animate-pulse rounded-full"
-                  style={{ background: 'oklch(0.65 0.22 278)' }}
-                />
-                Free - Open source - No tracking
-              </motion.div>
 
               <div className="mb-5 perspective-midrange">
-                <h1 className="text-5xl leading-[0.95] font-black tracking-tighter md:text-6xl">
-                  {'Your school day, organised properly.'.split(/\s+/).map((word, i) => (
+                <h1 className="text-5xl leadqing-[0.95] font-black tracking-tighter md:text-6xl">
+                  {'SchoolSoft, done right.'.split(/\s+/).map((word, i) => (
                     <span key={i} className="lp-word mr-[0.2em] inline-block opacity-0 last:mr-0">
                       {word}
                     </span>
@@ -708,8 +671,7 @@ export default function LandingPage() {
                 className="mb-8 max-w-xl text-sm leading-relaxed text-white/40 md:text-base"
               >
                 SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft
-                into one clean interface - with an AI assistant that knows your timetable and
-                real-time direct messaging to stay connected with classmates.
+                into one clean interface — completely free, no ads, open source.
               </motion.p>
 
               <motion.div
@@ -720,13 +682,9 @@ export default function LandingPage() {
               >
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white"
-                  style={{
-                    background:
-                      'linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))',
-                  }}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-accent-foreground bg-primary hover:bg-primary/70 transition-colors"
                 >
-                  Get started <ArrowRight className="h-4 w-4" />
+                  Sign in <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
                   href="https://github.com/elias4044/schoolsoftplus"
@@ -1049,11 +1007,7 @@ export default function LandingPage() {
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Link
                   href="/open-source"
-                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white"
-                  style={{
-                    background:
-                      'linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))',
-                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white bg-primary"
                 >
                   <GitPullRequest className="h-3.5 w-3.5" /> Contribute
                 </Link>
@@ -1107,10 +1061,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(135deg, oklch(0.65 0.22 278), oklch(0.55 0.25 295))',
-            }}
+            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] bg-primary"
           >
             Sign in with SchoolSoft <ArrowRight className="h-4 w-4" />
           </Link>
