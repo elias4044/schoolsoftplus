@@ -1,30 +1,26 @@
 // NOTE: Old route has been moved to /api/news/legacy
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-import * as cheerio from "cheerio";
+import * as cheerio from 'cheerio';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
   requireSession,
   getSessionCookies,
-} from "@/app/api/lib/schoolsoft";
-import { handleApiError } from "@/app/api/lib/apiError";
+} from '@/app/api/lib/schoolsoft';
+import { handleApiError } from '@/app/api/lib/apiError';
 
-// -- GET /api/news  ------------------------------------------------------------
 export async function GET(req: NextRequest) {
   // Updated to use AuthV2
 
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get("orgid") ?? 18; // 18 is IES Halmstad's OrgID.
+  const orgId = searchParams.get('orgid') ?? 18;
 
   const sess = await requireSession(req);
 
   if (!sess) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 },
-    );
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   if (!sess.token) {
@@ -32,9 +28,9 @@ export async function GET(req: NextRequest) {
       {
         success: false,
         error:
-          "This route requires AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2). The legacy route is available at /api/news/legacy",
+          'This route requires AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2). The legacy route is available at /api/news/legacy',
       },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -42,22 +38,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "UserId was not found.",
+        error: 'UserId was not found.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const api = createSchoolsoftClient(sess.school);
 
   try {
-    const res = await api.get(
-      `/eva/api/v2/student/${sess.user.userId}/schools/${orgId}/news`,
-      { headers: { Authorization: "Bearer " + sess.token } },
-    );
+    const res = await api.get(`/eva/api/v2/student/${sess.user.userId}/schools/${orgId}/news`, {
+      headers: { Authorization: 'Bearer ' + sess.token },
+    });
 
     // Example res:
     // Note that the description is pure HTML
+    // Also note that the pfp can be grabbed by grabbing the teacher id and calling /api/news/pfp=id=${id}
     /* [
         {
           "id": 332375,
@@ -80,6 +76,6 @@ export async function GET(req: NextRequest) {
     ]*/
     return NextResponse.json(res.data);
   } catch (err) {
-    return handleApiError(err, "news");
+    return handleApiError(err, 'news');
   }
 }

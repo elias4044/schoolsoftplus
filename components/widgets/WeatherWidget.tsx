@@ -63,9 +63,7 @@ function capitalize(s: string) {
 
 const STORAGE_KEY = "ssp_weather_city";
 
-/* ================================================================
-   WeatherWidget
-   ================================================================ */
+
 export default function WeatherWidget({ size }: { size: WidgetSize }) {
   const [state, setState]     = useState<LoadState>("idle");
   const [data, setData]       = useState<WeatherData | null>(null);

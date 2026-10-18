@@ -22,7 +22,7 @@ import {
   Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 import { apiFetch } from "@/lib/api-client";
 import ShareConversationPicker from "@/components/ShareConversationPicker";
 import { inferGrade } from "@/lib/grades/inferGrade";
@@ -82,7 +82,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  ACTIVE:   { bg: "oklch(0.65 0.22 148 / 15%)", color: "oklch(0.65 0.22 148)",  border: "oklch(0.65 0.22 148 / 30%)",  label: "Active"   },
+  ONGOING:   { bg: "oklch(0.65 0.22 148 / 15%)", color: "oklch(0.65 0.22 148)",  border: "oklch(0.65 0.22 148 / 30%)",  label: "Active"   },
   UPCOMING: { bg: "oklch(0.65 0.22 278 / 15%)", color: "oklch(0.75 0.15 278)",  border: "oklch(0.65 0.22 278 / 30%)",  label: "Upcoming" },
   EXPIRED:  { bg: "oklch(1 0 0 / 5%)",          color: "oklch(0.55 0 0)",        border: "oklch(1 0 0 / 10%)",          label: "Expired"  },
 };
@@ -295,12 +295,7 @@ export default function AssignmentDetailPage() {
               <p className="text-xs text-muted-foreground mt-0.5">{assignment.subTitle}</p>
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Badge
-                className="text-[10px] h-5"
-                style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
-              >
-                {s.label}
-              </Badge>
+
               <span className="text-[10px] text-muted-foreground">{assignment.type}</span>
               {assignment.subjectNames && (
                 <span className="text-[10px] text-muted-foreground">{assignment.subjectNames}</span>
@@ -648,9 +643,9 @@ function CriteriaTabSection({ tab, tabIndex }: { tab: AssessedCriteriaTab; tabIn
   );
 }
 
-/* -------------------------------------------------------------------------
+/* 
    AssessmentCard — cinematic results section
--------------------------------------------------------------------------- */
+ */
 
 function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName }: {
   assessment: Assessment;

@@ -25,9 +25,7 @@ import {
 } from "@/components/ui/select";
 import ShareConversationPicker, { type ShareCardRef } from "@/components/ShareConversationPicker";
 
-/* ============================================================
-   TYPES
-   ============================================================ */
+// types.
 
 type DeckColor = "violet" | "rose" | "amber" | "emerald" | "sky" | "slate";
 
@@ -61,9 +59,7 @@ interface FlashCard {
   updatedAt: number;
 }
 
-/* ============================================================
-   THEME / COLOR METADATA
-   ============================================================ */
+// Like the britains say it; colouuars
 
 const COLORS: Record<DeckColor, { from: string; to: string; glow: string; badge: string }> = {
   violet:  { from: "oklch(0.65 0.22 278)",  to: "oklch(0.55 0.25 295)",  glow: "oklch(0.65 0.22 278 / 35%)", badge: "oklch(0.65 0.22 278 / 18%)" },
@@ -114,9 +110,6 @@ function getDeckIcon(name: string): LucideIcon {
   return DECK_ICON_MAP[name as DeckIconName] ?? BookOpen;
 }
 
-/* ============================================================
-   SM-2 SPACED REPETITION
-   ============================================================ */
 
 type StudyRating = 0 | 1 | 3 | 5; // again / hard / good / easy
 
@@ -140,10 +133,6 @@ function computeSm2(card: FlashCard, rating: StudyRating): Partial<FlashCard> {
   const nextReview = now + interval * 24 * 60 * 60 * 1000;
   return { repetitions, easeFactor, interval, nextReview, lastReview: now };
 }
-
-/* ============================================================
-   STUDY MODE
-   ============================================================ */
 
 interface StudyModeProps {
   deck: FlashDeck;
@@ -327,7 +316,7 @@ function StudyMode({ deck, cards, onClose, onCardReviewed }: StudyModeProps) {
                 </motion.div>
               </div>
 
-              {/* Rating buttons — only shown after flip */}
+              {/* Rating buttons */}
               <AnimatePresence>
                 {flipped && (
                   <motion.div
@@ -370,9 +359,6 @@ function StudyMode({ deck, cards, onClose, onCardReviewed }: StudyModeProps) {
   );
 }
 
-/* ============================================================
-   DECK FORM MODAL
-   ============================================================ */
 
 interface DeckFormProps {
   initial?: Partial<FlashDeck> | null;
@@ -573,9 +559,6 @@ function DeckFormModal({ initial, subjects, onSave, onClose }: DeckFormProps) {
   );
 }
 
-/* ============================================================
-   CARD FORM MODAL
-   ============================================================ */
 
 interface CardFormProps {
   deckId: string;
@@ -709,9 +692,9 @@ function CardFormModal({ deckId, deckColor, initial, onSave, onClose }: CardForm
   );
 }
 
-/* ============================================================
+/* 
    AI GENERATE PANEL
-   ============================================================ */
+*/
 
 interface AiGeneratePanelProps {
   deck: FlashDeck;
@@ -923,9 +906,9 @@ function AiGeneratePanel({ deck, notes, onClose, onGenerated }: AiGeneratePanelP
   );
 }
 
-/* ============================================================
+/* 
    DECK STATS BAR
-   ============================================================ */
+*/
 
 function DeckStatsBar({ cards }: { cards: FlashCard[] }) {
   const now = Date.now();
@@ -949,9 +932,9 @@ function DeckStatsBar({ cards }: { cards: FlashCard[] }) {
   );
 }
 
-/* ============================================================
+/* 
    CARD GRID ITEM
-   ============================================================ */
+*/
 
 function CardItem({
   card, deckColor, onEdit, onDelete,
@@ -1017,9 +1000,9 @@ function CardItem({
   );
 }
 
-/* ============================================================
+/* 
    DECK LIST PANEL
-   ============================================================ */
+*/
 
 function DeckListPanel({
   decks,
@@ -1112,9 +1095,9 @@ function DeckListPanel({
   );
 }
 
-/* ============================================================
+/* 
    MAIN PAGE
-   ============================================================ */
+*/
 
 export default function FlashcardsPage() {
   const [decks, setDecks] = useState<FlashDeck[]>([]);

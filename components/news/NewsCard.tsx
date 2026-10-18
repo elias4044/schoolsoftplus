@@ -21,14 +21,16 @@ interface NewsCardProps {
 
 // credits to claude for this ❤️
 // Used to extract the teacher id from teacher pfp
-export function extractNumbersDirectlyAfter(text: string, word: string): string | null { // uh text is the full text, word is the string before the searched numbers
-  const escapedWord = word.replace(/[-\/\\^\$*+?.()|[\]{}]/g, '\\$&'); 
+
+// nvm didnt even need it
+// export function extractNumbersDirectlyAfter(text: string, word: string): string | null { // uh text is the full text, word is the string before the searched numbers
+//   const escapedWord = word.replace(/[-\/\\^\$*+?.()|[\]{}]/g, '\\$&'); 
   
-  const regex = new RegExp(`${escapedWord}:?\\s*(\\d+)`);
+//   const regex = new RegExp(`${escapedWord}:?\\s*(\\d+)`);
   
-  const match = text.match(regex);
-  return match ? match[1] : null;
-}
+//   const match = text.match(regex);
+//   return match ? match[1] : null;
+// }
 
 export function NewsCard({ item, isSelected = false, view = "grid", onClick }: NewsCardProps) {
   const dateInfo = formatNewsDate(item.creDate || item.toDate);
@@ -97,8 +99,8 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px] text-muted-foreground pl-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <Avatar className="w-4 h-4 text-[8px] font-bold border border-border">
-              {item.author?.picture && (
-                <AvatarImage src={`https://sms.schoolsoft.se/engelska/jsp/student/pictureFile.jsp?teacherId=${extractNumbersDirectlyAfter(item.author.picture, "teacher")}`} alt={item.author.name} />
+              {item.author?.id && (
+                <AvatarImage src={`/api/news/pfp?id=${item.author.id}`} alt={item.author.name} />
               )}
             </Avatar>
             <span className="truncate max-w-30 text-foreground/75">
@@ -176,8 +178,8 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
       <div className="pt-3 border-t border-border/60 flex items-center justify-between gap-2 mt-auto">
         <div className="flex items-center gap-2 min-w-0">
           <Avatar className="w-6 h-6 text-[9px] font-bold border border-border">
-            {item.author?.picture && (
-              <AvatarImage src={`https://sms.schoolsoft.se/engelska/jsp/student/pictureFile.jsp?teacherId=${extractNumbersDirectlyAfter(item.author.picture, "teacher")}`} alt={item.author.name} />
+            {item.author?.id && (
+              <AvatarImage src={`/api/news/pfp?id=${item.author.id}`} alt={item.author.name} />
             )}
             <AvatarFallback className="bg-surface-2 text-foreground/80 text-[8px]">{initials}</AvatarFallback>
           </Avatar>

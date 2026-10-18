@@ -1,0 +1,19 @@
+info:
+  name: Subject results all
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{local_url}}/api/subjects/results_all"
+  headers:
+    - name: Cookie
+      value: "{{ssp_cookie}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

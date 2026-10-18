@@ -15,7 +15,7 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
 import Link from "next/link";
@@ -45,7 +45,7 @@ interface Assignment {
   submissionDate?: string | null;
   submissionStatus: string;
   resultReportStatus: string;
-  status: "ACTIVE" | "EXPIRED" | "UPCOMING" | string;
+  status: "ONGOING" | "EXPIRED" | "UPCOMING" | string;
   subjectNames?: string[];
   read?: boolean;
 }
@@ -74,7 +74,7 @@ function getTypeIcon(type: string): React.ElementType {
 
 function statusStyle(status: string): { bg: string; color: string; border: string } {
   switch (status) {
-    case "ACTIVE":
+    case "ONGOING":
       return {
         bg: "oklch(0.65 0.22 148 / 15%)",
         color: "oklch(0.65 0.22 148)",
@@ -289,7 +289,7 @@ export default function SubjectDetailPage() {
   const plannings = assignments.filter(a => a.entityType === "PLANNING");
 
   // Split tasks by status
-  const active = tasks.filter(a => a.status === "ACTIVE" || a.status === "UPCOMING");
+  const active = tasks.filter(a => a.status === "ONGOING" || a.status === "UPCOMING");
   const expired = tasks.filter(a => a.status === "EXPIRED");
 
   return (
