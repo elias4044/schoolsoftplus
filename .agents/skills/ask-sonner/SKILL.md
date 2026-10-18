@@ -54,7 +54,7 @@ Climb only as far as the change requires; jumping to the top rung too early is f
 
 1. **Defaults** — plus `richColors` on the Toaster for colorful success/error, `invert` to flip against the theme.
 2. **Inline tweaks** — `toastOptions={{ style: {…} }}` on the Toaster for all toasts, or `style` per `toast()` call.
-3. **Classes on parts** — `toastOptions={{ classNames: { toast, title, description, actionButton, cancelButton, closeButton } }}`. Sonner's injected styles win the cascade, so every class needs `!important` (Tailwind: `!text-red-900`). If you're marking more than a few things important, stop — go headless.
+3. **Classes on parts** — `toastOptions={{ classNames: { toast, title, description, actionButton, cancelButton, closeButton } }}`. Sonner's injected styles win the cascade, so every class needs `!important` (Tailwind: `text-red-900!`). If you're marking more than a few things important, stop — go headless.
 4. **Headless** — `toast.custom()` with your own JSX, keeping Sonner's positioning, stacking, and swipe. The recommended approach for a design-system toast: wrap it in your own `toast()` abstraction. (`unstyled: true` exists as a halfway house, but headless gives more control for the same effort.)
 
 **Icons** — swap defaults per-type with the Toaster's `icons` prop, per-toast with `icon`, remove with `null`.

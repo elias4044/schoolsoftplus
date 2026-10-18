@@ -1060,7 +1060,7 @@ function CompletedView({ active }: { active: boolean }) {
             </div>
 
             {/* Subject chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-1 ">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-1 scrollbar-thin">
               <button
                 onClick={() => setSubjectFilter(null)}
                 aria-pressed={subjectFilter === null}

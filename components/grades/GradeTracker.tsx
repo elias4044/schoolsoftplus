@@ -53,7 +53,6 @@ function GradeBadge({ grade, size = "md" }: { grade: string; size?: "sm" | "md" 
         background: style.bg,
         color: style.color,
         border: `1.5px solid ${style.border}`,
-        boxShadow: size === "lg" ? `0 4px 20px ${style.glow}` : undefined,
       }}
     >
       {g || "—"}

@@ -662,7 +662,7 @@ export function PrintScheduleDialog({
             initial={{ opacity: 0, scale: 0.98, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            className="border-border bg-popover text-popover-foreground flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden border shadow-2xl md:h-full md:rounded-2xl"
+            className="border-border bg-popover text-popover-foreground flex h-dvh w-full max-w-6xl flex-col overflow-hidden border shadow-2xl md:h-full md:rounded-2xl"
           >
             <header className="border-border flex shrink-0 items-center justify-between border-b px-4 py-3">
               <div>

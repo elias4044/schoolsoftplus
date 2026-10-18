@@ -1201,7 +1201,7 @@ export default function NoteEditor({
   const st = STATUS_CONFIG[status];
   const showEditor = view !== 'preview';
   const showPreview = view !== 'edit';
-  const gutter = view === 'split' ? 'px-5' : 'px-6 md:px-[max(1.5rem,calc((100%_-_48rem)/2))]';
+  const gutter = view === 'split' ? 'px-5' : 'px-6 md:px-[max(1.5rem,calc((100%-48rem)/2))]';
 
   return (
     <TooltipProvider delayDuration={350}>
