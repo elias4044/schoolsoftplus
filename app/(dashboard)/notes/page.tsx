@@ -136,7 +136,7 @@ export default function NotesPage() {
   return (
     <>
     <div className="flex h-full overflow-hidden">
-      {/* ===== Note list panel ===== */}
+      {/* Note list panel */}
       <div
         className={cn(
           // Mobile: full width, toggled by mobileView
@@ -269,7 +269,7 @@ export default function NotesPage() {
         </div>
       </div>
 
-      {/* ===== Editor pane ===== */}
+      {/* Editor pane  */}
       <div
         className={cn(
           "flex-1 min-w-0 flex flex-col",
