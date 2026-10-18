@@ -15,11 +15,11 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/useSession";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-/* ── Types ─────────────────────────────────────────────── */
+/*  Types  */
 interface ProfileData {
   displayName: string;
   bio: string;
@@ -45,7 +45,7 @@ interface ProfileData {
 
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
-/* ── Accent palettes ───────────────────────────────────── */
+/*  Accent palettes  */
 const ACCENT_PRESETS = [
   { label: "Purple",  hex: "#7c6af7" },
   { label: "Blue",    hex: "#3b82f6" },
@@ -57,7 +57,7 @@ const ACCENT_PRESETS = [
   { label: "Pink",    hex: "#ec4899" },
 ];
 
-/* ── Helpers ───────────────────────────────────────────── */
+/*  Helpers  */
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -71,7 +71,7 @@ async function uploadImage(file: File): Promise<string> {
   return data.url as string;
 }
 
-/* ── Component ─────────────────────────────────────────── */
+/*  Component  */
 export default function ProfilePage() {
   const { session, loading: sessionLoading } = useSession();
   const router = useRouter();
@@ -386,7 +386,7 @@ export default function ProfilePage() {
 
       <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4">
 
-        {/* ── Cover + Avatar card ── */}
+        {/*  Cover + Avatar card  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card overflow-hidden">
           {/* Cover image */}
           <div
@@ -455,7 +455,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── About You ── */}
+        {/*  About You  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
@@ -505,7 +505,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Links & Social ── */}
+        {/*  Links & Social  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <LinkIcon className="w-4 h-4 text-primary" />
@@ -539,7 +539,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Accent colour ── */}
+        {/*  Accent colour  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4 text-primary" />
@@ -581,7 +581,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Privacy ── */}
+        {/*  Privacy  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-primary" />
@@ -610,7 +610,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Save hint ── */}
+        {/*  Save hint  */}
         {!isFirstSetup && (
           <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card px-5 py-3">
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -620,7 +620,7 @@ export default function ProfilePage() {
           </motion.div>
         )}
 
-        {/* ── Read-only Account Info ── */}
+        {/*  Read-only Account Info  */}
         <motion.div variants={fadeUp} className="rounded-xl border border-white/7 bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <BadgeInfo className="w-4 h-4 text-primary" />
@@ -652,7 +652,7 @@ export default function ProfilePage() {
   );
 }
 
-/* ── Sub-components ─────────────────────────────────────── */
+/*  Sub-components  */
 function SocialInput({
   icon, label, placeholder, value, onChange,
 }: { icon: React.ReactNode; label: string; placeholder: string; value: string; onChange: (v: string) => void }) {

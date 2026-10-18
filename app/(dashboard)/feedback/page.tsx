@@ -28,7 +28,7 @@ import {
   CheckCircle,
   Loader2,
 } from 'lucide-react';
-import { staggerContainer, fadeUp } from '@/components/dashboard-card';
+import { staggerContainer, fadeUp } from '@/lib/animations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';

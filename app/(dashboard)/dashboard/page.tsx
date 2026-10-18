@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, easeOut, motion } from 'framer-motion';
 import {
   CalendarDays,
   ClipboardList,
@@ -51,7 +51,7 @@ export default function DashboardPage() {
         <motion.div
           className="bg-primary/20 absolute -top-24 left-1/4 h-64 w-64 rounded-full blur-3xl md:left-1/3"
           animate={{ x: [0, 40, 0], opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeOut' }}
         />
       </div>
 
@@ -59,7 +59,7 @@ export default function DashboardPage() {
       <motion.section
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
+        transition={{ duration: 0.45, ease: easeOut }}
         className="bg-card/60 relative mb-6 overflow-hidden rounded-2xl border border-white/10 p-5 backdrop-blur-md"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -399,7 +399,7 @@ function FeatureScroller() {
   const trackRef = useRef<HTMLDivElement>(null);
   const inView = useInView(trackRef, { once: true, margin: '-10% 0px' });
   return (
-    <div className="relative flex justify-center align-middle">
+    <div className="relative flex justify-center align-middle max-w-5xl mx-auto">
       <div
         ref={trackRef}
         className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full p-4'

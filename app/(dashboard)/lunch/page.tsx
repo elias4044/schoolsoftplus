@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Copy, Leaf, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { staggerContainer, fadeUp } from '@/components/dashboard-card';
+import { fadeUp, staggerContainer } from '@/lib/animations';
 import { apiFetch } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 

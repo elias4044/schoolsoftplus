@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, ChevronRight } from "lucide-react";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
 import Link from "next/link";

@@ -22,7 +22,7 @@ import {
   Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
+import { staggerContainer, fadeUp } from "@/lib/animations";
 import { apiFetch } from "@/lib/api-client";
 import ShareConversationPicker from "@/components/ShareConversationPicker";
 import { inferGrade } from "@/lib/grades/inferGrade";

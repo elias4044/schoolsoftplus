@@ -1,24 +1,9 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
+import { fadeUp } from "@/lib/animations";
 import { cn } from "@/lib/utils";
 import { type LucideIcon } from "lucide-react";
-
-/* -- Staggered container ---------------------------------- */
-export const staggerContainer: Variants = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.07,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
 
 /* -- DashboardCard ---------------------------------------- */
 interface DashboardCardProps {
