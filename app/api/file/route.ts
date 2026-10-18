@@ -52,7 +52,6 @@ export async function GET(req: NextRequest) {
       //validateStatus: (status) => status === 303 || status === 404,
     });
 
-
     const headers = res.headers;
     if (res.status !== 303) {
       if (res.status === 404) {
@@ -61,7 +60,6 @@ export async function GET(req: NextRequest) {
         throw new Error('Did not recognise SchoolSoft response: ' + JSON.stringify(res.data));
       }
     }
-
 
     if (!headers.location) {
       throw new Error('No location was provided by SchoolSoft');
@@ -73,19 +71,30 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const fileRes = await api.get(headers.location, {
-      responseType: 'stream',
-      headers: {
-        Authorization: `Bearer ${sess.token}`, // include if SchoolSoft still checks it; harmless if not needed
-      },
-      validateStatus: () => true,
-    });
+    let totalAttempts = 0;
+    const getFile = async () => {
+      if (totalAttempts > 5) {
+        return null;
+      }
+      totalAttempts++;
+      const fileRes = await api.get(headers.location, {
+        responseType: 'stream',
+        headers: {
+          Authorization: `Bearer ${sess.token}`, // included if SchoolSoft still checks it; harmless if not needed (better safe than sorry)
+        },
+        validateStatus: () => true,
+      });
 
-    if (fileRes.status !== 200) {
-      return NextResponse.json(
-        { error: 'Upstream fetch failed', status: fileRes.status },
-        { status: 502 }
-      );
+      if (fileRes.status !== 200) {
+        return getFile();
+      }
+
+      return fileRes;
+    };
+
+    const fileRes = await getFile();
+    if (!fileRes) {
+      return NextResponse.json({ error: 'Upstream fetch failed' }, { status: 502 });
     }
 
     const contentType =
