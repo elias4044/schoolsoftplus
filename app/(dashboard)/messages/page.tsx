@@ -184,7 +184,7 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
 }
 
 /* 
-   EmojiPicker — lightweight inline emoji grid, no external lib
+   EmojiPicker — lightweight inline emoji grid, no external lib (claude gave me the emojis)
  */
 const EMOJI_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
     { label: "Recent", icon: "🕐", emojis: [] }, // filled from localStorage at runtime

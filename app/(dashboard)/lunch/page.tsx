@@ -1,13 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Copy, Leaf, UtensilsCrossed } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { staggerContainer, fadeUp } from "@/components/dashboard-card";
-import { apiFetch } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Check, ChevronLeft, ChevronRight, Copy, Leaf, UtensilsCrossed } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { staggerContainer, fadeUp } from '@/components/dashboard-card';
+import { apiFetch } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 
+// types
 interface ApiDish {
   dishType?: string;
   dish?: string;
@@ -33,7 +34,7 @@ interface MenuDay {
   dishes: Dish[];
 }
 
-const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const VEGETARIAN_START = /^veg(etarisk|etarian|ansk|an)?\b/i;
 
 function getWeek(offset: number) {
@@ -54,7 +55,7 @@ function getWeek(offset: number) {
   firstMonday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
   const week = 1 + Math.round((monday.getTime() - firstMonday.getTime()) / (7 * 86_400_000));
 
-  const fmt = (d: Date) => d.toLocaleDateString("en-SE", { month: "short", day: "numeric" });
+  const fmt = (d: Date) => d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' });
 
   return { monday, week, year, range: `${fmt(monday)} – ${fmt(friday)}` };
 }
@@ -62,9 +63,9 @@ function getWeek(offset: number) {
 function parseDishes(day?: ApiDay): Dish[] {
   return (day?.dishes ?? []).flatMap((ds) => {
     const type = ds.dishType?.trim() || undefined;
-    return (ds.dish ?? "")
+    return (ds.dish ?? '')
       .split(/\r?\n\r?\n/)
-      .map((s) => s.replace(/\r?\n/g, " ").trim())
+      .map((s) => s.replace(/\r?\n/g, ' ').trim())
       .filter(Boolean)
       .map((text) => ({
         type,
@@ -89,7 +90,7 @@ export default function LunchPage() {
     setLoading(true);
     setError(false);
 
-    apiFetch<{ success: boolean; data: ApiDay[] }>("/api/lunch", { params: { week, year } })
+    apiFetch<{ success: boolean; data: ApiDay[] }>('/api/lunch', { params: { week, year } })
       .then((res) => {
         if (!cancelled) setApiDays(Array.isArray(res?.data) ? res.data : []);
       })
@@ -111,12 +112,13 @@ export default function LunchPage() {
     function onKey(e: KeyboardEvent) {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable) return;
-      if (e.key === "ArrowLeft") setWeekOffset((o) => o - 1);
-      if (e.key === "ArrowRight") setWeekOffset((o) => o + 1);
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)
+        return;
+      if (e.key === 'ArrowLeft') setWeekOffset((o) => o - 1);
+      if (e.key === 'ArrowRight') setWeekOffset((o) => o + 1);
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   const days: MenuDay[] = useMemo(() => {
@@ -127,7 +129,7 @@ export default function LunchPage() {
       return {
         index: i,
         name,
-        date: d.toLocaleDateString("en-SE", { month: "short", day: "numeric" }),
+        date: d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' }),
         isToday: weekOffset === 0 && i === todayIdx,
         isPast: weekOffset === 0 && todayIdx <= 4 && i < todayIdx,
         dishes: parseDishes(apiDays.find((d) => d.dayId === i + 1)),
@@ -141,15 +143,15 @@ export default function LunchPage() {
   const hasMenu = days.some((d) => d.dishes.length > 0);
 
   async function copyMenu() {
-    const lines = [`Lunch menu, week ${week} (${range})`, ""];
+    const lines = [`Lunch menu, week ${week} (${range})`, ''];
     for (const d of days) {
       lines.push(d.name);
-      if (d.dishes.length === 0) lines.push("- No menu");
+      if (d.dishes.length === 0) lines.push('- No menu');
       d.dishes.forEach((dish) => lines.push(`- ${dish.text}`));
-      lines.push("");
+      lines.push('');
     }
     try {
-      await navigator.clipboard.writeText(lines.join("\n").trim());
+      await navigator.clipboard.writeText(lines.join('\n').trim());
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -164,10 +166,10 @@ export default function LunchPage() {
       >
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <UtensilsCrossed className="size-6 text-brand-strong" />
+            <UtensilsCrossed className="text-brand-strong size-6" />
             Lunch Menu
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-0.5 text-sm">
             Week {week} · {range}, {year}
           </p>
         </div>
@@ -175,7 +177,7 @@ export default function LunchPage() {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={copyMenu} disabled={loading || !hasMenu}>
             {copied ? <Check className="text-success" /> : <Copy />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? 'Copied' : 'Copy'}
           </Button>
           <div className="flex items-center gap-1.5">
             <Button
@@ -218,7 +220,10 @@ export default function LunchPage() {
           }
         />
       ) : !hasMenu ? (
-        <EmptyState title="No lunch menu this week" description="The menu hasn't been published for these days." />
+        <EmptyState
+          title="No lunch menu this week"
+          description="The menu hasn't been published for these days."
+        />
       ) : (
         <motion.div
           key={`${year}-${week}`}
@@ -249,19 +254,27 @@ function DishList({ dishes, large }: { dishes: Dish[]; large?: boolean }) {
   const showTypes = new Set(dishes.map((d) => d.type).filter(Boolean)).size > 1;
 
   return (
-    <ul className={cn(large ? "space-y-2.5" : "space-y-2")}>
+    <ul className={cn(large ? 'space-y-2.5' : 'space-y-2')}>
       {dishes.map((dish, i) => (
-        <li key={i} className={cn("flex items-start gap-2.5", large ? "text-base leading-6" : "text-sm leading-5")}>
-          <span className={cn("flex w-3.5 shrink-0 items-center justify-center", large ? "h-6" : "h-5")}>
+        <li
+          key={i}
+          className={cn(
+            'flex items-start gap-2.5',
+            large ? 'text-base leading-6' : 'text-sm leading-5'
+          )}
+        >
+          <span
+            className={cn('flex w-3.5 shrink-0 items-center justify-center', large ? 'h-6' : 'h-5')}
+          >
             {dish.vegetarian ? (
-              <Leaf className="size-3.5 text-success" />
+              <Leaf className="text-success size-3.5" />
             ) : (
-              <span className="size-1.5 rounded-full bg-brand" />
+              <span className="bg-brand size-1.5 rounded-full" />
             )}
           </span>
-          <span className="min-w-0 text-foreground/90">
+          <span className="text-foreground/90 min-w-0">
             {showTypes && dish.type && (
-              <span className="mr-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="text-muted-foreground mr-2 text-[10px] font-medium tracking-wide uppercase">
                 {dish.type}
               </span>
             )}
@@ -278,14 +291,14 @@ function TodayCard({ day }: { day: MenuDay }) {
     <section className="today-card rounded-2xl border p-5 md:p-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-brand-strong">Today</p>
+          <p className="text-brand-strong text-xs font-medium tracking-wider uppercase">Today</p>
           <h2 className="text-xl font-semibold tracking-tight">
-            {day.name} <span className="font-normal text-muted-foreground">· {day.date}</span>
+            {day.name} <span className="text-muted-foreground font-normal">· {day.date}</span>
           </h2>
         </div>
       </header>
       {day.dishes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No menu today</p>
+        <p className="text-muted-foreground text-sm">No menu today</p>
       ) : (
         <DishList dishes={day.dishes} large />
       )}
@@ -295,13 +308,13 @@ function TodayCard({ day }: { day: MenuDay }) {
 
 function DayCard({ day }: { day: MenuDay }) {
   return (
-    <section className={cn("card-base h-full p-4 transition-opacity", day.isPast && "opacity-50")}>
+    <section className={cn('card-base h-full p-4 transition-opacity', day.isPast && 'opacity-50')}>
       <header className="mb-2.5 flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{day.name}</h2>
-        <span className="text-xs text-muted-foreground">{day.date}</span>
+        <span className="text-muted-foreground text-xs">{day.date}</span>
       </header>
       {day.dishes.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No menu</p>
+        <p className="text-muted-foreground text-xs">No menu</p>
       ) : (
         <DishList dishes={day.dishes} />
       )}
@@ -342,9 +355,9 @@ function EmptyState({
 }) {
   return (
     <div className="card-base flex flex-col items-center gap-2 px-6 py-16 text-center">
-      <UtensilsCrossed className="size-8 text-muted-foreground/50" />
+      <UtensilsCrossed className="text-muted-foreground/50 size-8" />
       <p className="text-sm font-medium">{title}</p>
-      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      {description && <p className="text-muted-foreground text-xs">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

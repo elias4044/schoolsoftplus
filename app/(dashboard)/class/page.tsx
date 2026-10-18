@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-/*  Types  */
+// Types
 interface ClassStudent {
   name: string;
   email: string | null;
@@ -45,7 +45,7 @@ interface StaffSection {
 
 type Tab = 'students' | 'staff';
 
-/*  Helpers  */
+// helpers
 function nameInitials(name: string) {
   return (
     name
@@ -72,7 +72,7 @@ function exportCsv(filename: string, rows: Record<string, string | null>[]) {
     headers.join(','),
     ...rows.map((r) => headers.map((h) => escape(r[h] ?? null)).join(',')),
   ];
-  // Prepend UTF-8 BOM (\uFEFF) so Excel and other tools correctly read characters like ö, ä, å instead of falling back to Windows-1252.
+  // Prepend UTF-8 BOM (\uFEFF) so Excel and other tools correctly read characters like ö ä å instead of falling back to Windows-1252.
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

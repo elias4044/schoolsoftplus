@@ -25,10 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-/* ---------------------------------------------------------- */
-/*  Types (mirror server types)                                 */
-/* ---------------------------------------------------------- */
-
+// Types 😀
 type CountdownCategory = 'exam' | 'holiday' | 'birthday' | 'event' | 'deadline' | 'custom';
 type CountdownTheme = 'violet' | 'rose' | 'amber' | 'emerald' | 'sky' | 'slate';
 
@@ -46,9 +43,7 @@ interface Countdown {
   updatedAt: number;
 }
 
-/* ---------------------------------------------------------- */
-/*  Theme / category metadata                                   */
-/* ---------------------------------------------------------- */
+// colors 🌈🌈🌈🌈🌈🌈🌈
 
 const THEMES: { id: CountdownTheme; label: string; from: string; to: string; glow: string }[] = [
   {
@@ -108,9 +103,7 @@ function getTheme(t: CountdownTheme) {
   return THEMES.find((x) => x.id === t) ?? THEMES[0];
 }
 
-/* ---------------------------------------------------------- */
-/*  Time helpers                                                */
-/* ---------------------------------------------------------- */
+// Helpers
 
 interface TimeLeft {
   days: number;
@@ -511,12 +504,7 @@ function CountdownForm({
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
-        <Button
-          type="submit"
-          disabled={saving}
-          size="sm"
-          className="flex-1"
-        >
+        <Button type="submit" disabled={saving} size="sm" className="flex-1">
           {saving ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
