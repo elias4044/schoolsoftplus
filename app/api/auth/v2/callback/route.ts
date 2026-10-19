@@ -250,7 +250,7 @@ export async function GET(req: NextRequest) {
   /*  Set cookies & redirect  */
   const ssTokenExpiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
-  const res = NextResponse.redirect(new URL("/dashboard", req.url));
+  const res = NextResponse.redirect(new URL("/dashboard?init", req.url));
 
   // Clear the ephemeral PKCE cookie
   res.cookies.set("ssp_v2_pkce", "", {

@@ -22,6 +22,10 @@ import { useAuth } from '@/lib/auth-context';
 import { DashboardGrid } from '@/components/widgets/DashboardGrid';
 import { AddWidgetPanel } from '@/components/widgets/AddWidgetPanel';
 import { useWidgetLayout } from '@/lib/widgets/useWidgetLayout';
+import { prefetchSchedulePage } from '@/lib/cache/schedule';
+import { prefetchSubjectsPage } from '@/lib/cache/subjects';
+import { prefetch } from '@/lib/cache/prefetch';
+import { useSearchParams } from 'next/navigation';
 
 const QUICK_ACTIONS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: 'Schedule', href: '/schedule', icon: CalendarDays },
@@ -35,6 +39,12 @@ export default function DashboardPage() {
   const [editing, setEditing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const now = useNow(1000);
+
+  // Preload on login
+  const searchParams = useSearchParams()
+   if (searchParams.has("init")) {
+    prefetch()
+   }
 
   if (!hydrated) return null;
 
