@@ -5,20 +5,17 @@ import { motion } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Copy, Leaf, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fadeUp, staggerContainer } from '@/lib/animations';
-import { apiFetch } from '@/lib/api-client';
+import { useCachedResource } from '@/lib/cache';
+import {
+  fetchLunch,
+  getWeek,
+  lunchKey,
+  prefetchLunchWeeks,
+  type ApiDay,
+} from '@/lib/cache/lunch';
 import { cn } from '@/lib/utils';
 
 // types
-interface ApiDish {
-  dishType?: string;
-  dish?: string;
-}
-
-interface ApiDay {
-  dayId: number;
-  dishes?: ApiDish[];
-}
-
 interface Dish {
   type?: string;
   text: string;
@@ -37,29 +34,6 @@ interface MenuDay {
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const VEGETARIAN_START = /^veg(etarisk|etarian|ansk|an)?\b/i;
 
-function getWeek(offset: number) {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + offset * 7);
-  monday.setHours(0, 0, 0, 0);
-
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-
-  const thursday = new Date(monday);
-  thursday.setDate(monday.getDate() + 3);
-  const year = thursday.getFullYear();
-
-  const jan4 = new Date(year, 0, 4);
-  const firstMonday = new Date(jan4);
-  firstMonday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
-  const week = 1 + Math.round((monday.getTime() - firstMonday.getTime()) / (7 * 86_400_000));
-
-  const fmt = (d: Date) => d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' });
-
-  return { monday, week, year, range: `${fmt(monday)} – ${fmt(friday)}` };
-}
-
 function parseDishes(day?: ApiDay): Dish[] {
   return (day?.dishes ?? []).flatMap((ds) => {
     const type = ds.dishType?.trim() || undefined;
@@ -76,37 +50,23 @@ function parseDishes(day?: ApiDay): Dish[] {
 }
 
 export default function LunchPage() {
-  const [apiDays, setApiDays] = useState<ApiDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const [copied, setCopied] = useState(false);
 
   const { monday, week, year, range } = useMemo(() => getWeek(weekOffset), [weekOffset]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(false);
 
-    apiFetch<{ success: boolean; data: ApiDay[] }>('/api/lunch', { params: { week, year } })
-      .then((res) => {
-        if (!cancelled) setApiDays(Array.isArray(res?.data) ? res.data : []);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setApiDays([]);
-        setError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [week, year, reloadKey]);
+  const {
+    data,
+    refreshing,
+    error,
+    refresh,
+  } = useCachedResource(lunchKey(year, week), () => fetchLunch(year, week));
+  const apiDays = useMemo(() => data ?? [], [data]);
+  // Nothing to show yet (also covers the frame between switching weeks and reading the cache).
+  const loading = data === null && !error;
+  // Only show the error state when there's no cached data to fall back on.
+  const failed = error && data === null;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -120,6 +80,12 @@ export default function LunchPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Once the visible week has settled, quietly warm the neighbouring weeks.
+  useEffect(() => {
+    if (refreshing) return;
+    void prefetchLunchWeeks([weekOffset + 1, weekOffset - 1], { maxAgeMs: 60_000 });
+  }, [weekOffset, refreshing]);
 
   const days: MenuDay[] = useMemo(() => {
     const todayIdx = (new Date().getDay() + 6) % 7;
@@ -171,6 +137,9 @@ export default function LunchPage() {
           </h1>
           <p className="text-muted-foreground mt-0.5 text-sm">
             Week {week} · {range}, {year}
+            {refreshing && !loading && (
+              <span className="ml-2 animate-pulse text-xs opacity-60">· Updating</span>
+            )}
           </p>
         </div>
 
@@ -210,11 +179,11 @@ export default function LunchPage() {
 
       {loading ? (
         <MenuSkeleton />
-      ) : error ? (
+      ) : failed ? (
         <EmptyState
           title="Couldn't load the menu"
           action={
-            <Button variant="secondary" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+            <Button variant="secondary" size="sm" onClick={refresh}>
               Try again
             </Button>
           }

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays, ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiFetch } from "@/lib/api-client";
+import { useCachedResource } from "@/lib/cache";
+import { fetchSchedule, prefetchScheduleWeeks, scheduleKey } from "@/lib/cache/schedule";
 import { cn } from "@/lib/utils";
 import { PrintScheduleDialog } from "@/components/schedule-print";
 import {
@@ -17,7 +18,6 @@ import {
   layoutLessons,
   lessonAccent,
   localDateKey,
-  mapScheduleEvent,
   toMinutes,
   type Lesson,
 } from "@/lib/schedule-utils";
@@ -40,10 +40,6 @@ const PX_PER_MIN = 2;
 const pillSpring = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 export default function SchedulePage() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const [view, setView] = useState<View>("days");
   const [selectedDay, setSelectedDay] = useState(0);
@@ -51,6 +47,17 @@ export default function SchedulePage() {
   const [now, setNow] = useState(() => new Date());
 
   const { monday, week, range, label } = useMemo(() => getWeekBounds(weekOffset), [weekOffset]);
+
+  // Cached lessons for this week show instantly; the API response replaces them when it arrives.
+  // Each week has its own cache entry, so flipping between weeks you've seen is instant too.
+  const { data, refreshing, error, refresh } = useCachedResource(scheduleKey(week), () =>
+    fetchSchedule(week)
+  );
+  const lessons = useMemo(() => data ?? [], [data]);
+  // Nothing to show yet (also covers the frame between switching weeks and reading the cache).
+  const loading = data === null && !error;
+  // Only show the error state when there's no cached data to fall back on.
+  const failed = error && data === null;
 
   const todayKey = localDateKey(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -92,30 +99,12 @@ export default function SchedulePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [printOpen]);
 
+  // Once the visible week has settled, quietly warm the neighbouring weeks so the arrows feel instant.
+  // Weeks cached within the last minute are skipped, so stepping through weeks doesn't refetch constantly.
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(false);
-
-    apiFetch<{ success: boolean; schedule: any[] }>(`/api/schedule?week=${week}`)
-      .then((res) => {
-        if (cancelled) return;
-        const raw = Array.isArray(res?.schedule) ? res.schedule : [];
-        setLessons(raw.map(mapScheduleEvent).filter((l): l is Lesson => l !== null));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLessons([]);
-        setError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [week, weekOffset, reloadKey]);
+    if (refreshing) return;
+    void prefetchScheduleWeeks([weekOffset + 1, weekOffset - 1], { maxAgeMs: 60_000 });
+  }, [weekOffset, refreshing]);
 
   const days: WeekDay[] = useMemo(
     () =>
@@ -164,6 +153,9 @@ export default function SchedulePage() {
             {!loading && totalLessons > 0 && (
               <span className="ml-2 opacity-60">· {totalLessons} lessons</span>
             )}
+            {refreshing && !loading && (
+              <span className="ml-2 animate-pulse text-xs opacity-60">· Updating</span>
+            )}
           </p>
         </div>
 
@@ -199,7 +191,7 @@ export default function SchedulePage() {
             variant="secondary"
             size="sm"
             onClick={() => setPrintOpen(true)}
-            disabled={loading || error}
+            disabled={loading || failed}
           >
             <Printer />
             Print
@@ -209,11 +201,11 @@ export default function SchedulePage() {
 
       {loading ? (
         <ScheduleSkeleton />
-      ) : error ? (
+      ) : failed ? (
         <EmptyState
           title="Couldn't load the schedule"
           action={
-            <Button variant="secondary" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+            <Button variant="secondary" size="sm" onClick={refresh}>
               Try again
             </Button>
           }

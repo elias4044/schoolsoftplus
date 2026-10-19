@@ -20,81 +20,35 @@ import {
   X,
 } from "lucide-react";
 import { staggerContainer, fadeUp } from "@/lib/animations";
-import { apiFetch } from "@/lib/api-client";
+import { useCachedResource, useIsoLayoutEffect } from "@/lib/cache";
+import {
+  COMPLETED_KEY,
+  SUBJECTS_KEY,
+  buildInsight,
+  daysUntil,
+  fetchCompleted,
+  fetchSubjectAssignments,
+  fetchSubjects,
+  readCachedInsight,
+  type CompletedRow,
+  type DueItem,
+  type Insight,
+  type Subject,
+  type Teacher,
+} from "@/lib/cache/subjects";
 
-/* =========================================================
+/* 
    Types
-========================================================= */
-interface Teacher {
-  firstName: string;
-  lastName: string;
-}
-
-interface Subject {
-  id: string | number;
-  subject: string;
-  teachers: Teacher[];
-  unreadEntities?: number;
-  color: string;
-}
-
-interface DetailAssignment {
-  id: number;
-  entityType: string;
-  title: string;
-  type: string;
-  endDate: string;
-  endTime?: string;
-  status: string;
-}
-
-interface DetailResponse {
-  success: boolean;
-  assignments: DetailAssignment[];
-}
-
-interface DueItem {
-  id: number;
-  title: string;
-  type: string;
-  entityType: string;
-  endDate: string;
-  endTime?: string;
-}
-
-interface Insight {
-  ok: boolean;
-  active: number;
-  overdue: number;
-  upcoming: DueItem[];
-}
-
-interface CompletedRow {
-  assignmentId: number;
-  activityId: number;
-  title: string;
-  subjects: { name: string; color?: string }[];
-  assignmentType: string;
-  teacher?: string;
-  teacherPictureUrl?: string;
-  publishDate: string; // "YYYY-MM-DD HH:mm"
-  read: boolean;
-}
-
-interface CompletedResponse {
-  success: boolean;
-  rows: CompletedRow[];
-}
-
+ */
 type Tab = "subjects" | "completed";
 type ViewMode = "grid" | "list";
 type SortMode = "name" | "unread" | "due";
 type FilterMode = "all" | "unread" | "active";
 type CompletedSort = "newest" | "oldest" | "title";
 
-/* =========================================================
+/* 
    Constants / helpers
-========================================================= */
+ */
 const PINS_KEY = "subjects:pins";
 const PREFS_KEY = "subjects:prefs";
 const FALLBACK_COLOR = "#7c6cf0";
@@ -163,15 +117,6 @@ function teacherName(t?: Teacher): string {
   return t ? `${t.firstName} ${t.lastName}`.trim() : "";
 }
 
-function daysUntil(dateStr: string): number | null {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - today.getTime()) / 86400000);
-}
-
 function dueInfo(dateStr: string): { label: string; color: string } {
   const days = daysUntil(dateStr);
   if (days === null) return { label: "", color: CALM };
@@ -182,26 +127,6 @@ function dueInfo(dateStr: string): { label: string; color: string } {
   if (days < 7) return { label: `In ${days} days`, color: CALM };
   const label = new Date(dateStr).toLocaleDateString("en-SE", { day: "numeric", month: "short" });
   return { label, color: CALM };
-}
-
-function buildInsight(assignments: DetailAssignment[]): Insight {
-  const open = assignments
-    .filter(a => a.entityType === "ASSIGNMENT" && (a.status === "ONGOING" || a.status === "UPCOMING"))
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
-
-  return {
-    ok: true,
-    active: open.length,
-    overdue: open.filter(a => (daysUntil(a.endDate) ?? 0) < 0).length,
-    upcoming: open.slice(0, 2).map(a => ({
-      id: a.id,
-      title: a.title,
-      type: a.type,
-      entityType: a.entityType,
-      endDate: a.endDate,
-      endTime: a.endTime,
-    })),
-  };
 }
 
 function nextDueTime(i?: Insight): number {
@@ -233,9 +158,9 @@ function monthLabel(s: string): string {
   return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
-/* =========================================================
+/* 
    Shared small components
-========================================================= */
+ */
 function UnreadBadge({ count }: { count?: number }) {
   if (!count || count <= 0) return null;
   return (
@@ -362,6 +287,12 @@ function SearchBox({
   );
 }
 
+/** Small "Updating" hint shown while a background refresh runs on top of cached data. */
+function UpdatingHint({ show }: { show: boolean }) {
+  if (!show) return null;
+  return <span className="ml-2 text-[11px] text-muted-foreground/70 animate-pulse">· Updating</span>;
+}
+
 /** "/" focuses the search box, Escape clears it. Only listens while the tab is active. */
 function useSearchShortcuts(
   active: boolean,
@@ -387,9 +318,9 @@ function useSearchShortcuts(
   }, [active, inputRef, clear]);
 }
 
-/* =========================================================
+/* 
    Subjects: card + row
-========================================================= */
+ */
 function SubjectCard({
   subject,
   insight,
@@ -546,12 +477,14 @@ function SubjectRow({
   );
 }
 
-/* =========================================================
+/* 
    Subjects view
-========================================================= */
+ */
 function SubjectsView({ active }: { active: boolean }) {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached subject list shows instantly; the API response replaces it when it arrives.
+  const { data: subjectsData, loading, refreshing } = useCachedResource(SUBJECTS_KEY, fetchSubjects);
+  const subjects = useMemo(() => subjectsData ?? [], [subjectsData]);
+
   const [insights, setInsights] = useState<Record<string, Insight>>({});
 
   const [query, setQuery] = useState("");
@@ -563,14 +496,6 @@ function SubjectsView({ active }: { active: boolean }) {
 
   const clearQuery = useCallback(() => setQuery(""), []);
   useSearchShortcuts(active, searchRef, clearQuery);
-
-  /* Load subjects */
-  useEffect(() => {
-    apiFetch<{ success: boolean; subjects: Subject[] }>("/api/subjects")
-      .then(d => setSubjects(d?.success && Array.isArray(d.subjects) ? d.subjects : []))
-      .catch(() => setSubjects([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   /* Restore prefs + pins */
   useEffect(() => {
@@ -597,7 +522,22 @@ function SubjectsView({ active }: { active: boolean }) {
     });
   }, []);
 
-  /* Progressively enrich each subject with its upcoming work (3 at a time) */
+  /* Hydrate per-subject details from the cache before paint, so cards never flash skeletons */
+  useIsoLayoutEffect(() => {
+    if (!subjects.length) return;
+    setInsights(prev => {
+      let next: Record<string, Insight> | null = null;
+      for (const s of subjects) {
+        const key = String(s.id);
+        if (prev[key]) continue;
+        const cached = readCachedInsight(s.id);
+        if (cached) (next ??= { ...prev })[key] = cached;
+      }
+      return next ?? prev;
+    });
+  }, [subjects]);
+
+  /* Refresh each subject's upcoming work from the API (3 at a time), updating the cache as we go */
   useEffect(() => {
     if (!subjects.length) return;
     let cancelled = false;
@@ -609,16 +549,15 @@ function SubjectsView({ active }: { active: boolean }) {
         if (!s) return;
         const key = String(s.id);
         try {
-          const d = await apiFetch<DetailResponse>(`/api/subjects/${s.id}`);
+          const assignments = await fetchSubjectAssignments(s.id);
           if (cancelled) return;
-          const insight: Insight =
-            d?.success && Array.isArray(d.assignments)
-              ? buildInsight(d.assignments)
-              : { ok: false, active: 0, overdue: 0, upcoming: [] };
-          setInsights(prev => ({ ...prev, [key]: insight }));
+          setInsights(prev => ({ ...prev, [key]: buildInsight(assignments) }));
         } catch {
           if (cancelled) return;
-          setInsights(prev => ({ ...prev, [key]: { ok: false, active: 0, overdue: 0, upcoming: [] } }));
+          // Keep cached details on screen if the refresh fails.
+          setInsights(prev =>
+            prev[key] ? prev : { ...prev, [key]: { ok: false, active: 0, overdue: 0, upcoming: [] } }
+          );
         }
       }
     };
@@ -700,6 +639,7 @@ function SubjectsView({ active }: { active: boolean }) {
           : filtersActive
             ? `${visible.length} of ${subjects.length} subjects`
             : `${subjects.length} subjects`}
+        <UpdatingHint show={refreshing && !loading} />
       </p>
 
       {/* Summary strip */}
@@ -857,9 +797,9 @@ function SubjectsView({ active }: { active: boolean }) {
   );
 }
 
-/* =========================================================
+/* 
    Completed: row
-========================================================= */
+ */
 function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolean }) {
   const first = row.subjects[0];
   const color = first?.color || FALLBACK_COLOR;
@@ -920,13 +860,14 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
   );
 }
 
-/* =========================================================
+/* 
    Completed view
-========================================================= */
+ */
 function CompletedView({ active }: { active: boolean }) {
-  const [rows, setRows] = useState<CompletedRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, loading, refreshing, error: fetchFailed } = useCachedResource(COMPLETED_KEY, fetchCompleted);
+  const rows = useMemo(() => data ?? [], [data]);
+  // Only show the error state when there's no cached data to fall back on.
+  const error = fetchFailed && data === null;
 
   const [query, setQuery] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
@@ -938,16 +879,6 @@ function CompletedView({ active }: { active: boolean }) {
 
   const clearQuery = useCallback(() => setQuery(""), []);
   useSearchShortcuts(active, searchRef, clearQuery);
-
-  useEffect(() => {
-    apiFetch<CompletedResponse>("/api/subjects/results_all")
-      .then(d => {
-        if (d?.success && Array.isArray(d.rows)) setRows(d.rows);
-        else setError(true);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     setLimit(PAGE_SIZE);
@@ -1026,6 +957,7 @@ function CompletedView({ active }: { active: boolean }) {
           : filtersActive
             ? `${filtered.length} of ${rows.length} assignments`
             : `${rows.length} assignments${unreadCount > 0 ? ` · ${unreadCount} unread` : ""}`}
+        <UpdatingHint show={refreshing && !loading} />
       </p>
 
       {loading ? (
@@ -1211,9 +1143,9 @@ function CompletedView({ active }: { active: boolean }) {
   );
 }
 
-/* =========================================================
+/* 
    Page
-========================================================= */
+ */
 export default function SubjectsPage() {
   const [tab, setTab] = useState<Tab>("subjects");
   const [completedVisited, setCompletedVisited] = useState(false);
