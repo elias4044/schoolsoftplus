@@ -28,6 +28,7 @@ import {
   Layers,
   Gift,
   Trophy,
+  Search,
 } from "lucide-react";
 import { Comfortaa } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChangelogModal } from "@/components/ChangelogModal";
+import { triggerCommandPalette } from "@/components/command-palette";
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 
@@ -200,6 +202,46 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           onMouseLeave={() => setHovered(null)}
         >
           <LayoutGroup id={isMobile ? "sidebar-mobile" : "sidebar-desktop"}>
+            {/* Quick Search / Command Palette Trigger */}
+            <div className="mb-2">
+              {isCollapsed ? (
+                <div className="flex justify-center">
+                  <Tooltip delayDuration={200}>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => triggerCommandPalette()}
+                        className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+                        aria-label="Quick jump (⌘K)"
+                      >
+                        <Search className="size-4" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8} className="flex items-center gap-2">
+                      <span>Quick Jump</span>
+                      <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                        ⌘K
+                      </kbd>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => triggerCommandPalette()}
+                  className="flex w-full items-center justify-between rounded-lg border border-sidebar-border/70 bg-sidebar-accent/35 px-2.5 py-2 text-xs text-muted-foreground transition-all duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/75 hover:text-foreground group"
+                  aria-label="Quick search and command palette"
+                >
+                  <span className="flex items-center gap-2">
+                    <Search className="size-3.5 text-muted-foreground/70 group-hover:text-foreground transition-colors" />
+                    <span className="font-normal">Quick jump...</span>
+                  </span>
+                  <kbd className="inline-flex items-center gap-0.5 rounded border border-sidebar-border/80 bg-sidebar px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/90 shadow-2xs">
+                    ⌘K
+                  </kbd>
+                </motion.button>
+              )}
+            </div>
             <SectionLabel collapsed={isCollapsed} first>Menu</SectionLabel>
             <div className="space-y-0.5">
               {NAV_ITEMS.map(item => (
