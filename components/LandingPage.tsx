@@ -8,6 +8,7 @@ import {
   useSpring,
   useScroll,
   useTransform,
+  easeOut,
 } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -34,18 +35,22 @@ import {
   HelpCircle,
   FileText,
   Package,
+  Cloud,
+  ChartNoAxesCombined,
+  Palette,
 } from 'lucide-react';
 import MessagingShowcase from '@/components/MessagingShowcase';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { SiGithub } from '@icons-pack/react-simple-icons';
+import { Button } from './ui/button';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-/* --- Reveal ----------------------------------------------- */
 function Reveal({
   children,
   delay = 0,
@@ -70,7 +75,7 @@ function Reveal({
   );
 }
 
-/* --- Live counter ----------------------------------------- */
+/* --- Live counter --- */
 function LiveCounter({ label }: { label: string }) {
   const [value, setValue] = useState<number | null>(null);
   useEffect(() => {
@@ -107,7 +112,7 @@ function LiveCounter({ label }: { label: string }) {
   return <>{display}</>;
 }
 
-/* --- Nav dropdown ----------------------------------------- */
+/* --- Nav dropdown --- */
 type NavItem = {
   label: string;
   desc?: string;
@@ -251,176 +256,211 @@ function NavDropdown({
   );
 }
 
-/* --- Hero 3-D mockup -------------------------------------- */
-const LESSONS = [
-  { time: '08:15', subject: 'Mathematics', room: 'Rm 302', color: 'oklch(0.72 0.18 263)' },
-  { time: '10:00', subject: 'English', room: 'Rm 105', color: 'oklch(0.72 0.18 148)' },
-  { time: '11:45', subject: 'Physics', room: 'Lab 3', color: 'oklch(0.75 0.18 310)' },
-];
+/* --- Feature grid --- */
 
-function HeroMockup() {
-  const rotX = useSpring(10, { stiffness: 110, damping: 22 });
-  const rotY = useSpring(-10, { stiffness: 110, damping: 22 });
-
-  function onMove(e: React.MouseEvent<HTMLDivElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    const nx = (e.clientX - r.left) / r.width - 0.5;
-    const ny = (e.clientY - r.top) / r.height - 0.5;
-    rotX.set(10 - ny * 18);
-    rotY.set(-10 + nx * 18);
-  }
-  function onLeave() {
-    rotX.set(10);
-    rotY.set(-10);
-  }
-
-  return (
-    <motion.div
-      className="cursor-default"
-      style={{ perspective: '1100px' }}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.75, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <motion.div
-        style={{ rotateX: rotX, rotateY: rotY, transformStyle: 'preserve-3d' }}
-        className="w-72 overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d0d] shadow-[0_40px_100px_oklch(0_0_0/0.7)]"
-      >
-        {/* window chrome */}
-        <div className="flex items-center gap-1.5 border-b border-white/8 bg-white/3 px-4 py-3">
-          <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'oklch(0.60 0.22 20)' }} />
-          <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'oklch(0.72 0.18 70)' }} />
-          <div
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ background: 'oklch(0.65 0.22 145)' }}
-          />
-          <span className="ml-auto text-[10px] font-medium text-white/25">Wednesday - Today</span>
-        </div>
-
-        {/* day label */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
-          <span className="text-xs font-semibold text-white/80">Schedule</span>
-          <div className="flex items-center gap-1">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
-            <span className="text-[10px] text-white/30">Live</span>
-          </div>
-        </div>
-
-        {/* lesson rows */}
-        <div className="space-y-1.5 px-3 pb-3">
-          {LESSONS.map((l, i) => (
-            <motion.div
-              key={l.subject}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
-              className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/4 px-3 py-2.5"
-            >
-              <div className="h-8 w-1 shrink-0 rounded-full" style={{ background: l.color }} />
-              <div className="min-w-0">
-                <p className="mb-1 truncate text-xs leading-none font-medium text-white/90">
-                  {l.subject}
-                </p>
-                <p className="text-[10px] text-white/35">
-                  {l.time} - {l.room}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* footer bar */}
-        <div className="flex items-center justify-between border-t border-white/8 bg-white/2 px-4 py-2.5">
-          <span className="text-[10px] text-white/25">2 assignments due</span>
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ background: i === 0 ? 'oklch(0.62 0.16 263)' : 'oklch(1 0 0 / 12%)' }}
-              />
-            ))}
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-/* --- Feature scroller ------------------------------------- */
 const FEATURES = [
   {
     icon: CalendarDays,
-    color: 'oklch(0.72 0.18 148)',
-    title: 'Schedule',
-    body: 'Your full timetable pulled directly from SchoolSoft. Day view, week view, always up to date.',
+    color: 'oklch(0.76 0.13 165)',
+    title: 'Your schedule, sorted.',
+    body: 'Your timetable, without the SchoolSoft clutter. See whats next, or plan the entire week.',
+    size: 'md:col-span-2 md:row-span-2',
+    style: 'schedule',
   },
   {
     icon: BookOpen,
-    color: 'oklch(0.75 0.18 40)',
+    color: 'oklch(0.78 0.12 75)',
     title: 'Assignments',
-    body: "See what's due this week and next. Never miss a deadline because the school portal buried it.",
+    body: "Deadlines in one place. Know what's due next.",
+    size: 'md:col-span-1 md:row-span-1',
+    style: 'default',
   },
   {
     icon: UtensilsCrossed,
-    color: 'oklch(0.78 0.16 55)',
+    color: 'oklch(0.76 0.12 145)',
     title: 'Lunch menu',
-    body: "Today's and the whole week's menu. Rendered cleanly, not in a PDF you have to zoom into.",
+    body: "Today's lunch, simple & instant.",
+    size: 'md:col-span-1 md:row-span-1',
+    style: 'default',
   },
   {
     icon: Newspaper,
-    color: 'oklch(0.70 0.18 320)',
-    title: 'News',
-    body: 'School announcements in a readable feed. No login walls, no slow loading.',
+    color: 'oklch(0.76 0.12 230)',
+    title: 'School news',
+    body: 'Announcements that are actually easy to read.',
+    size: 'md:col-span-1 md:row-span-1',
+    style: 'default',
   },
   {
     icon: MessageSquare,
-    color: 'oklch(0.65 0.22 278)',
-    title: 'Direct messages',
-    body: 'Real-time DMs with classmates. Emoji reactions, reply threads, and unread notifications.',
+    color: 'oklch(0.76 0.12 285)',
+    title: 'Talk to classmates',
+    body: 'Direct messages, replies, reactions, and unread notifications.',
+    size: 'md:col-span-2 md:row-span-1',
+    style: 'messages',
   },
   {
     icon: StickyNote,
-    color: 'oklch(0.72 0.18 190)',
+    color: 'oklch(0.76 0.12 55)',
     title: 'Notes',
-    body: 'Quick private notes tied to your account. Write during class, access anywhere.',
+    body: 'Little reminders and private notes, ready whenever you need them.',
+    size: 'md:col-span-1 md:row-span-1',
+    style: 'default',
   },
   {
     icon: Brain,
-    color: 'oklch(0.65 0.22 278)',
-    title: 'AI assistant',
-    body: 'Ask about your schedule, assignments, or anything school-related. It has your context.',
+    color: 'oklch(0.76 0.12 200)',
+    title: 'Your AI assistant',
+    body: 'Ask about school, your schedule, or upcoming assignments. Less searching, more doing.',
+    size: 'md:col-span-2 md:row-span-1',
+    style: 'assistant',
+  },
+  {
+    icon: ChartNoAxesCombined,
+    color: 'oklch(0.76 0.12 165)',
+    title: 'Grade statistics',
+    body: 'Keep track of your grades and see how they change over time.',
+    size: 'md:col-span-1 md:row-span-2',
+    style: 'grades',
+  },
+  {
+    icon: Palette,
+    color: 'oklch(0.76 0.12 285)',
+    title: 'Make it yours',
+    body: 'Choose a theme and accent color that feels right to you.',
+    size: 'md:col-span-2 md:row-span-1',
+    style: 'themes',
   },
 ];
 
 function FeatureScroller() {
   const trackRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(trackRef, { once: true, margin: '-10% 0px' });
+  const inView = useInView(trackRef, {
+    once: true,
+    margin: '-8% 0px',
+  });
+
   return (
-    <div className="relative flex justify-center align-middle max-w-5xl mx-auto">
+    <div className="relative mx-auto max-w-5xl">
       <div
         ref={trackRef}
-        className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full p-4'
+        className="grid auto-rows-auto grid-cols-1 gap-3 p-4 md:auto-rows-60 md:grid-cols-3"
       >
-        {FEATURES.map(({ icon: Icon, color, title, body }, i) => (
+        {FEATURES.map(({ icon: Icon, color, title, body, size, style }, i) => (
           <motion.div
             key={title}
-            initial={{ opacity: 0, y: 10, scale: 0.96 }}
-            animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.4, delay: i * 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="flex w-full shrink-0 flex-col gap-4 rounded-3xl border border-white/10 bg-[#0a0a0a] p-7"
+            initial={{ opacity: 0, y: 12 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 0.4,
+              delay: i * 0.045,
+              ease: easeOut,
+            }}
+            className={[
+              'group relative flex min-h-60 flex-col overflow-hidden',
+              'rounded-2xl border border-white/8',
+              'bg-card p-5 md:p-6',
+              'transition-colors duration-200 hover:border-white/16',
+              size,
+            ].join(' ')}
           >
+
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-2xl"
-              style={{ background: `${color}20`, color }}
-            >
-              <Icon className="h-5 w-5" />
+              className="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full opacity-[0.07] blur-3xl transition-opacity duration-300 group-hover:opacity-[0.13]"
+              style={{ backgroundColor: color }}
+            />
+
+            <div className="relative flex items-center justify-between">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                style={{
+                  backgroundColor: `color-mix(in oklch, ${color} 12%, transparent)`,
+                  color,
+                }}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </div>
+
+              {style === 'schedule' && <span className="text-xs text-white/35">YOUR WEEK</span>}
+
+              {style === 'grades' && <span className="text-xs text-white/35">OVERVIEW</span>}
             </div>
-            <div>
-              <p className="mb-2 text-base font-bold tracking-tight text-white">{title}</p>
-              <p className="text-sm leading-relaxed text-white/45">{body}</p>
+
+            <div className="relative mt-auto pt-8">
+              <h3 className="text-base font-semibold tracking-tight text-white/90">{title}</h3>
+              <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-white/45">{body}</p>
+
+              {style === 'schedule' && (
+                <div className="mt-5 space-y-2">
+                  {[
+                    ['08:30', 'Mathematics'],
+                    ['10:15', 'English'],
+                    ['13:00', 'Technology'],
+                  ].map(([time, subject]) => (
+                    <div
+                      key={time}
+                      className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-2"
+                    >
+                      <span className="w-12 text-xs text-white/35 tabular-nums">{time}</span>
+                      <span className="text-sm text-white/65">{subject}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {style === 'grades' && (
+                <div className="mt-5 flex h-24 items-end gap-2">
+                  {[35, 52, 43, 68, 58, 82, 73, 92].map((height, index) => (
+                    <div
+                      key={index}
+                      className="flex-1 rounded-t-sm"
+                      style={{
+                        height: `${height}%`,
+                        backgroundColor: color,
+                        opacity: 0.25 + index * 0.085,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {style === 'themes' && (
+                <div className="mt-4 flex gap-2">
+                  {[
+                    'oklch(0.68 0.16 250)',
+                    'oklch(0.7 0.15 150)',
+                    'oklch(0.68 0.16 320)',
+                    'oklch(0.76 0.13 75)',
+                    'oklch(0.7 0.02 260)',
+                  ].map((accent) => (
+                    <div
+                      key={accent}
+                      className="h-6 w-6 rounded-full border border-white/10"
+                      style={{ backgroundColor: accent }}
+                    />
+                  ))}
+                  <span className="ml-1 self-center text-xs text-white/35">
+                    Your colors, your choice.
+                  </span>
+                </div>
+              )}
+
+              {style === 'messages' && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-white/55">
+                    Sounds good!
+                  </span>
+                  <span className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-white/55">
+                    👍 2 
+                  </span>
+                </div>
+              )}
+
+              {style === 'assistant' && (
+                <div className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-sm text-white/35">
+                  What do I have due this week?
+                </div>
+              )}
             </div>
           </motion.div>
         ))}
@@ -429,9 +469,147 @@ function FeatureScroller() {
   );
 }
 
-/* --- Main component --------------------------------------- */
+function Footer() {
+  const linkStyle = 'text-xs text-muted-foreground transition-colors hover:text-foreground';
+
+  return (
+    <footer className="border-border/80 bg-background/90 border-t py-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-5">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="SchoolSoft+ Logo"
+                width={20}
+                height={20}
+                className="h-5 w-5 object-contain"
+              />
+              <span className="text-foreground text-sm font-bold tracking-tight">SchoolSoft+</span>
+            </div>
+            <p className="text-muted-foreground mt-2.5 max-w-sm text-xs leading-relaxed">
+              A modern, fast, and community-driven client for SchoolSoft. Built by Elias.
+            </p>
+            <p className="text-muted-foreground/60 mt-3 text-[11px]">
+              Not affiliated with or endorsed by SchoolSoft AB.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-foreground font-mono text-xs font-semibold uppercase">Product</p>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <Link href="/login" className={linkStyle}>
+                  Sign In
+                </Link>
+              </li>
+              <li>
+                <Link href="/stats" className={linkStyle}>
+                  Live Stats
+                </Link>
+              </li>
+              <li>
+                <Link href="/changelog" className={linkStyle}>
+                  Changelog (v1.5)
+                </Link>
+              </li>
+              <li>
+                <Link href="/open-source" className={linkStyle}>
+                  Open Source
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-foreground font-mono text-xs font-semibold uppercase">Developers</p>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <a
+                  href={'https://developer.ssp.elias4044.com'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyle}
+                >
+                  Developer Portal
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.npmjs.com/package/@elias4044/ssp-node"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyle}
+                >
+                  npm: schoolsoftplus
+                </a>
+              </li>
+              <li>
+                <a
+                  href={'https://github.com/elias4044/schoolsoftplus'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyle}
+                >
+                  GitHub Repository
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`https://github.com/elias4044/schoolsoftplus/issues`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyle}
+                >
+                  Issue Tracker
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-foreground font-mono text-xs font-semibold uppercase">
+              Legal &amp; Help
+            </p>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <Link href="/terms" className={linkStyle}>
+                  Terms &amp; Privacy
+                </Link>
+              </li>
+              <li>
+                <Link href="/login-help" className={linkStyle}>
+                  Login Help
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="https://elias4044.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkStyle}
+                >
+                  Author (Elias)
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="border-border/80 text-muted-foreground mt-12 flex flex-col items-center justify-between gap-4 border-t pt-6 text-xs sm:flex-row">
+          <p>© {new Date().getFullYear()} SchoolSoft+. MIT Licensed.</p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">All systems operational</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* --- Main component --- */
 export default function LandingPage() {
-  const Router = useRouter()
+  const Router = useRouter();
 
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -482,7 +660,7 @@ export default function LandingPage() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.ctrlKey && event.key === 'Enter') {
         event.preventDefault();
-        Router.push("/login")
+        Router.push('/login');
       }
     }
 
@@ -622,7 +800,7 @@ export default function LandingPage() {
       {/* -- Hero -- */}
       <section
         ref={heroRef}
-        className="relative bg-background flex min-h-screen flex-col items-center justify-center overflow-hidden"
+        className="bg-background relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       >
         {/* ambient orbs */}
         <div
@@ -650,12 +828,9 @@ export default function LandingPage() {
           style={{ y: heroY, opacity: heroOpacity }}
           className="relative z-10 mx-auto w-full max-w-5xl px-6"
         >
-          <div className="grid min-h-screen items-center gap-10 py-28 md:grid-cols-2 md:gap-16 md:py-0">
-            {/* Left: copy */}
-            <div>
-
+          <div>
               <div className="mb-5 perspective-midrange">
-                <h1 className="text-5xl leadqing-[0.95] font-black tracking-tighter md:text-6xl">
+                <h1 className="leadqing-[0.95] text-5xl font-black tracking-tighter md:text-6xl">
                   {'SchoolSoft, done right.'.split(/\s+/).map((word, i) => (
                     <span key={i} className="lp-word mr-[0.2em] inline-block opacity-0 last:mr-0">
                       {word}
@@ -680,11 +855,10 @@ export default function LandingPage() {
                 transition={{ duration: 0.5, delay: 0.95 }}
                 className="flex flex-wrap items-center gap-3"
               >
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-accent-foreground bg-primary hover:bg-primary/70 transition-colors"
-                >
-                  Sign in <ArrowRight className="h-4 w-4" />
+                <Link href="/login">
+                  <Button className="cursor-pointer">
+                    Sign in <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </Link>
                 <a
                   href="https://github.com/elias4044/schoolsoftplus"
@@ -692,48 +866,20 @@ export default function LandingPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:border-white/20 hover:text-white"
                 >
-                  <Star className="h-3.5 w-3.5" /> GitHub
+                  <SiGithub className="h-3.5 w-3.5" /> GitHub
                 </a>
               </motion.div>
-            </div>
-
-            {/* Right: 3D mockup */}
-            <div className="hidden items-center justify-center md:flex">
-              <HeroMockup />
-            </div>
           </div>
         </motion.div>
 
-        {/* scroll cue */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            className="h-10 w-px rounded-full"
-            style={{
-              background: 'linear-gradient(to bottom, oklch(0.65 0.22 278 / 60%), transparent)',
-            }}
-          />
-        </motion.div>
       </section>
 
       {/* -- Stats strip -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-16">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 60% 80% at 50% 50%, oklch(0.55 0.22 278 / 5%), transparent)',
-          }}
-        />
+      <section className="relative overflow-hidden border-t bg-background border-white/5 px-6 py-16">
+
         <div className="relative z-10 mx-auto max-w-5xl">
           <Reveal className="mb-6">
-            <p className="text-[10px] tracking-widest text-white/25 uppercase">By the numbers</p>
+            <p className="text-[10px] tracking-widest text-white/25">BY THE NUMBERS</p>
           </Reveal>
           <div className="grid grid-cols-3 gap-3">
             {[
@@ -785,11 +931,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* -- Messaging Showcase -- */}
-      <MessagingShowcase />
+      {/* -- Messaging Showcase --
+      <MessagingShowcase /> */}
 
       {/* -- Features -- */}
-      <div className="border-t border-white/5">
+      <div className="bg-background border-t border-white/5">
         <div className="mx-auto max-w-5xl px-6 pt-16 pb-4">
           <Reveal>
             <p className="mb-2 text-[10px] tracking-widest text-white/30 uppercase">What it does</p>
@@ -800,14 +946,7 @@ export default function LandingPage() {
       </div>
 
       {/* -- Dashboard -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-20">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 50% 60% at 80% 50%, oklch(0.55 0.18 40 / 7%), transparent)',
-          }}
-        />
+      <section className="bg-background relative overflow-hidden border-t border-white/5 px-6 py-20">
         <div className="relative z-10 mx-auto max-w-5xl">
           <div className="grid items-start gap-12 md:grid-cols-2">
             <Reveal>
@@ -815,10 +954,6 @@ export default function LandingPage() {
               <h2 className="mb-4 text-3xl font-black tracking-tight md:text-4xl">
                 Build your own view.
               </h2>
-              <p className="mb-6 text-sm leading-relaxed text-white/40">
-                The dashboard is a grid of widgets you choose. Add what you need, remove what you
-                don't. Layout is saved per account. No config files, no setup steps.
-              </p>
               <div className="space-y-2.5">
                 {[
                   'Schedule widget',
@@ -828,10 +963,10 @@ export default function LandingPage() {
                   'Countdown timers',
                   'Notes pad',
                   'Weather',
-                  'Goals',
+                  'and even more...',
                 ].map((w, i) => (
                   <Reveal key={w} delay={i * 0.04}>
-                    <div className="flex items-center gap-2.5 text-sm text-white/40">
+                    <div className="flex items-center gap-2.5 text-sm text-white/60">
                       <div
                         className="h-1 w-1 rounded-full"
                         style={{ background: 'oklch(0.65 0.22 278)' }}
@@ -843,12 +978,12 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal delay={0.1}>
-              <div className="space-y-2 rounded-2xl border border-white/8 bg-[#0d0d0d] p-4">
+              <div className="border-b-card bg-card space-y-2 rounded-2xl border p-4">
                 {[
                   { icon: CalendarDays, label: 'Schedule', color: 'oklch(0.72 0.18 148)' },
-                  { icon: BookOpen, label: 'Homework', color: 'oklch(0.75 0.18 40)' },
+                  { icon: BookOpen, label: 'Assignments', color: 'oklch(0.75 0.18 40)' },
                   { icon: UtensilsCrossed, label: 'Lunch', color: 'oklch(0.78 0.16 55)' },
-                  { icon: Activity, label: 'Stats', color: 'oklch(0.65 0.22 278)' },
+                  { icon: Cloud, label: 'Weather', color: 'oklch(0.65 0.22 278)' },
                 ].map(({ icon: Icon, label, color }) => (
                   <div
                     key={label}
@@ -873,118 +1008,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* -- How it works -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-20">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: 'radial-gradient(oklch(1 0 0 / 2%) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
-        <div className="relative z-10 mx-auto max-w-5xl">
-          <Reveal className="mb-10">
-            <p className="mb-2 text-[10px] tracking-widest text-white/30 uppercase">Setup</p>
-            <h2 className="text-3xl font-black tracking-tight">Three steps, then you're in.</h2>
-          </Reveal>
-          <div className="grid gap-8 sm:grid-cols-3">
-            {[
-              {
-                n: '1',
-                title: 'Sign in with SchoolSoft',
-                desc: "Use your existing SchoolSoft credentials. We don't store your password - it's passed directly to SchoolSoft's own login.",
-              },
-              {
-                n: '2',
-                title: 'Pick your school',
-                desc: 'Search for your school name. Works with any school running SchoolSoft in Sweden.',
-              },
-              {
-                n: '3',
-                title: 'Start using it',
-                desc: 'Your schedule, assignments, lunch, and news load immediately. Set up your dashboard however you like.',
-              },
-            ].map(({ n, title, desc }, i) => (
-              <Reveal key={n} delay={i * 0.08}>
-                <div className="flex gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-black text-white/40">
-                    {n}
-                  </div>
-                  <div>
-                    <p className="mb-1.5 text-sm font-bold text-white/80">{title}</p>
-                    <p className="text-xs leading-relaxed text-white/35">{desc}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* -- Values -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-20">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 50% 60% at 20% 50%, oklch(0.50 0.22 148 / 7%), transparent)',
-          }}
-        />
-        <div className="relative z-10 mx-auto max-w-5xl">
-          <Reveal className="mb-8">
-            <h2 className="text-3xl font-black tracking-tight">What we don't do.</h2>
-            <p className="mt-1 text-sm text-white/35">Simple things that matter.</p>
-          </Reveal>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                icon: Shield,
-                color: 'oklch(0.72 0.18 148)',
-                title: 'No analytics on you',
-                desc: 'We collect anonymous aggregate counts (total logins, total AI messages). Nothing tied to a person.',
-              },
-              {
-                icon: Zap,
-                color: 'oklch(0.75 0.18 40)',
-                title: 'No password storage',
-                desc: 'Your SchoolSoft credentials are used once at login. We hold a session token, not your password.',
-              },
-              {
-                icon: Scale,
-                color: 'oklch(0.65 0.22 278)',
-                title: 'No ads, no upsells',
-                desc: "This is a free open-source project. There's no premium tier, no advertising, no data selling.",
-              },
-            ].map(({ icon: Icon, color, title, desc }, i) => (
-              <Reveal key={title} delay={i * 0.07}>
-                <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-6">
-                  <div
-                    className="mb-4 flex h-8 w-8 items-center justify-center rounded-xl"
-                    style={{ background: `${color}20`, color }}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <p className="mb-1.5 text-sm font-bold text-white/80">{title}</p>
-                  <p className="text-xs leading-relaxed text-white/35">{desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* -- Open source + Developer portal -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-20">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 60% 50% at 60% 50%, oklch(0.55 0.22 263 / 6%), transparent)',
-          }}
-        />
+      <section className="bg-background relative overflow-hidden border-t border-white/5 px-6 py-20">
         <div className="relative z-10 mx-auto max-w-5xl">
           <Reveal>
-            <div className="flex flex-col items-start justify-between gap-5 rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 sm:flex-row sm:items-center">
+            <div className="border-b-card bg-card flex flex-col items-start justify-between gap-5 rounded-2xl border p-6 sm:flex-row sm:items-center">
               <div>
                 <div className="mb-1.5 flex items-center gap-2">
                   <Code2 className="h-4 w-4" style={{ color: 'oklch(0.65 0.22 278)' }} />
@@ -1007,7 +1035,7 @@ export default function LandingPage() {
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Link
                   href="/open-source"
-                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white bg-primary"
+                  className="bg-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white"
                 >
                   <GitPullRequest className="h-3.5 w-3.5" /> Contribute
                 </Link>
@@ -1033,84 +1061,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* -- CTA -- */}
-      <section className="relative overflow-hidden border-t border-white/5 px-6 py-28 text-center">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 80% 60% at 50% 100%, oklch(0.55 0.22 278 / 12%), transparent)',
-          }}
-        />
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-10% 0px' }}
-          transition={{ duration: 0.7 }}
-          className="relative z-10 mx-auto max-w-xl"
-        >
-          <p className="mb-4 text-xs tracking-widest text-white/25 uppercase">Ready?</p>
-          <h2 className="mb-4 text-4xl leading-tight font-black tracking-tighter md:text-5xl">
-            30 seconds
-            <br />
-            to get started.
-          </h2>
-          <p className="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-white/35">
-            Free for any Swedish school using SchoolSoft. Sign in, pick your school, and your
-            schedule, AI, and classmates are all in one place.
-          </p>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] bg-primary"
-          >
-            Sign in with SchoolSoft <ArrowRight className="h-4 w-4" />
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* -- Footer -- */}
-      <footer className="border-t border-white/8">
-        <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-4 px-6 py-8 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" style={{ color: 'oklch(0.65 0.22 278)' }} />
-            <span className="text-sm font-bold text-white/80">SchoolSoft+</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/50">
-            <Link href="/terms" className="transition-colors hover:text-white">
-              Terms &amp; Privacy
-            </Link>
-            <Link href="/login-help" className="transition-colors hover:text-white">
-              Login help
-            </Link>
-            <Link href="/stats" className="transition-colors hover:text-white">
-              Stats
-            </Link>
-            <Link href="/changelog" className="transition-colors hover:text-white">
-              Changelog
-            </Link>
-            <Link href="/open-source" className="transition-colors hover:text-white">
-              Open source
-            </Link>
-            <a
-              href="https://developer.ssp.elias4044.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-white"
-            >
-              Developers
-            </a>
-            <a
-              href="https://github.com/elias4044/schoolsoftplus"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-white"
-            >
-              GitHub
-            </a>
-          </div>
-          <p className="text-xs text-white/40">Not affiliated with SchoolSoft AB.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
