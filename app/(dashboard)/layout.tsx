@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Menu, Sparkles, Bot } from "lucide-react";
+import { Menu, Bot, Search } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { AiChatPanel } from "@/components/ai-chat-panel";
+import { CommandPalette, triggerCommandPalette } from "@/components/command-palette";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { UnreadProvider } from "@/lib/unread-context";
 import { NotificationProvider } from "@/lib/notification-context";
@@ -13,8 +14,8 @@ import { CallProvider } from "@/lib/call-context";
 import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
 import { Comfortaa } from "next/font/google";
 import { CinematicTransition } from "@/components/CinematicTransition";
-import Image from "next/image";
-import { Metadata } from "next";
+
+
 
 const comfortaa = Comfortaa({ subsets: ["latin"] });
 
@@ -87,6 +88,15 @@ function MobileHeader({
       </span>
 
       <div className="flex items-center gap-1">
+        <button
+          onClick={() => triggerCommandPalette()}
+          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors active:scale-95"
+          aria-label="Open command palette"
+        >
+          <Search className="w-5 h-5" />
+        </button>
+
+
         <NotificationBell />
         <button
           onClick={onAiOpen}
@@ -134,6 +144,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop notification bell — top-right fixed corner. Disable due to placement issues */}
       {/* <div className="hidden md:block fixed bottom-4 left-42 z-50">
+
+
         <NotificationBell />
       </div> */}
 
@@ -145,6 +157,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Global floating layers */}
       <NotificationToasts />
       <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} />
+      <CommandPalette onAiOpen={() => setAiOpen(true)} />
     </div>
   );
 }
