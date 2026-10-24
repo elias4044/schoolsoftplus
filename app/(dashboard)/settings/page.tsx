@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, User, Palette, Check, Layout, Bell, Play, KeyRound } from 'lucide-react';
+import {
+  LogOut,
+  User,
+  Palette,
+  Check,
+  Layout,
+  Bell,
+  Play,
+  KeyRound,
+  TextCursor,
+  Eye,
+} from 'lucide-react';
 import PasskeyManager from '@/components/PasskeyManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +22,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useAppTheme, THEMES, ACCENTS } from '@/lib/theme-context';
 import type { AppTheme, AccentColor } from '@/lib/theme-context';
 import { RINGTONE_OPTIONS, useRingtone, type RingtoneId } from '@/components/CallPanel';
+import UselessButton from '@/components/useless-button';
 
 /*  Ringtone preview helper */
 function RingtonePreviewButton({ id, customUrl }: { id: string; customUrl?: string }) {
@@ -60,7 +72,7 @@ function Section({
         className="flex items-center gap-2.5 border-b px-5 py-4"
         style={{ borderColor: 'oklch(1 0 0 / 6%)' }}
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent">
+        <div className="bg-accent flex h-7 w-7 items-center justify-center rounded-lg">
           <Icon className="h-3.5 w-3.5" />
         </div>
         <h2 className="text-foreground text-sm font-semibold">{title}</h2>
@@ -74,10 +86,12 @@ export default function SettingsPage() {
   const { session, logout } = useAuth();
   const { theme, accent, setTheme, setAccent } = useAppTheme();
 
-  // Ringtone preference — loaded from profile, saved on change
+  // Ringtone preference —loaded from profile, saved on change
   const [ringtone, setRingtoneState] = useState<RingtoneId>('default');
   const [ringtoneSaving, setRingtoneSaving] = useState(false);
   const savingRef = useRef(false);
+
+  const  [uBtnStatus, setUBtnStatus] = useState<'Useless Button' | 'Congrats!'>('Useless Button')
 
   const [ringtoneCustomUrl, setRingtoneCustomUrl] = useState('');
   const customUrlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -299,7 +313,7 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </div>
-                  {/* URL input — only shown for custom, only when selected */}
+                  {/* URL input */}
                   {opt.id === 'custom' && ringtone === 'custom' && (
                     <div className="mt-1.5 ml-8">
                       <Input
@@ -336,6 +350,31 @@ export default function SettingsPage() {
           </div>
         </Section>
 
+        <Section icon={Eye} title="A button">
+          <div className="m-5 h-40">
+            <UselessButton
+              className='h-full'
+              inkColor="#f5f5f5"
+              contrastColor="#18181b"
+              fieldHeight={500}
+              reach={100}
+              radius={120}
+              falloff={2}
+              fleeDuration={100}
+              returnDuration={920}
+              returnBounce={0.25}
+              axis="both"
+              wall="clamp"
+              patience={4}
+              onCatch={() => setUBtnStatus('Congrats!')
+              
+              }
+            >
+                <Button>{uBtnStatus}</Button>
+            </UselessButton>
+          </div>
+        </Section>
+
         {/*  Danger zone  */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -349,10 +388,8 @@ export default function SettingsPage() {
         >
           <div>
             <div className="mb-1 flex items-center gap-2">
-              <LogOut className="h-3.5 w-3.5 text-destructive" />
-              <p className="text-sm font-semibold text-destructive" >
-                Sign out
-              </p>
+              <LogOut className="text-destructive h-3.5 w-3.5" />
+              <p className="text-destructive text-sm font-semibold">Sign out</p>
             </div>
             <p className="text-muted-foreground text-xs">
               You will be redirected to the login page.

@@ -53,9 +53,6 @@ interface School {
   id: string;
 }
 
-// ---------------------------------------------------------------------------
-// SchoolPicker (Searchable, keyboard-navigable, with recents)
-// ---------------------------------------------------------------------------
 function SchoolPicker({
   value,
   displayName,
@@ -331,9 +328,7 @@ function SchoolPicker({
   );
 }
 
-// ---------------------------------------------------------------------------
-// LoginPage Export + Suspense boundary
-// ---------------------------------------------------------------------------
+
 export default function LoginPage() {
   return (
     <Suspense>
@@ -342,9 +337,7 @@ export default function LoginPage() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main Login Page Inner
-// ---------------------------------------------------------------------------
+
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -627,9 +620,7 @@ function LoginPageInner() {
 
   return (
     <div className="bg-background flex min-h-screen overflow-hidden">
-      {/* ----------------------------------------------------------------- */}
-      {/* Left panel: Original 3D Hero Mockup (Scaled up & roomier)        */}
-      {/* ----------------------------------------------------------------- */}
+
       <div
         className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex lg:w-[54%] xl:p-14 border-r-border border-r-[1] bg-background"
       >
@@ -702,7 +693,7 @@ function LoginPageInner() {
             </p>
           </div>
 
-          {/* 3-D app card (Reverted to original card structure, made bigger) */}
+
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -808,9 +799,7 @@ function LoginPageInner() {
         </p>
       </div>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Right panel: Fast, 1-Click Form (No walls of text)                */}
-      {/* ----------------------------------------------------------------- */}
+
       <div className="flex flex-1 flex-col justify-between p-6 bg-background sm:p-10 lg:p-12">
         {/* Mobile brand header */}
         <Link href="/" className="relative flex items-center gap-3 lg:hidden">
@@ -904,7 +893,7 @@ function LoginPageInner() {
             </button>
           </div>
 
-          {/* Passkey Sign-in (Streamlined biometric) */}
+          {/* Passkey Signin */}
           {passkeySupported && (
             <div className="space-y-3 pt-1">
               <div className="relative flex items-center justify-center text-xs">
@@ -947,7 +936,7 @@ function LoginPageInner() {
             </div>
           )}
 
-          {/* Advanced Developer / Token Sign-in Accordion */}
+          {/* Advanced */}
           <div className="pt-2">
             <button
               type="button"
@@ -1022,9 +1011,7 @@ function LoginPageInner() {
         </div>
       </div>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Cinematic Exit Curtain: 7 Strips                                  */}
-      {/* ----------------------------------------------------------------- */}
+
       {exitActive && (
         <div className="pointer-events-none fixed inset-0 z-9999 overflow-hidden">
           {Array.from({ length: 7 }).map((_, i) => {
@@ -1102,9 +1089,7 @@ function LoginPageInner() {
         </div>
       )}
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Konami Code Easter Egg Modal                                      */}
-      {/* ----------------------------------------------------------------- */}
+
       <AnimatePresence>
         {easterEgg && (
           <motion.div
