@@ -135,6 +135,8 @@ export async function requireSession(req: NextRequest): Promise<{
       try {
         const api = createSchoolsoftClient(sess.school);
         const { data, status } = await api.get("/rest-api/session", {
+          timeout: 5_000,
+          signal: AbortSignal.timeout(5_000),
           headers: { Cookie: sess.cookieString },
           responseType: "json",
           validateStatus: () => true,
@@ -204,6 +206,7 @@ export async function requireSession(req: NextRequest): Promise<{
         `&refreshToken=${encodeURIComponent(refreshToken)}`;
       const r = await fetch(refreshUrl, {
         method: "POST",
+        signal: AbortSignal.timeout(5_000),
         headers: { accept: "application/json" },
       });
       if (r.status === 200) {
@@ -233,6 +236,8 @@ export async function requireSession(req: NextRequest): Promise<{
 
   try {
     const sessionRes = await axios.get(sessionUrl, {
+      timeout: 5_000,
+      signal: AbortSignal.timeout(5_000),
       headers: {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

@@ -29,8 +29,9 @@ const IDLE_THRESHOLD   = 15 * 60 * 1000;  // 15 minutes → idle/in-app (yellow)
 /** Derive a display status from a stored record (accounts for stale heartbeats). */
 export function computeStatus(record: PresenceRecord | null): UserStatus {
   if (!record) return "offline";
+  if (record.status === "offline") return "offline";
   const age = Date.now() - record.lastSeen;
-  if (age < ONLINE_THRESHOLD) return "online";
+  if (age < ONLINE_THRESHOLD) return record.status;
   if (age < IDLE_THRESHOLD)   return "idle";
   return "offline";
 }
@@ -41,10 +42,15 @@ export function computeStatus(record: PresenceRecord | null): UserStatus {
 
 export async function updatePresence(username: string, status: UserStatus): Promise<void> {
   const now = Date.now();
-  await db.collection(COL).doc(username).set(
-    { status, lastSeen: now, updatedAt: now },
-    { merge: true }
-  );
+  const ref = db.collection(COL).doc(username);
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const age = now - (previous?.updatedAt ?? 0);
+    // Enforce this across tabs and server instances, including older clients.
+    if (previous && (age < 15_000 || (previous.status === status && age < 110_000))) return;
+    transaction.set(ref, { status, lastSeen: now, updatedAt: now }, { merge: true });
+  }, { maxAttempts: 1 });
 }
 
 /* ─────────────────────────────────────────────────────────────

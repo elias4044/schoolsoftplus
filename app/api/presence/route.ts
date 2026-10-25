@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authUser } from "@/app/api/lib/auth";
-import { requireSession } from "@/app/api/lib/schoolsoft";
+import { requireSession, applySessionCookieUpdates } from "@/app/api/lib/schoolsoft";
 import { computeStatus, getPresenceForUsers, updatePresence } from "@/app/api/lib/presenceDb";
 import type { UserStatus } from "@/app/api/lib/presenceDb";
 
 const MAX_USERS_PER_REQUEST = 100;
+export const maxDuration = 20;
 
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
@@ -34,7 +35,9 @@ export async function GET(req: NextRequest) {
     })
   );
 
-  return NextResponse.json({ success: true, presences });
+  const response = NextResponse.json({ success: true, presences });
+  applySessionCookieUpdates(response, sess.cookieUpdates);
+  return response;
 }
 
 // PATCH /api/presence  — update my own presence
@@ -43,6 +46,7 @@ export async function PATCH(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   const { cookieString, school, username } = sess;
+  if (!username) return NextResponse.json({ success: false, error: "Missing username." }, { status: 401 });
   if (!(await authUser(cookieString, school))) {
     return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
   }
@@ -52,5 +56,7 @@ export async function PATCH(req: NextRequest) {
 
   const status = (["online", "idle", "offline"].includes(body.status ?? "")) ? body.status as UserStatus : "online";
   await updatePresence(username, status);
-  return NextResponse.json({ success: true, status });
+  const response = NextResponse.json({ success: true, status });
+  applySessionCookieUpdates(response, sess.cookieUpdates);
+  return response;
 }

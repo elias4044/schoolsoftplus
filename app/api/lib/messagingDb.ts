@@ -1,4 +1,5 @@
 import { db } from "./firebaseAdmin";
+import { FieldPath } from "firebase-admin/firestore";
 
 /* 
    Types
@@ -523,8 +524,14 @@ export async function markConversationRead(
   conversationId: string,
   username: string
 ): Promise<void> {
-  await db.collection(CONV_COL).doc(conversationId).update({
-    [`lastReadAt.${username}`]: Date.now(),
+  const ref = db.collection(CONV_COL).doc(conversationId);
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const conversation = snapshot.data();
+    if (!conversation || !conversation.participants?.includes(username)) return;
+    if ((conversation.lastReadAt?.[username] ?? 0) >= (conversation.lastAt ?? 0)) return;
+    // Usernames contain dots, which must be literal field-name characters.
+    transaction.update(ref, new FieldPath("lastReadAt", username), Date.now());
   });
 }
 

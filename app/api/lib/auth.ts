@@ -19,6 +19,8 @@ export async function authUser(cookies: string, school = "engelska"): Promise<bo
       `https://sms.schoolsoft.se/${school}/rest-api/session`,
       {
         responseType: "json",
+        timeout: 5_000,
+        signal: AbortSignal.timeout(5_000),
         headers: {
           Cookie: cookies,
           "User-Agent": DEFAULT_USER_AGENT,
