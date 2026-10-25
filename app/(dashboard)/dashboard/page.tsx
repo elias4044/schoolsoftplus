@@ -27,11 +27,7 @@ import { prefetchSubjectsPage } from '@/lib/cache/subjects';
 import { prefetch } from '@/lib/cache/prefetch';
 import { useSearchParams } from 'next/navigation';
 
-const QUICK_ACTIONS: { label: string; href: string; icon: LucideIcon }[] = [
-  { label: 'Schedule', href: '/schedule', icon: CalendarDays },
-  { label: 'Messages', href: '/messages', icon: MessageSquare },
-  { label: 'Notes', href: '/notes', icon: StickyNote },
-];
+
 
 export default function DashboardPage() {
   const { session } = useAuth();
@@ -53,17 +49,6 @@ export default function DashboardPage() {
 
   return (
     <div className="relative mx-auto max-w-350 p-6">
-      {/* Ambient background glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-10 h-72 overflow-hidden"
-      >
-        <motion.div
-          className="bg-primary/20 absolute -top-24 left-1/4 h-64 w-64 rounded-full blur-3xl md:left-1/3"
-          animate={{ x: [0, 40, 0], opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeOut' }}
-        />
-      </div>
 
       {/* Hero header */}
       <motion.section
@@ -82,49 +67,18 @@ export default function DashboardPage() {
               {greeting}
             </h1>
 
-            {/* Quick actions */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {QUICK_ACTIONS.map(({ label, href, icon: ActionIcon }, i) => (
-                <motion.div
-                  key={href}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 + i * 0.06 }}
-                >
-                  <Link
-                    href={href}
-                    className="group text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition-all hover:-translate-y-0.5"
-                  >
-                    <ActionIcon className="text-primary h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    {label}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+            
           </div>
 
-          {/* Clock + week progress */}
+
           <div className="flex flex-col items-end gap-2 pr-10">
-            <div className="font-mono text-4xl font-semibold tracking-tight tabular-nums">
+            <div className="font-mono text-5xl mt-2 font-semibold tracking-tight tabular-nums">
               {now.toLocaleTimeString('en-SE', { hour: '2-digit', minute: '2-digit' })}
               <span className="text-muted-foreground/50 ml-1 text-base">
                 {String(now.getSeconds()).padStart(2, '0')}
               </span>
             </div>
-            <div className="w-48">
-              <div className="text-muted-foreground mb-1 flex justify-between text-[10px]">
-                <span>Week {week.number}</span>
-                <span>{Math.round(week.pct)}% done</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  className="bg-primary h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${week.pct}%` }}
-                  transition={{ duration: 0.9, ease: 'easeOut' }}
-                />
-              </div>
-            </div>
+           
           </div>
         </div>
 
