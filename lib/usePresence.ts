@@ -16,8 +16,9 @@ const PRESENCE_POLL_MS = 60 * 1000;
 
 function computeStatus(record: PresenceRecord | null): UserStatus {
   if (!record) return "offline";
+  if (record.status === "offline") return "offline";
   const age = Date.now() - record.lastSeen;
-  if (age < ONLINE_MS) return "online";
+  if (age < ONLINE_MS) return record.status;
   if (age < IDLE_MS) return "idle";
   return "offline";
 }
@@ -49,13 +50,14 @@ async function fetchForUnion() {
 
   manager.abort?.abort();
   manager.abort = new AbortController();
+  const timeout = setTimeout(() => manager.abort?.abort(), 10_000);
 
   try {
     const res = await fetch(`/api/presence?users=${encodeURIComponent(users.join(","))}`, {
       signal: manager.abort.signal,
     });
     const data = await res.json();
-    if (!data.success) return {};
+    if (!res.ok || !data.success) return {};
 
     const now = Date.now();
     const out: Record<string, PresenceRecord> = {};
@@ -66,8 +68,10 @@ async function fetchForUnion() {
       out[u] = { status, lastSeen };
     }
     return out;
-  } catch (err) {
+  } catch {
     return {};
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -76,7 +80,7 @@ function startManagerIfNeeded() {
   // poll immediately then on interval
   let running = false;
   const run = async () => {
-    if (running) return;
+    if (running || document.hidden || manager.union.size === 0) return;
     running = true;
     const records = await fetchForUnion();
     // notify subscribers
@@ -106,35 +110,52 @@ function recomputeUnion() {
   for (const s of manager.subs.values()) for (const u of s.usernames) manager.union.add(u);
 }
 
+function subscribeToPresence(usernames: string[], cb: Subscriber["cb"]) {
+  const id = manager.nextId++;
+  manager.subs.set(id, { id, usernames, cb });
+  recomputeUnion();
+  startManagerIfNeeded();
+  return () => {
+    manager.subs.delete(id);
+    recomputeUnion();
+    stopManagerIfIdle();
+  };
+}
+
 export function useMyPresence(username: string) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSentRef = useRef<{ status: UserStatus; at: number } | null>(null);
+  const inFlightRef = useRef(false);
 
   const sendHeartbeat = useCallback(async (status: UserStatus) => {
-    if (!username) return;
+    if (!username || inFlightRef.current) return;
     const now = Date.now();
     const lastSent = lastSentRef.current;
     if (lastSent && lastSent.status === status && now - lastSent.at < HEARTBEAT_MS - 5_000) {
       return;
     }
     lastSentRef.current = { status, at: now };
+    inFlightRef.current = true;
     try {
       await fetch("/api/presence", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         keepalive: status === "offline",
         body: JSON.stringify({ status }),
+        signal: AbortSignal.timeout(10_000),
       });
     } catch {
       /* ignore */
+    } finally {
+      inFlightRef.current = false;
     }
   }, [username]);
 
   useEffect(() => {
     if (!username) return;
-    void sendHeartbeat("online");
+    if (!document.hidden) void sendHeartbeat("online");
     intervalRef.current = setInterval(() => {
-      void sendHeartbeat(document.hidden ? "idle" : "online");
+      if (!document.hidden) void sendHeartbeat("online");
     }, HEARTBEAT_MS);
     const onVisibility = () => void sendHeartbeat(document.hidden ? "idle" : "online");
     document.addEventListener("visibilitychange", onVisibility);
@@ -144,7 +165,6 @@ export function useMyPresence(username: string) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", onUnload);
-      void sendHeartbeat("offline");
     };
   }, [username, sendHeartbeat]);
 }
@@ -152,25 +172,9 @@ export function useMyPresence(username: string) {
 export function usePresenceMap(usernames: string[]) {
   const [statusMap, setStatusMap] = useState<Record<string, UserStatus>>({});
   const normalized = [...new Set(usernames.filter(Boolean))].sort();
-  const idRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // subscribe
-    const id = manager.nextId++;
-    idRef.current = id;
-    const sub: Subscriber = { id, usernames: normalized, cb: (m) => setStatusMap(m) };
-    manager.subs.set(id, sub);
-    recomputeUnion();
-    startManagerIfNeeded();
-
-    // immediate empty map until fetch returns
-    setStatusMap(Object.fromEntries(normalized.map(u => [u, "offline" as UserStatus])));
-
-    return () => {
-      manager.subs.delete(id);
-      recomputeUnion();
-      stopManagerIfIdle();
-    };
+    return subscribeToPresence(normalized, setStatusMap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(normalized)]);
 

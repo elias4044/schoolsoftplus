@@ -163,6 +163,8 @@ export async function fetchSchoolsoftSession(
         },
         validateStatus: () => true,
         responseType: "json",
+        timeout: 5_000,
+        signal: AbortSignal.timeout(5_000),
       },
     );
     if (res.status !== 200) return null;
