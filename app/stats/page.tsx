@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
-import Link from "next/link";
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { motion, useInView } from 'framer-motion';
 import {
+  Activity,
   ArrowLeft,
-  Users,
-  MousePointerClick,
   Brain,
-  StickyNote,
   CalendarDays,
   ClipboardList,
-  UtensilsCrossed,
-  Globe,
   Clock,
-  TrendingUp,
-  Activity,
+  Globe,
   MessageSquare,
   MessagesSquare,
+  MousePointerClick,
   Smile,
-} from "lucide-react";
+  StickyNote,
+  TrendingUp,
+  Users,
+  UtensilsCrossed,
+} from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface StatsPayload {
@@ -47,20 +47,28 @@ interface StatsPayload {
   peakDates: Record<string, number>;
 }
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /* ─── Reveal ─────────────────────────────────────────────── */
-function Reveal({ children, delay = 0, className = "" }: {
-  children: React.ReactNode; delay?: number; className?: string;
+function Reveal({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-4% 0px" });
+  const inView = useInView(ref, { once: true, margin: '-4% 0px' });
   return (
-    <motion.div ref={ref}
+    <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 14 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}>
+      className={className}
+    >
       {children}
     </motion.div>
   );
@@ -70,7 +78,7 @@ function Reveal({ children, delay = 0, className = "" }: {
 function Counter({ target }: { target: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
-  const [display, setDisplay] = useState("0");
+  const [display, setDisplay] = useState('0');
 
   useEffect(() => {
     if (!inView) return;
@@ -89,14 +97,22 @@ function Counter({ target }: { target: number }) {
 }
 
 /* ─── Bar chart ──────────────────────────────────────────── */
-function BarChart({ data, labels, color, height = 80 }: {
-  data: number[]; labels: string[]; color: string; height?: number;
+function BarChart({
+  data,
+  labels,
+  color,
+  height = 80,
+}: {
+  data: number[];
+  labels: string[];
+  color: string;
+  height?: number;
 }) {
   const max = Math.max(...data, 1);
   return (
     <div className="flex items-end gap-0.5" style={{ height }}>
       {data.map((v, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+        <div key={i} className="flex flex-1 flex-col items-center gap-1">
           <div
             className="w-full rounded-sm"
             style={{
@@ -107,7 +123,9 @@ function BarChart({ data, labels, color, height = 80 }: {
             }}
           />
           {labels[i] !== undefined && (
-            <span className="text-[9px] text-muted-foreground select-none leading-none">{labels[i]}</span>
+            <span className="text-muted-foreground text-[9px] leading-none select-none">
+              {labels[i]}
+            </span>
           )}
         </div>
       ))}
@@ -116,22 +134,32 @@ function BarChart({ data, labels, color, height = 80 }: {
 }
 
 /* ─── Stat card ──────────────────────────────────────────── */
-function StatCard({ icon: Icon, value, label, sublabel, color }: {
-  icon: React.ElementType; value: number; label: string; sublabel?: string; color: string;
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+  sublabel,
+  color,
+}: {
+  icon: React.ElementType;
+  value: number;
+  label: string;
+  sublabel?: string;
+  color: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="border-border bg-card rounded-xl border p-5">
       <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center mb-3"
+        className="mb-3 flex h-7 w-7 items-center justify-center rounded-lg"
         style={{ background: `${color}18`, color }}
       >
-        <Icon className="w-3.5 h-3.5" />
+        <Icon className="h-3.5 w-3.5" />
       </div>
-      <p className="text-2xl font-bold tabular-nums text-foreground tracking-tight">
+      <p className="text-foreground text-2xl font-bold tracking-tight tabular-nums">
         <Counter target={value} />
       </p>
-      <p className="text-xs font-medium text-foreground/70 mt-0.5">{label}</p>
-      {sublabel && <p className="text-[11px] text-muted-foreground mt-0.5">{sublabel}</p>}
+      <p className="text-foreground/70 mt-0.5 text-xs font-medium">{label}</p>
+      {sublabel && <p className="text-muted-foreground mt-0.5 text-[11px]">{sublabel}</p>}
     </div>
   );
 }
@@ -142,9 +170,11 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/stats")
-      .then(r => r.json())
-      .then(d => { if (d.success) setStats(d); })
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setStats(d);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -152,9 +182,13 @@ export default function StatsPage() {
   const msgHours24 = Array.from({ length: 24 }, (_, i) => stats?.messageHours?.[i] ?? 0);
   const aiHours24 = Array.from({ length: 24 }, (_, i) => stats?.aiHours?.[i] ?? 0);
   const days7 = Array.from({ length: 7 }, (_, i) => stats?.loginDays?.[i] ?? 0);
-  const topSchools = Object.entries(stats?.schools ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const topSchoolMax = Math.max(...topSchools.map(s => s[1]), 1);
-  const topDates = Object.entries(stats?.peakDates ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const topSchools = Object.entries(stats?.schools ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+  const topSchoolMax = Math.max(...topSchools.map((s) => s[1]), 1);
+  const topDates = Object.entries(stats?.peakDates ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
   const peakHour = hours24.indexOf(Math.max(...hours24));
   const peakDay = days7.indexOf(Math.max(...days7));
   const peakMsgHour = msgHours24.indexOf(Math.max(...msgHours24));
@@ -166,52 +200,109 @@ export default function StatsPage() {
 
   // Messaging cards first, then community, then AI, then features
   const statCards = [
-    { icon: MessageSquare,   value: stats?.totalMessagesSent  ?? 0,           label: "Messages sent",       sublabel: "Across all conversations",  color: "oklch(0.65 0.22 278)" },
-    { icon: MessagesSquare,  value: stats?.totalConversations ?? 0,           label: "Conversations started", sublabel: "DM threads created",       color: "oklch(0.72 0.18 263)" },
-    { icon: Smile,           value: stats?.totalReactions     ?? 0,           label: "Reactions added",     sublabel: "Emoji reactions on messages", color: "oklch(0.78 0.18 310)" },
-    { icon: Users,           value: stats?.uniqueLogins       ?? 0,           label: "Unique users",        sublabel: "All time",                  color: "oklch(0.72 0.18 148)" },
-    { icon: MousePointerClick, value: stats?.totalLogins      ?? 0,           label: "Total logins",        sublabel: "Successful sessions",       color: "oklch(0.75 0.18 40)" },
-    { icon: Brain,           value: stats?.totalAiMessages    ?? 0,           label: "AI messages",         sublabel: "Questions answered",        color: "oklch(0.75 0.18 310)" },
-    { icon: StickyNote,      value: stats?.totalNotesCreated  ?? 0,           label: "Notes created",       color: "oklch(0.72 0.18 190)" },
-    { icon: Activity,        value: stats?.totalApiCalls      ?? 0,           label: "API calls",           sublabel: "Server requests",           color: "oklch(0.70 0.16 263)" },
+    {
+      icon: MessageSquare,
+      value: stats?.totalMessagesSent ?? 0,
+      label: 'Messages sent',
+      sublabel: 'Across all conversations',
+      color: 'oklch(0.65 0.22 278)',
+    },
+    {
+      icon: MessagesSquare,
+      value: stats?.totalConversations ?? 0,
+      label: 'Conversations started',
+      sublabel: 'DM threads created',
+      color: 'oklch(0.72 0.18 263)',
+    },
+    {
+      icon: Smile,
+      value: stats?.totalReactions ?? 0,
+      label: 'Reactions added',
+      sublabel: 'Emoji reactions on messages',
+      color: 'oklch(0.78 0.18 310)',
+    },
+    {
+      icon: Users,
+      value: stats?.uniqueLogins ?? 0,
+      label: 'Unique users',
+      sublabel: 'All time',
+      color: 'oklch(0.72 0.18 148)',
+    },
+    {
+      icon: MousePointerClick,
+      value: stats?.totalLogins ?? 0,
+      label: 'Total logins',
+      sublabel: 'Successful sessions',
+      color: 'oklch(0.75 0.18 40)',
+    },
+    {
+      icon: Brain,
+      value: stats?.totalAiMessages ?? 0,
+      label: 'AI messages',
+      sublabel: 'Questions answered',
+      color: 'oklch(0.75 0.18 310)',
+    },
+    {
+      icon: StickyNote,
+      value: stats?.totalNotesCreated ?? 0,
+      label: 'Notes created',
+      color: 'oklch(0.72 0.18 190)',
+    },
+    {
+      icon: Activity,
+      value: stats?.totalApiCalls ?? 0,
+      label: 'API calls',
+      sublabel: 'Server requests',
+      color: 'oklch(0.70 0.16 263)',
+    },
   ];
 
   const Skeleton = () => (
-    <div className="rounded-xl border border-border bg-card p-5 animate-pulse">
-      <div className="w-7 h-7 rounded-lg bg-muted mb-3" />
-      <div className="h-6 w-20 bg-muted rounded mb-1.5" />
-      <div className="h-3 w-28 bg-muted rounded" />
+    <div className="border-border bg-card animate-pulse rounded-xl border p-5">
+      <div className="bg-muted mb-3 h-7 w-7 rounded-lg" />
+      <div className="bg-muted mb-1.5 h-6 w-20 rounded" />
+      <div className="bg-muted h-3 w-28 rounded" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-
+    <div className="bg-background text-foreground min-h-screen">
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back
+      <header className="border-border bg-background/90 sticky top-0 z-50 border-b backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
+          <Link
+            href="/"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-2 text-sm font-medium">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full" />
             Live stats
           </div>
           <div className="w-16" />
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6">
-
+      <main className="mx-auto max-w-5xl px-6">
         {/* Page header */}
-        <div className="py-12 border-b border-border">
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">SchoolSoft+ · Live</p>
-            <h1 className="text-3xl font-bold tracking-tight mb-3">
-              What's happening<br />right now.
+        <div className="border-border border-b py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="text-muted-foreground mb-3 text-[11px] tracking-widest uppercase">
+              SchoolSoft+ · Live
+            </p>
+            <h1 className="mb-3 text-3xl font-bold tracking-tight">
+              What's happening
+              <br />
+              right now.
             </h1>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Anonymous usage data updated in real-time. No personal information is collected or stored — ever.
+            <p className="text-muted-foreground max-w-md text-sm">
+              Anonymous usage data updated in real-time. No personal information is collected or
+              stored — ever.
             </p>
           </motion.div>
 
@@ -224,19 +315,31 @@ export default function StatsPage() {
               className="mt-8 flex flex-wrap gap-3"
             >
               {[
-                { value: stats.totalMessagesSent  ?? 0, label: "messages sent",      color: "oklch(0.65 0.22 278)" },
-                { value: stats.totalConversations ?? 0, label: "conversations",      color: "oklch(0.72 0.18 263)" },
-                { value: stats.uniqueLogins,            label: "students",           color: "oklch(0.72 0.18 148)" },
-                { value: stats.totalAiMessages,         label: "AI messages",        color: "oklch(0.75 0.18 310)" },
+                {
+                  value: stats.totalMessagesSent ?? 0,
+                  label: 'messages sent',
+                  color: 'oklch(0.65 0.22 278)',
+                },
+                {
+                  value: stats.totalConversations ?? 0,
+                  label: 'conversations',
+                  color: 'oklch(0.72 0.18 263)',
+                },
+                { value: stats.uniqueLogins, label: 'students', color: 'oklch(0.72 0.18 148)' },
+                {
+                  value: stats.totalAiMessages,
+                  label: 'AI messages',
+                  color: 'oklch(0.75 0.18 310)',
+                },
               ].map(({ value, label, color }) => (
                 <div
                   key={label}
-                  className="flex items-baseline gap-1.5 rounded-full border border-border bg-card px-4 py-1.5"
+                  className="border-border bg-card flex items-baseline gap-1.5 rounded-full border px-4 py-1.5"
                 >
                   <span className="text-sm font-bold tabular-nums" style={{ color }}>
                     {value.toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <span className="text-muted-foreground text-xs">{label}</span>
                 </div>
               ))}
             </motion.div>
@@ -244,16 +347,20 @@ export default function StatsPage() {
         </div>
 
         {/* Overview */}
-        <section className="py-10 border-b border-border">
+        <section className="border-border border-b py-10">
           <Reveal className="mb-5">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Overview</h2>
+            <h2 className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              Overview
+            </h2>
           </Reveal>
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} />)}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} />
+              ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {statCards.map((s, i) => (
                 <Reveal key={s.label} delay={i * 0.04}>
                   <StatCard {...s} />
@@ -264,20 +371,42 @@ export default function StatsPage() {
         </section>
 
         {/* Messaging */}
-        <section className="py-10 border-b border-border">
+        <section className="border-border border-b py-10">
           <Reveal className="mb-5">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Messaging</h2>
+            <h2 className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              Messaging
+            </h2>
           </Reveal>
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} />)}
+            <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} />
+              ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               {[
-                { icon: MessageSquare,  value: stats?.totalMessagesSent  ?? 0, label: "Messages sent",        sublabel: "Total across all DMs",        color: "oklch(0.65 0.22 278)" },
-                { icon: MessagesSquare, value: stats?.totalConversations ?? 0, label: "Conversations",        sublabel: "DM threads created",          color: "oklch(0.72 0.18 263)" },
-                { icon: Smile,          value: stats?.totalReactions     ?? 0, label: "Reactions",            sublabel: "Emoji reactions added",       color: "oklch(0.78 0.18 310)" },
+                {
+                  icon: MessageSquare,
+                  value: stats?.totalMessagesSent ?? 0,
+                  label: 'Messages sent',
+                  sublabel: 'Total across all DMs',
+                  color: 'oklch(0.65 0.22 278)',
+                },
+                {
+                  icon: MessagesSquare,
+                  value: stats?.totalConversations ?? 0,
+                  label: 'Conversations',
+                  sublabel: 'DM threads created',
+                  color: 'oklch(0.72 0.18 263)',
+                },
+                {
+                  icon: Smile,
+                  value: stats?.totalReactions ?? 0,
+                  label: 'Reactions',
+                  sublabel: 'Emoji reactions added',
+                  color: 'oklch(0.78 0.18 310)',
+                },
               ].map((s, i) => (
                 <Reveal key={s.label} delay={i * 0.06}>
                   <StatCard {...s} />
@@ -286,20 +415,20 @@ export default function StatsPage() {
             </div>
           )}
           <Reveal delay={0.1}>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-start justify-between mb-1">
+            <div className="border-border bg-card rounded-xl border p-5">
+              <div className="mb-1 flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Messages by hour</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    UTC{loading ? "" : ` · peak at ${peakMsgHour}:00`}
+                  <p className="text-foreground text-sm font-medium">Messages by hour</p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    UTC{loading ? '' : ` · peak at ${peakMsgHour}:00`}
                   </p>
                 </div>
-                <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
+                <MessageSquare className="text-muted-foreground h-4 w-4 shrink-0" />
               </div>
               <div className="mt-5">
                 <BarChart
                   data={msgHours24}
-                  labels={Array.from({ length: 24 }, (_, i) => i % 6 === 0 ? `${i}h` : "")}
+                  labels={Array.from({ length: 24 }, (_, i) => (i % 6 === 0 ? `${i}h` : ''))}
                   color="oklch(0.65 0.22 278)"
                   height={96}
                 />
@@ -309,27 +438,29 @@ export default function StatsPage() {
         </section>
 
         {/* Activity patterns */}
-        <section className="py-10 border-b border-border">
+        <section className="border-border border-b py-10">
           <Reveal className="mb-6">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Activity patterns</h2>
+            <h2 className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              Activity patterns
+            </h2>
           </Reveal>
 
-          <div className="grid md:grid-cols-2 gap-3 mb-3">
+          <div className="mb-3 grid gap-3 md:grid-cols-2">
             <Reveal>
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between mb-1">
+              <div className="border-border bg-card rounded-xl border p-5">
+                <div className="mb-1 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Logins by hour</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      UTC{loading ? "" : ` · peak at ${peakHour}:00`}
+                    <p className="text-foreground text-sm font-medium">Logins by hour</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      UTC{loading ? '' : ` · peak at ${peakHour}:00`}
                     </p>
                   </div>
-                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                 </div>
                 <div className="mt-5">
                   <BarChart
                     data={hours24}
-                    labels={Array.from({ length: 24 }, (_, i) => i % 6 === 0 ? `${i}h` : "")}
+                    labels={Array.from({ length: 24 }, (_, i) => (i % 6 === 0 ? `${i}h` : ''))}
                     color="oklch(0.65 0.22 278)"
                     height={96}
                   />
@@ -338,20 +469,21 @@ export default function StatsPage() {
             </Reveal>
 
             <Reveal delay={0.06}>
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between mb-1">
+              <div className="border-border bg-card rounded-xl border p-5">
+                <div className="mb-1 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">AI usage by hour</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      UTC{loading ? "" : ` · ${(stats?.totalAiMessages ?? 0).toLocaleString()} total`}
+                    <p className="text-foreground text-sm font-medium">AI usage by hour</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      UTC
+                      {loading ? '' : ` · ${(stats?.totalAiMessages ?? 0).toLocaleString()} total`}
                     </p>
                   </div>
-                  <Brain className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Brain className="text-muted-foreground h-4 w-4 shrink-0" />
                 </div>
                 <div className="mt-5">
                   <BarChart
                     data={aiHours24}
-                    labels={Array.from({ length: 24 }, (_, i) => i % 6 === 0 ? `${i}h` : "")}
+                    labels={Array.from({ length: 24 }, (_, i) => (i % 6 === 0 ? `${i}h` : ''))}
                     color="oklch(0.75 0.18 310)"
                     height={96}
                   />
@@ -360,39 +492,62 @@ export default function StatsPage() {
             </Reveal>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <Reveal>
-              <div className="rounded-xl border border-border bg-card p-5">
-                <p className="text-sm font-medium text-foreground mb-0.5">Day of week</p>
-                <p className="text-xs text-muted-foreground mb-5">
-                  {loading ? "—" : `Most active: ${DAY_LABELS[peakDay]}`}
+              <div className="border-border bg-card rounded-xl border p-5">
+                <p className="text-foreground mb-0.5 text-sm font-medium">Day of week</p>
+                <p className="text-muted-foreground mb-5 text-xs">
+                  {loading ? '—' : `Most active: ${DAY_LABELS[peakDay]}`}
                 </p>
-                <BarChart data={days7} labels={DAY_LABELS} color="oklch(0.72 0.18 148)" height={96} />
+                <BarChart
+                  data={days7}
+                  labels={DAY_LABELS}
+                  color="oklch(0.72 0.18 148)"
+                  height={96}
+                />
               </div>
             </Reveal>
 
             <Reveal delay={0.06} className="md:col-span-2">
-              <div className="rounded-xl border border-border bg-card p-5 h-full">
-                <p className="text-sm font-medium text-foreground mb-0.5">Feature usage</p>
-                <p className="text-xs text-muted-foreground mb-5">Share of total feature calls</p>
+              <div className="border-border bg-card h-full rounded-xl border p-5">
+                <p className="text-foreground mb-0.5 text-sm font-medium">Feature usage</p>
+                <p className="text-muted-foreground mb-5 text-xs">Share of total feature calls</p>
                 <div className="space-y-3.5">
                   {[
-                    { label: "Schedule",    value: stats?.totalScheduleViews    ?? 0, color: "oklch(0.72 0.18 148)" },
-                    { label: "Assignments", value: stats?.totalAssignmentFetches ?? 0, color: "oklch(0.75 0.18 40)" },
-                    { label: "Lunch menu",  value: stats?.totalLunchFetches      ?? 0, color: "oklch(0.78 0.16 55)" },
-                    { label: "News",        value: stats?.totalNewsFetches       ?? 0, color: "oklch(0.70 0.18 320)" },
-                  ].map(item => {
+                    {
+                      label: 'Schedule',
+                      value: stats?.totalScheduleViews ?? 0,
+                      color: 'oklch(0.72 0.18 148)',
+                    },
+                    {
+                      label: 'Assignments',
+                      value: stats?.totalAssignmentFetches ?? 0,
+                      color: 'oklch(0.75 0.18 40)',
+                    },
+                    {
+                      label: 'Lunch menu',
+                      value: stats?.totalLunchFetches ?? 0,
+                      color: 'oklch(0.78 0.16 55)',
+                    },
+                    {
+                      label: 'News',
+                      value: stats?.totalNewsFetches ?? 0,
+                      color: 'oklch(0.70 0.18 320)',
+                    },
+                  ].map((item) => {
                     const pct = totalFeature > 0 ? (item.value / totalFeature) * 100 : 0;
                     return (
                       <div key={item.label} className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground w-20 shrink-0">{item.label}</span>
-                        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <span className="text-muted-foreground w-20 shrink-0 text-xs">
+                          {item.label}
+                        </span>
+                        <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
                           <div
                             className="h-full rounded-full"
                             style={{ width: `${pct}%`, background: item.color }}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground w-10 text-right tabular-nums shrink-0">
+                        <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
                           {pct.toFixed(1)}%
                         </span>
                       </div>
@@ -407,38 +562,45 @@ export default function StatsPage() {
         {/* Breakdown */}
         <section className="py-10 pb-16">
           <Reveal className="mb-6">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Breakdown</h2>
+            <h2 className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+              Breakdown
+            </h2>
           </Reveal>
 
-          <div className="grid md:grid-cols-2 gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {/* Schools */}
             <Reveal>
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between mb-1">
+              <div className="border-border bg-card rounded-xl border p-5">
+                <div className="mb-1 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Active schools</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {topSchools.length} school{topSchools.length !== 1 ? "s" : ""} using SchoolSoft+
+                    <p className="text-foreground text-sm font-medium">Active schools</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {topSchools.length} school{topSchools.length !== 1 ? 's' : ''} using
+                      SchoolSoft+
                     </p>
                   </div>
-                  <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Globe className="text-muted-foreground h-4 w-4 shrink-0" />
                 </div>
                 {topSchools.length === 0 ? (
-                  <p className="text-xs text-muted-foreground mt-4">No data yet.</p>
+                  <p className="text-muted-foreground mt-4 text-xs">No data yet.</p>
                 ) : (
                   <div className="mt-4 space-y-2.5">
                     {topSchools.map(([school, count]) => {
                       const pct = (count / topSchoolMax) * 100;
                       return (
                         <div key={school} className="flex items-center gap-3">
-                          <span className="text-xs text-foreground/80 truncate flex-1 min-w-0">{school}</span>
-                          <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden shrink-0">
+                          <span className="text-foreground/80 min-w-0 flex-1 truncate text-xs">
+                            {school}
+                          </span>
+                          <div className="bg-muted h-1.5 w-20 shrink-0 overflow-hidden rounded-full">
                             <div
                               className="h-full rounded-full"
-                              style={{ width: `${pct}%`, background: "oklch(0.62 0.16 263)" }}
+                              style={{ width: `${pct}%`, background: 'oklch(0.62 0.16 263)' }}
                             />
                           </div>
-                          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums shrink-0">{count}</span>
+                          <span className="text-muted-foreground w-8 shrink-0 text-right text-xs tabular-nums">
+                            {count}
+                          </span>
                         </div>
                       );
                     })}
@@ -449,30 +611,33 @@ export default function StatsPage() {
 
             {/* Peak dates */}
             <Reveal delay={0.06}>
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between mb-1">
+              <div className="border-border bg-card rounded-xl border p-5">
+                <div className="mb-1 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Busiest days</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Top 5 login days by date</p>
+                    <p className="text-foreground text-sm font-medium">Busiest days</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">Top 5 login days by date</p>
                   </div>
-                  <TrendingUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <TrendingUp className="text-muted-foreground h-4 w-4 shrink-0" />
                 </div>
                 {topDates.length === 0 ? (
-                  <p className="text-xs text-muted-foreground mt-4">No data yet.</p>
+                  <p className="text-muted-foreground mt-4 text-xs">No data yet.</p>
                 ) : (
                   <div className="mt-4 space-y-3">
                     {topDates.map(([date, count], i) => (
                       <div key={date} className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <span
-                            className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                            style={{ background: "oklch(0.75 0.18 40 / 15%)", color: "oklch(0.75 0.18 40)" }}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                            style={{
+                              background: 'oklch(0.75 0.18 40 / 15%)',
+                              color: 'oklch(0.75 0.18 40)',
+                            }}
                           >
                             {i + 1}
                           </span>
-                          <span className="text-sm font-medium text-foreground">{date}</span>
+                          <span className="text-foreground text-sm font-medium">{date}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                           {count.toLocaleString()} logins
                         </span>
                       </div>
@@ -483,13 +648,14 @@ export default function StatsPage() {
             </Reveal>
           </div>
         </section>
-
       </main>
 
-      <footer className="border-t border-border">
-        <div className="max-w-5xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
-          <Link href="/" className="text-sm font-medium text-foreground">SchoolSoft+</Link>
-          <p className="text-xs text-muted-foreground text-center">
+      <footer className="border-border border-t">
+        <div className="mx-auto flex max-w-5xl flex-col flex-wrap items-center justify-between gap-3 px-6 py-6 sm:flex-row">
+          <Link href="/" className="text-foreground text-sm font-medium">
+            SchoolSoft+
+          </Link>
+          <p className="text-muted-foreground text-center text-xs">
             All data is fully anonymous. No personal information is stored or displayed.
           </p>
         </div>

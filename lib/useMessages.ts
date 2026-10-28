@@ -1,18 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   collection,
-  query,
-  where,
-  orderBy,
   limit,
   limitToLast,
   onSnapshot,
+  orderBy,
+  query,
   Unsubscribe,
-} from "firebase/firestore";
-import { clientDb } from "./firebase";
-import { useFirebaseAuth } from "./useFirebaseAuth";
+  where,
+} from 'firebase/firestore';
+
+import { clientDb } from './firebase';
+import { useFirebaseAuth } from './useFirebaseAuth';
 
 /* ── Types (mirrored from messagingDb.ts) ──────────────── */
 export interface ReplyTo {
@@ -22,29 +23,29 @@ export interface ReplyTo {
 }
 
 export interface NoteShareCard {
-  type: "note";
+  type: 'note';
   noteId: string;
   title: string;
   preview: string;
-  fullContent?: string;  // full raw markdown stored at share time
-  status: "draft" | "published" | "archived";
+  fullContent?: string; // full raw markdown stored at share time
+  status: 'draft' | 'published' | 'archived';
   sharedAt: number;
 }
 
 export interface GradeShareCard {
-  type: "grade";
+  type: 'grade';
   assignmentId: number;
   assignmentTitle: string;
   subjectName: string;
   assignmentType: string;
   grade: string;
-  confidence: "confirmed" | "estimated";
+  confidence: 'confirmed' | 'estimated';
   totalPoints: string | null;
   sharedAt: number;
 }
 
 export interface FlashDeckShareCard {
-  type: "flashdeck";
+  type: 'flashdeck';
   deckId: string;
   title: string;
   description: string;
@@ -79,7 +80,7 @@ export interface RTMessage {
 
 export interface RTConversation {
   id: string;
-  type: "dm" | "group";
+  type: 'dm' | 'group';
   participants: string[];
   participantNames: Record<string, string>;
   participantPfpUrls: Record<string, string>;
@@ -106,40 +107,46 @@ export function useConversations(username: string) {
 
     setLoading(true);
     const q = query(
-      collection(clientDb, "conversations_v1"),
-      where("participants", "array-contains", username),
-      orderBy("lastAt", "desc"),
+      collection(clientDb, 'conversations_v1'),
+      where('participants', 'array-contains', username),
+      orderBy('lastAt', 'desc'),
       limit(50)
     );
 
-    unsubRef.current = onSnapshot(q, snap => {
-      const convos: RTConversation[] = snap.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id:                  doc.id,
-          type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
-          participants:        d.participants       ?? [],
-          participantNames:    d.participantNames   ?? {},
-          participantPfpUrls:  d.participantPfpUrls ?? {},
-          groupName:           d.groupName          ?? null,
-          groupDescription:    d.groupDescription   ?? null,
-          adminUsername:       d.adminUsername       ?? null,
-          encrypted:           d.encrypted          ?? false,
-          lastMessage:         d.lastMessage        ?? "",
-          lastSenderUsername:  d.lastSenderUsername ?? "",
-          lastAt:              d.lastAt             ?? 0,
-          lastReadAt:          d.lastReadAt         ?? {},
-          createdAt:           d.createdAt          ?? 0,
-        };
-      });
-      setConversations(convos);
-      setLoading(false);
-    }, err => {
-      console.error("[useConversations] snapshot error:", err);
-      setLoading(false);
-    });
+    unsubRef.current = onSnapshot(
+      q,
+      (snap) => {
+        const convos: RTConversation[] = snap.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            type: (d.type === 'group' ? 'group' : 'dm') as 'dm' | 'group',
+            participants: d.participants ?? [],
+            participantNames: d.participantNames ?? {},
+            participantPfpUrls: d.participantPfpUrls ?? {},
+            groupName: d.groupName ?? null,
+            groupDescription: d.groupDescription ?? null,
+            adminUsername: d.adminUsername ?? null,
+            encrypted: d.encrypted ?? false,
+            lastMessage: d.lastMessage ?? '',
+            lastSenderUsername: d.lastSenderUsername ?? '',
+            lastAt: d.lastAt ?? 0,
+            lastReadAt: d.lastReadAt ?? {},
+            createdAt: d.createdAt ?? 0,
+          };
+        });
+        setConversations(convos);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useConversations] snapshot error:', err);
+        setLoading(false);
+      }
+    );
 
-    return () => { unsubRef.current?.(); };
+    return () => {
+      unsubRef.current?.();
+    };
   }, [ready, fbUser, username]);
 
   return { conversations, loading };
@@ -158,11 +165,11 @@ export function useMessages(conversationId: string | null) {
     if (!initialLoadDoneRef.current) {
       // First snapshot — mark all as NOT new (they're historical)
       initialLoadDoneRef.current = true;
-      knownIdsRef.current = new Set(msgs.map(m => m.id));
-      setMessages(msgs.map(m => ({ ...m, isNew: false })));
+      knownIdsRef.current = new Set(msgs.map((m) => m.id));
+      setMessages(msgs.map((m) => ({ ...m, isNew: false })));
     } else {
       // Subsequent snapshots — flag genuinely new IDs
-      const result = msgs.map(m => {
+      const result = msgs.map((m) => {
         if (!knownIdsRef.current.has(m.id)) {
           knownIdsRef.current.add(m.id);
           return { ...m, isNew: true };
@@ -185,38 +192,44 @@ export function useMessages(conversationId: string | null) {
 
     setLoading(true);
     const q = query(
-      collection(clientDb, "messages_v1"),
-      where("conversationId", "==", conversationId),
-      orderBy("createdAt", "asc"),
+      collection(clientDb, 'messages_v1'),
+      where('conversationId', '==', conversationId),
+      orderBy('createdAt', 'asc'),
       limitToLast(100)
     );
 
-    unsubRef.current = onSnapshot(q, snap => {
-      const msgs: RTMessage[] = snap.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id:                  doc.id,
-          conversationId:      d.conversationId      ?? "",
-          senderUsername:      d.senderUsername      ?? "",
-          senderDisplayName:   d.senderDisplayName   ?? "",
-          content:             d.content             ?? "",
-          edited:              d.edited              ?? false,
-          editedAt:            d.editedAt            ?? null,
-          pinned:              d.pinned              ?? false,
-          deletedAt:           d.deletedAt           ?? null,
-          createdAt:           d.createdAt           ?? 0,
-          reactions:           d.reactions           ?? {},
-          replyTo:             d.replyTo             ?? null,
-          shareCard:           d.shareCard            ?? null,
-        };
-      });
-      applyUpdate(msgs);
-    }, err => {
-      console.error("[useMessages] snapshot error:", err);
-      setLoading(false);
-    });
+    unsubRef.current = onSnapshot(
+      q,
+      (snap) => {
+        const msgs: RTMessage[] = snap.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            conversationId: d.conversationId ?? '',
+            senderUsername: d.senderUsername ?? '',
+            senderDisplayName: d.senderDisplayName ?? '',
+            content: d.content ?? '',
+            edited: d.edited ?? false,
+            editedAt: d.editedAt ?? null,
+            pinned: d.pinned ?? false,
+            deletedAt: d.deletedAt ?? null,
+            createdAt: d.createdAt ?? 0,
+            reactions: d.reactions ?? {},
+            replyTo: d.replyTo ?? null,
+            shareCard: d.shareCard ?? null,
+          };
+        });
+        applyUpdate(msgs);
+      },
+      (err) => {
+        console.error('[useMessages] snapshot error:', err);
+        setLoading(false);
+      }
+    );
 
-    return () => { unsubRef.current?.(); };
+    return () => {
+      unsubRef.current?.();
+    };
   }, [ready, fbUser, conversationId, applyUpdate]);
 
   return { messages, loading };

@@ -44,8 +44,8 @@ export interface NewsDetail {
   orgId?: number;
 }
 
-export type ViewMode = "split" | "grid";
-export type SortOrder = "newest" | "oldest";
+export type ViewMode = 'split' | 'grid';
+export type SortOrder = 'newest' | 'oldest';
 
 export interface NewsFilterState {
   search: string;
@@ -57,20 +57,20 @@ export interface NewsFilterState {
 
 /* ── Helper: Clean HTML to preview text ─────────────────── */
 export function stripHtml(html?: string): string {
-  if (!html) return "";
+  if (!html) return '';
   return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<\/?[^>]+(>|$)/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/?[^>]+(>|$)/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
-    .replace(/&ndash;/g, "–")
-    .replace(/&mdash;/g, "—")
-    .replace(/\s+/g, " ")
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -80,7 +80,7 @@ export function formatNewsDate(dateStr?: string): {
   full: string;
   isRecent: boolean;
 } {
-  if (!dateStr) return { relative: "Unknown date", full: "", isRecent: false };
+  if (!dateStr) return { relative: 'Unknown date', full: '', isRecent: false };
 
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return { relative: dateStr, full: dateStr, isRecent: false };
@@ -90,13 +90,13 @@ export function formatNewsDate(dateStr?: string): {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  const full = d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  const full = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
   const isRecent = diffHours >= 0 && diffHours < 48;
@@ -109,7 +109,7 @@ export function formatNewsDate(dateStr?: string): {
     return { relative: `${diffHours}h ago`, full, isRecent: true };
   }
   if (diffDays === 1) {
-    return { relative: "Yesterday", full, isRecent: true };
+    return { relative: 'Yesterday', full, isRecent: true };
   }
   if (diffDays > 1 && diffDays < 7) {
     return { relative: `${diffDays}d ago`, full, isRecent: false };
@@ -117,10 +117,10 @@ export function formatNewsDate(dateStr?: string): {
 
   // Format as "May 27, 2026" or "May 27"
   const sameYear = d.getFullYear() === now.getFullYear();
-  const relative = d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
+  const relative = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
   });
 
   return { relative, full, isRecent: false };
@@ -132,10 +132,10 @@ export function getExpiryStatus(toDateStr?: string): {
   expiresSoon: boolean;
   label: string;
 } {
-  if (!toDateStr) return { isExpired: false, expiresSoon: false, label: "" };
+  if (!toDateStr) return { isExpired: false, expiresSoon: false, label: '' };
 
   const toDate = new Date(toDateStr);
-  if (isNaN(toDate.getTime())) return { isExpired: false, expiresSoon: false, label: "" };
+  if (isNaN(toDate.getTime())) return { isExpired: false, expiresSoon: false, label: '' };
 
   const now = new Date();
   const diffMs = toDate.getTime() - now.getTime();
@@ -145,7 +145,7 @@ export function getExpiryStatus(toDateStr?: string): {
     return {
       isExpired: true,
       expiresSoon: false,
-      label: `Expired ${toDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      label: `Expired ${toDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
     };
   }
 
@@ -153,14 +153,14 @@ export function getExpiryStatus(toDateStr?: string): {
     return {
       isExpired: false,
       expiresSoon: true,
-      label: diffDays === 1 ? "Expires tomorrow" : `Expires in ${diffDays} days`,
+      label: diffDays === 1 ? 'Expires tomorrow' : `Expires in ${diffDays} days`,
     };
   }
 
   return {
     isExpired: false,
     expiresSoon: false,
-    label: `Active until ${toDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    label: `Active until ${toDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
   };
 }
 
@@ -174,14 +174,23 @@ export function getReadingTime(text?: string): string {
 
 /* ── Helper: Initials for avatar fallback ────────────────── */
 export function getAuthorInitials(name?: string): string {
-  if (!name) return "NN";
+  if (!name) return 'NN';
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 /* ── Helper: File attachment categorizer ─────────────────── */
-export type AttachmentCategory = "image" | "pdf" | "document" | "spreadsheet" | "presentation" | "archive" | "audio" | "video" | "file";
+export type AttachmentCategory =
+  | 'image'
+  | 'pdf'
+  | 'document'
+  | 'spreadsheet'
+  | 'presentation'
+  | 'archive'
+  | 'audio'
+  | 'video'
+  | 'file';
 
 export function getAttachmentInfo(attachment: NewsAttachment): {
   category: AttachmentCategory;
@@ -189,38 +198,39 @@ export function getAttachmentInfo(attachment: NewsAttachment): {
   downloadUrl: string;
   isImage: boolean;
 } {
-  const name = attachment.name || "";
-  const dotIndex = name.lastIndexOf(".");
-  const extension = dotIndex !== -1 ? name.slice(dotIndex + 1).toLowerCase() : "";
+  const name = attachment.name || '';
+  const dotIndex = name.lastIndexOf('.');
+  const extension = dotIndex !== -1 ? name.slice(dotIndex + 1).toLowerCase() : '';
 
-  const typeUpper = (attachment.type || "").toUpperCase();
-  const isImg = typeUpper === "IMAGE" || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension);
+  const typeUpper = (attachment.type || '').toUpperCase();
+  const isImg =
+    typeUpper === 'IMAGE' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension);
 
-  let category: AttachmentCategory = "file";
+  let category: AttachmentCategory = 'file';
   if (isImg) {
-    category = "image";
-  } else if (typeUpper === "PDF" || extension === "pdf") {
-    category = "pdf";
-  } else if (["doc", "docx", "txt", "rtf", "odt", "pages"].includes(extension)) {
-    category = "document";
-  } else if (["xls", "xlsx", "csv", "numbers"].includes(extension)) {
-    category = "spreadsheet";
-  } else if (["ppt", "pptx", "key"].includes(extension)) {
-    category = "presentation";
-  } else if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) {
-    category = "archive";
-  } else if (["mp3", "wav", "m4a", "ogg"].includes(extension)) {
-    category = "audio";
-  } else if (["mp4", "mov", "avi", "webm"].includes(extension)) {
-    category = "video";
+    category = 'image';
+  } else if (typeUpper === 'PDF' || extension === 'pdf') {
+    category = 'pdf';
+  } else if (['doc', 'docx', 'txt', 'rtf', 'odt', 'pages'].includes(extension)) {
+    category = 'document';
+  } else if (['xls', 'xlsx', 'csv', 'numbers'].includes(extension)) {
+    category = 'spreadsheet';
+  } else if (['ppt', 'pptx', 'key'].includes(extension)) {
+    category = 'presentation';
+  } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+    category = 'archive';
+  } else if (['mp3', 'wav', 'm4a', 'ogg'].includes(extension)) {
+    category = 'audio';
+  } else if (['mp4', 'mov', 'avi', 'webm'].includes(extension)) {
+    category = 'video';
   }
 
-  const fileTypeParam = isImg ? "image" : "attachment";
+  const fileTypeParam = isImg ? 'image' : 'attachment';
   const downloadUrl = `/api/file?id=${attachment.fileId}&type=${fileTypeParam}&responseType=redirect`;
 
   return {
     category,
-    extension: extension || typeUpper || "FILE",
+    extension: extension || typeUpper || 'FILE',
     downloadUrl,
     isImage: isImg,
   };

@@ -1,8 +1,14 @@
-import { db } from "./firebaseAdmin";
-import type { GradeTrackerDoc, GradeTrackerSettings, GradeEntry, GradeSnapshot } from "@/lib/grades/types";
-import { DEFAULT_SETTINGS } from "@/lib/grades/constants";
+import { DEFAULT_SETTINGS } from '@/lib/grades/constants';
+import type {
+  GradeEntry,
+  GradeSnapshot,
+  GradeTrackerDoc,
+  GradeTrackerSettings,
+} from '@/lib/grades/types';
 
-const COL = "grade_tracker_v1";
+import { db } from './firebaseAdmin';
+
+const COL = 'grade_tracker_v1';
 
 function docId(username: string, subjectId: number): string {
   return `${username.toLowerCase().trim()}_${subjectId}`;
@@ -12,14 +18,14 @@ function docId(username: string, subjectId: number): string {
 function docToTracker(doc: FirebaseFirestore.DocumentSnapshot<any>): GradeTrackerDoc {
   const d = doc.data()!;
   return {
-    username: d.username ?? "",
-    subjectId: typeof d.subjectId === "number" ? d.subjectId : 0,
-    subjectName: d.subjectName ?? "",
+    username: d.username ?? '',
+    subjectId: typeof d.subjectId === 'number' ? d.subjectId : 0,
+    subjectName: d.subjectName ?? '',
     subjectColor: d.subjectColor,
     settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
     entries: Array.isArray(d.entries) ? d.entries : [],
     snapshots: Array.isArray(d.snapshots) ? d.snapshots : [],
-    updatedAt: typeof d.updatedAt === "number" ? d.updatedAt : Date.now(),
+    updatedAt: typeof d.updatedAt === 'number' ? d.updatedAt : Date.now(),
   };
 }
 

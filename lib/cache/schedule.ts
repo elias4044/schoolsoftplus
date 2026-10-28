@@ -1,18 +1,16 @@
-import { apiFetch } from "@/lib/api-client";
-import { dedupe, readCache, writeCache } from "@/lib/cache";
-import { getWeekBounds, mapScheduleEvent, type Lesson } from "@/lib/schedule-utils";
+import { apiFetch } from '@/lib/api-client';
+import { dedupe, readCache, writeCache } from '@/lib/cache';
+import { getWeekBounds, mapScheduleEvent, type Lesson } from '@/lib/schedule-utils';
 
-type Week = ReturnType<typeof getWeekBounds>["week"];
-
+type Week = ReturnType<typeof getWeekBounds>['week'];
 
 export const scheduleKey = (week: Week) => `schedule:week:${week}`;
-
 
 export function fetchSchedule(week: Week): Promise<Lesson[]> {
   const key = scheduleKey(week);
   return dedupe(key, async () => {
     const res = await apiFetch<{ success: boolean; schedule: any[] }>(`/api/schedule?week=${week}`);
-    if (!Array.isArray(res?.schedule)) throw new Error("Invalid schedule response");
+    if (!Array.isArray(res?.schedule)) throw new Error('Invalid schedule response');
     const lessons = res.schedule.map(mapScheduleEvent).filter((l): l is Lesson => l !== null);
     writeCache(key, lessons);
     return lessons;
@@ -28,7 +26,7 @@ export async function prefetchScheduleWeeks(
   { maxAgeMs = 0 }: { maxAgeMs?: number } = {}
 ): Promise<void> {
   await Promise.all(
-    offsets.map(async offset => {
+    offsets.map(async (offset) => {
       const { week } = getWeekBounds(offset);
       if (maxAgeMs > 0) {
         const cached = readCache<Lesson[]>(scheduleKey(week));

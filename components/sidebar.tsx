@@ -1,87 +1,88 @@
-"use client";
+'use client';
 
-import { motion, AnimatePresence, LayoutGroup, MotionConfig } from "framer-motion";
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from 'react';
+import { Comfortaa } from 'next/font/google';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { AnimatePresence, LayoutGroup, motion, MotionConfig } from 'framer-motion';
 import {
-  LayoutDashboard,
-  CalendarDays,
-  UtensilsCrossed,
-  Newspaper,
   BookOpen,
-  StickyNote,
-  Settings,
-  LogOut,
+  Bot,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Bot,
-  Timer,
-  X,
-  UserCircle,
-  MessageSquare,
+  Gift,
   GitPullRequest,
-  Megaphone,
-  Users,
   GraduationCap,
   Layers,
-  Gift,
-  Trophy,
+  LayoutDashboard,
+  LogOut,
+  Megaphone,
+  MessageSquare,
+  Newspaper,
   Search,
-} from "lucide-react";
-import { Comfortaa } from "next/font/google";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChangelogModal } from "@/components/ChangelogModal";
-import { triggerCommandPalette } from "@/components/command-palette";
+  Settings,
+  StickyNote,
+  Timer,
+  Trophy,
+  UserCircle,
+  Users,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react';
 
-const comfortaa = Comfortaa({ subsets: ["latin"] });
+import { useAuth } from '@/lib/auth-context';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChangelogModal } from '@/components/ChangelogModal';
+import { triggerCommandPalette } from '@/components/command-palette';
 
-const spring = { type: "spring", stiffness: 420, damping: 34, mass: 0.7 } as const;
-const widthSpring = { type: "spring", stiffness: 260, damping: 30 } as const;
+const comfortaa = Comfortaa({ subsets: ['latin'] });
+
+const spring = { type: 'spring', stiffness: 420, damping: 34, mass: 0.7 } as const;
+const widthSpring = { type: 'spring', stiffness: 260, damping: 30 } as const;
 
 const NAV_ITEMS = [
-  { href: "/dashboard",    label: "Dashboard",     icon: LayoutDashboard, shortcut: "Alt+1" },
-  { href: "/schedule",     label: "Schedule",      icon: CalendarDays,    shortcut: "Alt+2" },
-  { href: "/lunch",        label: "Lunch Menu",    icon: UtensilsCrossed, shortcut: "Alt+3" },
-  { href: "/news",         label: "News",          icon: Newspaper,       shortcut: "Alt+4" },
-  { href: "/subjects",     label: "Subjects",      icon: BookOpen,        shortcut: "Alt+5" },
-  { href: "/countdown",    label: "Countdown",     icon: Timer,           shortcut: "Alt+6" },
-  { href: "/class",        label: "Class & Staff", icon: GraduationCap,   shortcut: "Alt+7" },
-  { href: "/final-grades", label: "Final Grades",  icon: Trophy,          shortcut: "Alt+8" },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'Alt+1' },
+  { href: '/schedule', label: 'Schedule', icon: CalendarDays, shortcut: 'Alt+2' },
+  { href: '/lunch', label: 'Lunch Menu', icon: UtensilsCrossed, shortcut: 'Alt+3' },
+  { href: '/news', label: 'News', icon: Newspaper, shortcut: 'Alt+4' },
+  { href: '/subjects', label: 'Subjects', icon: BookOpen, shortcut: 'Alt+5' },
+  { href: '/countdown', label: 'Countdown', icon: Timer, shortcut: 'Alt+6' },
+  { href: '/class', label: 'Class & Staff', icon: GraduationCap, shortcut: 'Alt+7' },
+  { href: '/final-grades', label: 'Final Grades', icon: Trophy, shortcut: 'Alt+8' },
 ] as const;
 
 const BOTTOM_NAV = [
-  { href: "/notes",      label: "Notes",      icon: StickyNote,     shortcut: "Alt+N" },
-  { href: "/flashcards", label: "Flashcards", icon: Layers,         shortcut: "Alt+K" },
-  { href: "/messages",   label: "Messages",   icon: MessageSquare,  shortcut: "Alt+M" },
-  { href: "/people",     label: "People",     icon: Users,          shortcut: "Alt+U" },
-  { href: "/referrals",  label: "Referrals",  icon: Gift,           shortcut: "Alt+R" },
-  { href: "/profile",    label: "Profile",    icon: UserCircle,     shortcut: "Alt+P" },
-  { href: "/settings",   label: "Settings",   icon: Settings,       shortcut: "Alt+," },
-  { href: "/feedback",   label: "Feedback",   icon: GitPullRequest, shortcut: "Alt+F" },
+  { href: '/notes', label: 'Notes', icon: StickyNote, shortcut: 'Alt+N' },
+  { href: '/flashcards', label: 'Flashcards', icon: Layers, shortcut: 'Alt+K' },
+  { href: '/messages', label: 'Messages', icon: MessageSquare, shortcut: 'Alt+M' },
+  { href: '/people', label: 'People', icon: Users, shortcut: 'Alt+U' },
+  { href: '/referrals', label: 'Referrals', icon: Gift, shortcut: 'Alt+R' },
+  { href: '/profile', label: 'Profile', icon: UserCircle, shortcut: 'Alt+P' },
+  { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'Alt+,' },
+  { href: '/feedback', label: 'Feedback', icon: GitPullRequest, shortcut: 'Alt+F' },
 ] as const;
 
 const SHORTCUT_ROUTES: Record<string, string> = {
-  "1": "/dashboard",
-  "2": "/schedule",
-  "3": "/lunch",
-  "4": "/news",
-  "5": "/subjects",
-  "6": "/countdown",
-  "7": "/class",
-  "8": "/final-grades",
-  n: "/notes",
-  k: "/flashcards",
-  m: "/messages",
-  u: "/people",
-  r: "/referrals",
-  p: "/profile",
-  ",": "/settings",
-  f: "/feedback",
+  '1': '/dashboard',
+  '2': '/schedule',
+  '3': '/lunch',
+  '4': '/news',
+  '5': '/subjects',
+  '6': '/countdown',
+  '7': '/class',
+  '8': '/final-grades',
+  n: '/notes',
+  k: '/flashcards',
+  m: '/messages',
+  u: '/people',
+  r: '/referrals',
+  p: '/profile',
+  ',': '/settings',
+  f: '/feedback',
 };
 
 function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
@@ -90,7 +91,7 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
   const handler = useCallback(
     (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       if (target.isContentEditable) return;
       if (!e.altKey) return;
 
@@ -100,10 +101,10 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
       if (route) {
         e.preventDefault();
         router.push(route);
-      } else if (key === "a") {
+      } else if (key === 'a') {
         e.preventDefault();
         onAiOpen?.();
-      } else if (key === "q") {
+      } else if (key === 'q') {
         e.preventDefault();
         onLogout?.();
       }
@@ -112,8 +113,8 @@ function useKeyboardNav(onAiOpen?: () => void, onLogout?: () => void) {
   );
 
   useEffect(() => {
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [handler]);
 }
 
@@ -139,8 +140,13 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
   useKeyboardNav(onAiOpen, logout);
 
   const initials = session?.name
-    ? session.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
-    : session?.username?.slice(0, 2).toUpperCase() ?? "??";
+    ? session.name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : (session?.username?.slice(0, 2).toUpperCase() ?? '??');
 
   const sidebarWidth = collapsed ? 68 : 232;
 
@@ -153,14 +159,14 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
           style={{
             background:
-              "linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 55%, transparent), transparent)",
+              'linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 55%, transparent), transparent)',
           }}
         />
 
         <div
           className={cn(
-            "flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-3",
-            isCollapsed && "justify-center px-0"
+            'border-sidebar-border flex h-16 shrink-0 items-center justify-between border-b px-3',
+            isCollapsed && 'justify-center px-0'
           )}
         >
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
@@ -170,14 +176,20 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
               transition={spring}
               className="grid size-9 shrink-0 place-items-center"
             >
-              <Image src="/logo.png" alt="SchoolSoft+ Logo" className="size-6" width={32} height={32} />
+              <Image
+                src="/logo.png"
+                alt="SchoolSoft+ Logo"
+                className="size-6"
+                width={32}
+                height={32}
+              />
             </motion.div>
             <AnimatePresence initial={false}>
               {!isCollapsed && (
                 <motion.span
                   key="wordmark"
                   className={cn(
-                    "text-gradient whitespace-nowrap pt-1 text-base font-bold tracking-tight",
+                    'text-gradient pt-1 text-base font-bold tracking-tight whitespace-nowrap',
                     comfortaa.className
                   )}
                 >
@@ -189,7 +201,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           {isMobile && (
             <button
               onClick={onMobileClose}
-              className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+              className="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground grid size-8 place-items-center rounded-lg transition-colors"
               aria-label="Close menu"
             >
               <X className="size-4" />
@@ -198,10 +210,10 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
         </div>
 
         <nav
-          className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3 pt-2"
+          className="flex-1 overflow-x-hidden overflow-y-auto px-2 pt-2 pb-3"
           onMouseLeave={() => setHovered(null)}
         >
-          <LayoutGroup id={isMobile ? "sidebar-mobile" : "sidebar-desktop"}>
+          <LayoutGroup id={isMobile ? 'sidebar-mobile' : 'sidebar-desktop'}>
             {/* Quick Search / Command Palette Trigger */}
             <div className="mb-2">
               {isCollapsed ? (
@@ -211,7 +223,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => triggerCommandPalette()}
-                        className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+                        className="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground grid size-10 place-items-center rounded-lg transition-colors"
                         aria-label="Quick jump (⌘K)"
                       >
                         <Search className="size-4" />
@@ -219,7 +231,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
                     </TooltipTrigger>
                     <TooltipContent side="right" sideOffset={8} className="flex items-center gap-2">
                       <span>Quick Jump</span>
-                      <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                      <kbd className="border-border/60 bg-muted rounded border px-1.5 py-0.5 font-mono text-[10px]">
                         ⌘K
                       </kbd>
                     </TooltipContent>
@@ -229,29 +241,34 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={() => triggerCommandPalette()}
-                  className="flex w-full items-center justify-between rounded-lg border border-sidebar-border/70 bg-sidebar-accent/35 px-2.5 py-2 text-xs text-muted-foreground transition-all duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/75 hover:text-foreground group"
+                  className="border-sidebar-border/70 bg-sidebar-accent/35 text-muted-foreground hover:border-sidebar-border hover:bg-sidebar-accent/75 hover:text-foreground group flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-xs transition-all duration-150"
                   aria-label="Quick search and command palette"
                 >
                   <span className="flex items-center gap-2">
-                    <Search className="size-3.5 text-muted-foreground/70 group-hover:text-foreground transition-colors" />
+                    <Search className="text-muted-foreground/70 group-hover:text-foreground size-3.5 transition-colors" />
                     <span className="font-normal">Quick jump...</span>
                   </span>
-                  <kbd className="inline-flex items-center gap-0.5 rounded border border-sidebar-border/80 bg-sidebar px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/90 shadow-2xs">
+                  <kbd className="border-sidebar-border/80 bg-sidebar text-muted-foreground/90 inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 font-mono text-[10px] shadow-2xs">
                     ⌘K
                   </kbd>
                 </motion.button>
               )}
             </div>
-            <SectionLabel collapsed={isCollapsed} first>Menu</SectionLabel>
+            <SectionLabel collapsed={isCollapsed} first>
+              Menu
+            </SectionLabel>
             <div className="space-y-0.5">
-              {NAV_ITEMS.map(item => (
+              {NAV_ITEMS.map((item) => (
                 <NavItem
                   key={item.href}
                   id={item.href}
                   href={item.href}
                   label={item.label}
                   Icon={item.icon}
-                  active={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+                  active={
+                    pathname === item.href ||
+                    (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                  }
                   collapsed={isCollapsed}
                   shortcut={item.shortcut}
                   hovered={hovered}
@@ -262,7 +279,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
 
             <SectionLabel collapsed={isCollapsed}>More</SectionLabel>
             <div className="space-y-0.5">
-              {BOTTOM_NAV.map(item => (
+              {BOTTOM_NAV.map((item) => (
                 <NavItem
                   key={item.href}
                   id={item.href}
@@ -304,30 +321,31 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
           </LayoutGroup>
         </nav>
 
-        <div className="shrink-0 space-y-0.5 border-t border-sidebar-border p-2">
+        <div className="border-sidebar-border shrink-0 space-y-0.5 border-t p-2">
           {session && (
             <motion.button
               type="button"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => router.push("/profile")}
+              onClick={() => router.push('/profile')}
               className={cn(
-                "mb-1 flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-overlay p-2 text-left transition-colors hover:bg-overlay-hover",
-                isCollapsed && "mx-auto size-10 justify-center border-transparent bg-transparent p-0"
+                'border-sidebar-border bg-overlay hover:bg-overlay-hover mb-1 flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition-colors',
+                isCollapsed &&
+                  'mx-auto size-10 justify-center border-transparent bg-transparent p-0'
               )}
             >
-              <Avatar className="size-8 shrink-0 ring-1 ring-brand/30">
-                <AvatarFallback className="bg-brand-soft text-xs font-semibold text-brand-strong">
+              <Avatar className="ring-brand/30 size-8 shrink-0 ring-1">
+                <AvatarFallback className="bg-brand-soft text-brand-strong text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-sidebar-foreground">
+                  <p className="text-sidebar-foreground truncate text-xs font-medium">
                     {session.name ?? session.username}
                   </p>
-                  <p className="truncate text-[10px] text-muted-foreground">{session.school}</p>
+                  <p className="text-muted-foreground truncate text-[10px]">{session.school}</p>
                 </div>
               )}
             </motion.button>
@@ -351,11 +369,11 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
             <NavItem
               id="collapse"
               href="#"
-              label={collapsed ? "Expand" : "Collapse"}
+              label={collapsed ? 'Expand' : 'Collapse'}
               Icon={collapsed ? ChevronRight : ChevronLeft}
               active={false}
               collapsed={isCollapsed}
-              onClick={() => setCollapsed(c => !c)}
+              onClick={() => setCollapsed((c) => !c)}
               hovered={hovered}
               onHover={setHovered}
             />
@@ -373,7 +391,7 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
         initial={false}
         animate={{ width: sidebarWidth }}
         transition={widthSpring}
-        className="relative hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex"
+        className="border-sidebar-border bg-sidebar relative hidden h-full shrink-0 flex-col overflow-hidden border-r md:flex"
       >
         {sidebarContent(false)}
       </motion.aside>
@@ -392,11 +410,11 @@ export function Sidebar({ onAiOpen, mobileOpen = false, onMobileClose }: Sidebar
             />
             <motion.aside
               key="drawer"
-              initial={{ x: "-100%" }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:hidden"
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+              className="border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r md:hidden"
             >
               {sidebarContent(true)}
             </motion.aside>
@@ -417,13 +435,15 @@ function SectionLabel({
   first?: boolean;
 }) {
   if (collapsed) {
-    return <div className={cn("mx-auto h-px w-6 bg-sidebar-border", first ? "mb-2 mt-1" : "my-3")} />;
+    return (
+      <div className={cn('bg-sidebar-border mx-auto h-px w-6', first ? 'mt-1 mb-2' : 'my-3')} />
+    );
   }
   return (
     <div
       className={cn(
-        "px-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70",
-        first ? "pt-2" : "pt-5"
+        'text-muted-foreground/70 px-2.5 pb-1.5 text-[10px] font-medium tracking-wider uppercase',
+        first ? 'pt-2' : 'pt-5'
       )}
     >
       {children}
@@ -469,15 +489,15 @@ function NavItem({
       whileTap={{ scale: 0.97 }}
       transition={spring}
       className={cn(
-        "group relative flex cursor-pointer select-none items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors duration-200",
-        collapsed && "mx-auto size-10 justify-center px-0 py-0",
+        'group relative flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors duration-200 select-none',
+        collapsed && 'mx-auto size-10 justify-center px-0 py-0',
         active
-          ? "font-medium text-foreground"
+          ? 'text-foreground font-medium'
           : danger
-          ? "text-muted-foreground hover:text-destructive"
-          : accent
-          ? "text-muted-foreground hover:text-foreground"
-          : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            ? 'text-muted-foreground hover:text-destructive'
+            : accent
+              ? 'text-muted-foreground hover:text-foreground'
+              : 'text-sidebar-foreground/70 hover:text-sidebar-foreground'
       )}
     >
       <AnimatePresence initial={false}>
@@ -490,8 +510,8 @@ function NavItem({
             exit={{ opacity: 0 }}
             transition={spring}
             className={cn(
-              "absolute inset-0 rounded-lg",
-              danger ? "bg-destructive/10" : "bg-overlay-hover"
+              'absolute inset-0 rounded-lg',
+              danger ? 'bg-destructive/10' : 'bg-overlay-hover'
             )}
           />
         )}
@@ -502,21 +522,21 @@ function NavItem({
           <motion.span
             layoutId="sidebar-active-bg"
             transition={spring}
-            className="absolute inset-0 rounded-lg bg-brand-dim ring-1 ring-inset ring-brand/15"
+            className="bg-brand-dim ring-brand/15 absolute inset-0 rounded-lg ring-1 ring-inset"
           />
           <motion.span
             layoutId="sidebar-active-bar"
             transition={spring}
-            className="absolute inset-y-2.5 left-0 w-[3px] rounded-r-full bg-brand"
+            className="bg-brand absolute inset-y-2.5 left-0 w-[3px] rounded-r-full"
           />
         </>
       )}
 
       <Icon
         className={cn(
-          "relative z-10 shrink-0 transition-colors duration-200",
-          collapsed ? "size-5" : "size-4",
-          (active || accent) && "text-brand-strong"
+          'relative z-10 shrink-0 transition-colors duration-200',
+          collapsed ? 'size-5' : 'size-4',
+          (active || accent) && 'text-brand-strong'
         )}
       />
 
@@ -533,12 +553,12 @@ function NavItem({
             {label}
             <span className="flex items-center gap-1.5">
               {badge != null && badge > 0 && (
-                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-bold text-brand-foreground">
-                  {badge > 99 ? "99+" : badge}
+                <span className="bg-brand text-brand-foreground inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold">
+                  {badge > 99 ? '99+' : badge}
                 </span>
               )}
               {shortcut && (
-                <span className="hidden rounded border border-border px-1 py-px font-mono text-[9px] tracking-tight text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:inline">
+                <span className="border-border text-muted-foreground hidden rounded border px-1 py-px font-mono text-[9px] tracking-tight opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:inline">
                   {shortcut}
                 </span>
               )}
@@ -550,10 +570,13 @@ function NavItem({
   );
 
   const wrapped =
-    href === "#" ? (
+    href === '#' ? (
       content
     ) : (
-      <Link href={href} className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link
+        href={href}
+        className="focus-visible:ring-ring block rounded-lg outline-none focus-visible:ring-2"
+      >
         {content}
       </Link>
     );
@@ -565,8 +588,8 @@ function NavItem({
           <div className="relative">
             {wrapped}
             {badge != null && badge > 0 && (
-              <span className="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-brand text-[8px] font-bold text-brand-foreground">
-                {badge > 9 ? "9+" : badge}
+              <span className="bg-brand text-brand-foreground pointer-events-none absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[8px] font-bold">
+                {badge > 9 ? '9+' : badge}
               </span>
             )}
           </div>

@@ -1,9 +1,11 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 // Get files/images from SchoolSoft. Useful for "news".
 import { NextRequest, NextResponse } from 'next/server';
-import { createSchoolsoftClient, requireSession } from '../lib/schoolsoft';
+
 import { handleApiError } from '../lib/apiError';
+import { createSchoolsoftClient, requireSession } from '../lib/schoolsoft';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

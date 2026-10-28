@@ -1,6 +1,6 @@
-import axios from "axios";
+import axios from 'axios';
 
-const DEFAULT_USER_AGENT = "Mozilla/5.0";
+const DEFAULT_USER_AGENT = 'Mozilla/5.0';
 
 /**
  * Verifies that the provided cookies represent a live SchoolSoft session.
@@ -8,34 +8,31 @@ const DEFAULT_USER_AGENT = "Mozilla/5.0";
  * The `school` parameter determines which school's subdirectory to hit
  * (e.g. "engelska"). Defaults to "engelska".
  */
-export async function authUser(cookies: string, school = "engelska"): Promise<boolean> {
+export async function authUser(cookies: string, school = 'engelska'): Promise<boolean> {
   if (!cookies) {
-    console.warn("[authUser] No cookies provided.");
+    console.warn('[authUser] No cookies provided.');
     return false;
   }
 
   try {
-    const response = await axios.get(
-      `https://sms.schoolsoft.se/${school}/rest-api/session`,
-      {
-        responseType: "json",
-        timeout: 5_000,
-        signal: AbortSignal.timeout(5_000),
-        headers: {
-          Cookie: cookies,
-          "User-Agent": DEFAULT_USER_AGENT,
-          Referer: `https://sms.schoolsoft.se/${school}/`,
-          Origin: "https://sms.schoolsoft.se",
-        },
-        validateStatus: () => true,
-      }
-    );
+    const response = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
+      responseType: 'json',
+      timeout: 5_000,
+      signal: AbortSignal.timeout(5_000),
+      headers: {
+        Cookie: cookies,
+        'User-Agent': DEFAULT_USER_AGENT,
+        Referer: `https://sms.schoolsoft.se/${school}/`,
+        Origin: 'https://sms.schoolsoft.se',
+      },
+      validateStatus: () => true,
+    });
 
     if (response.status === 200) return true;
     console.warn(`[authUser] Session check returned ${response.status}`);
     return false;
   } catch (error) {
-    console.error("[authUser] Network error:", (error as Error).message);
+    console.error('[authUser] Network error:', (error as Error).message);
     return false;
   }
 }
@@ -48,35 +45,39 @@ export async function authUser(cookies: string, school = "engelska"): Promise<bo
 export async function authUserWithUsername(
   cookies: string,
   expectedUsername: string,
-  school = "engelska"
+  school = 'engelska'
 ): Promise<boolean> {
   if (!cookies) {
-    console.warn("[authUserWithUsername] No cookies provided.");
+    console.warn('[authUserWithUsername] No cookies provided.');
     return false;
   }
 
   try {
     const baseHeaders = {
       Cookie: cookies,
-      "User-Agent": DEFAULT_USER_AGENT,
+      'User-Agent': DEFAULT_USER_AGENT,
       Referer: `https://sms.schoolsoft.se/${school}/`,
-      Origin: "https://sms.schoolsoft.se",
+      Origin: 'https://sms.schoolsoft.se',
     };
 
-    const sessionRes = await axios.get(
-      `https://sms.schoolsoft.se/${school}/rest-api/session`,
-      { responseType: "json", headers: baseHeaders, validateStatus: () => true }
-    );
+    const sessionRes = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
+      responseType: 'json',
+      headers: baseHeaders,
+      timeout: 5_000,
+      signal: AbortSignal.timeout(5_000),
+      validateStatus: () => true,
+    });
 
     if (sessionRes.status !== 200) {
       console.warn(`[authUserWithUsername] Session check failed: ${sessionRes.status}`);
       return false;
     }
 
-    const fetchedUsername =
-      `${sessionRes.data.user.userName}`.toLowerCase();
+    const fetchedUsername = String(sessionRes.data?.user?.userName ?? '')
+      .toLowerCase()
+      .trim();
 
-    if (fetchedUsername !== expectedUsername) {
+    if (fetchedUsername !== expectedUsername.toLowerCase().trim()) {
       console.warn(
         `[authUserWithUsername] Username mismatch. Expected: ${expectedUsername}, Got: ${fetchedUsername}`
       );
@@ -85,7 +86,7 @@ export async function authUserWithUsername(
 
     return true;
   } catch (error) {
-    console.error("[authUserWithUsername] Network error:", (error as Error).message);
+    console.error('[authUserWithUsername] Network error:', (error as Error).message);
     return false;
   }
 }

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/app/api/lib/firebaseAdmin";
-import { authUserWithUsername } from "@/app/api/lib/auth";
-import { getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { authUserWithUsername } from '@/app/api/lib/auth';
+import { db } from '@/app/api/lib/firebaseAdmin';
+import { getSessionCookies } from '@/app/api/lib/schoolsoft';
 
 type UserEntry = {
   username: string;
@@ -11,24 +12,18 @@ type UserEntry = {
   };
 };
 
-type DataKey = "notes" | "goals";
-type ItemKey = "note" | "goal";
+type DataKey = 'notes' | 'goals';
+type ItemKey = 'note' | 'goal';
 
 // -----------------------------------------------------------------------------
 // Shared logic for GET (fetch), POST (create), DELETE (remove) on user data.
 // -----------------------------------------------------------------------------
 
 /** GET /api/notes  or  GET /api/goals */
-export async function getUserData(
-  req: NextRequest,
-  dataKey: DataKey
-): Promise<NextResponse> {
+export async function getUserData(req: NextRequest, dataKey: DataKey): Promise<NextResponse> {
   const sess = getSessionCookies(req);
   if (!sess) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school, username } = sess;
@@ -36,35 +31,27 @@ export async function getUserData(
 
   if (!normalised) {
     return NextResponse.json(
-      { success: false, error: "Username not found in session." },
+      { success: false, error: 'Username not found in session.' },
       { status: 400 }
     );
   }
 
   if (!(await authUserWithUsername(cookies, normalised, school))) {
-    return NextResponse.json(
-      { success: false, error: "Authentication failed." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Authentication failed.' }, { status: 401 });
   }
 
   try {
-    const statsDoc = await db.collection("stats").doc("loginStats").get();
+    const statsDoc = await db.collection('stats').doc('loginStats').get();
     if (!statsDoc.exists) {
       return NextResponse.json(
-        { success: false, error: "Stats document not found." },
+        { success: false, error: 'Stats document not found.' },
         { status: 500 }
       );
     }
 
-    const user = (statsDoc.data()!.users as UserEntry[]).find(
-      (u) => u.username === normalised
-    );
+    const user = (statsDoc.data()!.users as UserEntry[]).find((u) => u.username === normalised);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -73,10 +60,7 @@ export async function getUserData(
     });
   } catch (err) {
     console.error(`[get${dataKey}]`, (err as Error).message);
-    return NextResponse.json(
-      { success: false, error: "Internal server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error.' }, { status: 500 });
   }
 }
 
@@ -90,10 +74,7 @@ export async function createUserData(
 ): Promise<NextResponse> {
   const sess = getSessionCookies(req);
   if (!sess) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school, username } = sess;
@@ -103,10 +84,7 @@ export async function createUserData(
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Invalid JSON body." },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
   }
 
   const { time } = body;
@@ -120,18 +98,15 @@ export async function createUserData(
   }
 
   if (!(await authUserWithUsername(cookies, normalised, school))) {
-    return NextResponse.json(
-      { success: false, error: "Authentication failed." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Authentication failed.' }, { status: 401 });
   }
 
   try {
-    const statsRef = db.collection("stats").doc("loginStats");
+    const statsRef = db.collection('stats').doc('loginStats');
     const statsDoc = await statsRef.get();
     if (!statsDoc.exists) {
       return NextResponse.json(
-        { success: false, error: "Stats document not found." },
+        { success: false, error: 'Stats document not found.' },
         { status: 500 }
       );
     }
@@ -140,10 +115,7 @@ export async function createUserData(
     const users: UserEntry[] = usersData.users;
     const userIndex = users.findIndex((u) => u.username === normalised);
     if (userIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: "User not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
     const user = users[userIndex];
@@ -159,16 +131,10 @@ export async function createUserData(
     user.data[dataKey].push({ [itemKey]: item, time } as never);
     await statsRef.set(usersData);
 
-    return NextResponse.json(
-      { success: true, data: { [itemKey]: item, time } },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data: { [itemKey]: item, time } }, { status: 201 });
   } catch (err) {
     console.error(`[create${dataKey}]`, (err as Error).message);
-    return NextResponse.json(
-      { success: false, error: "Internal server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error.' }, { status: 500 });
   }
 }
 
@@ -182,10 +148,7 @@ export async function deleteUserData(
 ): Promise<NextResponse> {
   const sess = getSessionCookies(req);
   if (!sess) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school, username } = sess;
@@ -195,10 +158,7 @@ export async function deleteUserData(
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Invalid JSON body." },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
   }
 
   const { time } = body;
@@ -212,18 +172,15 @@ export async function deleteUserData(
   }
 
   if (!(await authUserWithUsername(cookies, normalised, school))) {
-    return NextResponse.json(
-      { success: false, error: "Authentication failed." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Authentication failed.' }, { status: 401 });
   }
 
   try {
-    const statsRef = db.collection("stats").doc("loginStats");
+    const statsRef = db.collection('stats').doc('loginStats');
     const statsDoc = await statsRef.get();
     if (!statsDoc.exists) {
       return NextResponse.json(
-        { success: false, error: "Stats document not found." },
+        { success: false, error: 'Stats document not found.' },
         { status: 500 }
       );
     }
@@ -232,10 +189,7 @@ export async function deleteUserData(
     const users: UserEntry[] = usersData.users;
     const userIndex = users.findIndex((u) => u.username === normalised);
     if (userIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: "User not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
     const user = users[userIndex];
@@ -245,10 +199,7 @@ export async function deleteUserData(
       (i) => i[itemKey] === item && i.time === time
     );
     if (itemIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: `${itemKey} not found.` },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: `${itemKey} not found.` }, { status: 404 });
     }
 
     user.data[dataKey].splice(itemIndex, 1);
@@ -260,9 +211,6 @@ export async function deleteUserData(
     });
   } catch (err) {
     console.error(`[delete${dataKey}]`, (err as Error).message);
-    return NextResponse.json(
-      { success: false, error: "Internal server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error.' }, { status: 500 });
   }
 }

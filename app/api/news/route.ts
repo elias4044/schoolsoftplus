@@ -1,15 +1,15 @@
 // NOTE: Old route has been moved to /api/news/legacy
 
 import { NextRequest, NextResponse } from 'next/server';
-
 import * as cheerio from 'cheerio';
+
+import { handleApiError } from '@/app/api/lib/apiError';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  requireSession,
   getSessionCookies,
+  requireSession,
 } from '@/app/api/lib/schoolsoft';
-import { handleApiError } from '@/app/api/lib/apiError';
 
 export async function GET(req: NextRequest) {
   // Updated to use AuthV2

@@ -1,4 +1,4 @@
-export type FinalGradeLetter = "A" | "B" | "C" | "D" | "E" | "F";
+export type FinalGradeLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export interface FinalGradeCell {
   period: string;

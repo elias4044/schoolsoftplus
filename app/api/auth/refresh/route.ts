@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-const CLIENT_ID = "eApp";
+const CLIENT_ID = 'eApp';
 
 /* -------------------------------------------------------------
    POST /api/mobile/refresh
@@ -28,15 +28,18 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON body." }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
   }
 
   const { refreshToken } = body;
   if (!refreshToken) {
-    return NextResponse.json({ success: false, error: "refreshToken is required." }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: 'refreshToken is required.' },
+      { status: 400 }
+    );
   }
 
-  const school = (body.school ?? req.headers.get("x-school") ?? "engelska").trim();
+  const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
 
   const refreshUrl =
     `https://sms.schoolsoft.se/${encodeURIComponent(school)}/rest-api/login/token` +
@@ -46,8 +49,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await fetch(refreshUrl, {
-      method: "POST",
-      headers: { accept: "application/json" },
+      method: 'POST',
+      headers: { accept: 'application/json' },
     });
 
     const text = await res.text();
@@ -55,19 +58,23 @@ export async function POST(req: NextRequest) {
     if (res.status !== 200) {
       console.warn(`[mobile/refresh] SchoolSoft returned ${res.status}`, text);
       return NextResponse.json(
-        { success: false, error: "Refresh failed. The refresh token may have expired." },
+        { success: false, error: 'Refresh failed. The refresh token may have expired.' },
         { status: 401 }
       );
     }
 
     let data: unknown;
-    try { data = JSON.parse(text); } catch { data = { access_token: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { access_token: text };
+    }
 
     return NextResponse.json({ success: true, ...(data as object) });
   } catch (err) {
-    console.error("[mobile/refresh] error:", (err as Error).message);
+    console.error('[mobile/refresh] error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, error: "Could not reach SchoolSoft. Try again later." },
+      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
       { status: 502 }
     );
   }

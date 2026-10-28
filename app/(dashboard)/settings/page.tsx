@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, User, Palette, Check, Layout, Bell, Play, KeyRound } from 'lucide-react';
-import PasskeyManager from '@/components/PasskeyManager';
+import { Bell, Check, KeyRound, Layout, LogOut, Palette, Play, User } from 'lucide-react';
+
+import { useAuth } from '@/lib/auth-context';
+import { ACCENTS, THEMES, useAppTheme } from '@/lib/theme-context';
+import type { AccentColor, AppTheme } from '@/lib/theme-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/lib/auth-context';
-import { useAppTheme, THEMES, ACCENTS } from '@/lib/theme-context';
-import type { AppTheme, AccentColor } from '@/lib/theme-context';
 import { RINGTONE_OPTIONS, useRingtone, type RingtoneId } from '@/components/CallPanel';
+import PasskeyManager from '@/components/PasskeyManager';
 
 /*  Ringtone preview helper */
 function RingtonePreviewButton({ id, customUrl }: { id: string; customUrl?: string }) {
@@ -60,7 +61,7 @@ function Section({
         className="flex items-center gap-2.5 border-b px-5 py-4"
         style={{ borderColor: 'oklch(1 0 0 / 6%)' }}
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent">
+        <div className="bg-accent flex h-7 w-7 items-center justify-center rounded-lg">
           <Icon className="h-3.5 w-3.5" />
         </div>
         <h2 className="text-foreground text-sm font-semibold">{title}</h2>
@@ -349,10 +350,8 @@ export default function SettingsPage() {
         >
           <div>
             <div className="mb-1 flex items-center gap-2">
-              <LogOut className="h-3.5 w-3.5 text-destructive" />
-              <p className="text-sm font-semibold text-destructive" >
-                Sign out
-              </p>
+              <LogOut className="text-destructive h-3.5 w-3.5" />
+              <p className="text-destructive text-sm font-semibold">Sign out</p>
             </div>
             <p className="text-muted-foreground text-xs">
               You will be redirected to the login page.

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/app/api/lib/schoolsoft";
-import { makeUserHandle, listCredentials } from "@/app/api/lib/passkeyDb";
-import { Timestamp } from "firebase-admin/firestore";
+import { NextRequest, NextResponse } from 'next/server';
+import { Timestamp } from 'firebase-admin/firestore';
+
+import { listCredentials, makeUserHandle } from '@/app/api/lib/passkeyDb';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
  * GET /api/auth/passkey/credentials
@@ -12,7 +13,7 @@ import { Timestamp } from "firebase-admin/firestore";
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const userHandle = makeUserHandle(sess.username, sess.school);
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    credentials: creds.map(c => ({
+    credentials: creds.map((c) => ({
       id: c.credentialId,
       deviceName: c.deviceName,
       deviceType: c.deviceType,

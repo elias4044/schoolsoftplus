@@ -1,18 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { authUser } from "@/app/api/lib/auth";
-import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
-import { getConversationsForUser, findOrCreateDM, createGroupChat } from "@/app/api/lib/messagingDb";
-import { getProfile } from "@/app/api/lib/profileDb";
-import { trackConversationCreated } from "@/app/api/lib/statsHelper";
-import { areFriends } from "@/app/api/lib/friendsDb";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { authUser } from '@/app/api/lib/auth';
+import { areFriends } from '@/app/api/lib/friendsDb';
+import {
+  createGroupChat,
+  findOrCreateDM,
+  getConversationsForUser,
+} from '@/app/api/lib/messagingDb';
+import { getProfile } from '@/app/api/lib/profileDb';
+import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
+import { trackConversationCreated } from '@/app/api/lib/statsHelper';
 
 // GET /api/conversations  – list all conversations for the current user
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const conversations = await getConversationsForUser(username);
@@ -24,10 +30,11 @@ export async function GET(req: NextRequest) {
 //   Group: { type: "group", groupName: string, groupDescription?: string, members: string[] }
 export async function POST(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: {
@@ -38,12 +45,20 @@ export async function POST(req: NextRequest) {
     encrypted?: boolean;
     members?: string[];
   } = {};
-  try { body = await req.json(); } catch { /* empty */ }
+  try {
+    body = await req.json();
+  } catch {
+    /* empty */
+  }
 
   /* ── Group chat ───────────────────────────────────────── */
-  if (body.type === "group") {
-    const groupName = (body.groupName ?? "").trim();
-    if (!groupName) return NextResponse.json({ success: false, error: "Group name is required." }, { status: 400 });
+  if (body.type === 'group') {
+    const groupName = (body.groupName ?? '').trim();
+    if (!groupName)
+      return NextResponse.json(
+        { success: false, error: 'Group name is required.' },
+        { status: 400 }
+      );
 
     const memberUsernames: string[] = (body.members ?? [])
       .map((u: string) => u.trim())
@@ -51,33 +66,36 @@ export async function POST(req: NextRequest) {
       .slice(0, 49); // max 50 participants incl. creator
 
     if (memberUsernames.length < 1) {
-      return NextResponse.json({ success: false, error: "Add at least one other member." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Add at least one other member.' },
+        { status: 400 }
+      );
     }
 
     // Fetch all display names in parallel
     const [myProfile, ...memberProfiles] = await Promise.all([
       getProfile(username),
-      ...memberUsernames.map(u => getProfile(u)),
+      ...memberUsernames.map((u) => getProfile(u)),
     ]);
 
     const myDisplayName =
       myProfile?.displayName ||
-      `${myProfile?.firstName ?? ""} ${myProfile?.lastName ?? ""}`.trim() ||
+      `${myProfile?.firstName ?? ''} ${myProfile?.lastName ?? ''}`.trim() ||
       username;
 
     const members = memberUsernames.map((u, i) => {
       const p = memberProfiles[i];
       return {
         username: u,
-        displayName: p?.displayName || `${p?.firstName ?? ""} ${p?.lastName ?? ""}`.trim() || u,
-        pfpUrl: p?.pfpUrl ?? "",
+        displayName: p?.displayName || `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim() || u,
+        pfpUrl: p?.pfpUrl ?? '',
       };
     });
 
     const conversation = await createGroupChat({
       creatorUsername: username,
       creatorDisplayName: myDisplayName,
-      creatorPfpUrl: myProfile?.pfpUrl ?? "",
+      creatorPfpUrl: myProfile?.pfpUrl ?? '',
       groupName,
       groupDescription: body.groupDescription,
       encrypted: body.encrypted === true,
@@ -89,9 +107,9 @@ export async function POST(req: NextRequest) {
   }
 
   /* ── DM ───────────────────────────────────────────────── */
-  const targetUsername = (body.targetUsername ?? "").trim();
+  const targetUsername = (body.targetUsername ?? '').trim();
   if (!targetUsername || targetUsername === username) {
-    return NextResponse.json({ success: false, error: "Invalid target user." }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 });
   }
 
   const [myProfile, theirProfile] = await Promise.all([
@@ -101,23 +119,24 @@ export async function POST(req: NextRequest) {
 
   const myDisplayName =
     myProfile?.displayName ||
-    `${myProfile?.firstName ?? ""} ${myProfile?.lastName ?? ""}`.trim() ||
+    `${myProfile?.firstName ?? ''} ${myProfile?.lastName ?? ''}`.trim() ||
     username;
 
   const theirDisplayName =
     theirProfile?.displayName ||
-    `${theirProfile?.firstName ?? ""} ${theirProfile?.lastName ?? ""}`.trim() ||
+    `${theirProfile?.firstName ?? ''} ${theirProfile?.lastName ?? ''}`.trim() ||
     targetUsername;
 
   if (!theirProfile) {
-    return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
   }
 
   // Check if a DM already exists — if so, allow opening it regardless of friend status
-  const { db } = await import("@/app/api/lib/firebaseAdmin");
+  const { db } = await import('@/app/api/lib/firebaseAdmin');
   const participants = [username, targetUsername].sort();
-  const existingSnap = await db.collection("conversations_v1")
-    .where("participants", "==", participants)
+  const existingSnap = await db
+    .collection('conversations_v1')
+    .where('participants', '==', participants)
     .limit(1)
     .get();
 
@@ -125,19 +144,25 @@ export async function POST(req: NextRequest) {
     // New DM: require friendship
     const friends = await areFriends(username, targetUsername);
     if (!friends) {
-      return NextResponse.json({
-        success: false,
-        error: "You must be friends to start a new direct message. Send them a friend request first.",
-        needsFriend: true,
-      }, { status: 403 });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'You must be friends to start a new direct message. Send them a friend request first.',
+          needsFriend: true,
+        },
+        { status: 403 }
+      );
     }
   }
 
   const { conversation, created } = await findOrCreateDM(
-    username, myDisplayName,
-    targetUsername, theirDisplayName,
-    myProfile?.pfpUrl ?? "",
-    theirProfile?.pfpUrl ?? ""
+    username,
+    myDisplayName,
+    targetUsername,
+    theirDisplayName,
+    myProfile?.pfpUrl ?? '',
+    theirProfile?.pfpUrl ?? ''
   );
   if (created) trackConversationCreated();
   return NextResponse.json({ success: true, conversation });

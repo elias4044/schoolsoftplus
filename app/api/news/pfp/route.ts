@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSchoolsoftClient, requireSession } from '../../lib/schoolsoft';
-import { authUser } from '../../lib/auth';
-import { handleApiError } from '../../lib/apiError';
 
-// /api/news/id={ID} ID = teacher's id 
+import { handleApiError } from '../../lib/apiError';
+import { authUser } from '../../lib/auth';
+import { createSchoolsoftClient, requireSession } from '../../lib/schoolsoft';
+
+// /api/news/id={ID} ID = teacher's id
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {

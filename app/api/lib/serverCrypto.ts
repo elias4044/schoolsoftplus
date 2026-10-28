@@ -7,23 +7,23 @@
  * stored alongside the ciphertext and provided to decrypt().
  */
 
-import crypto from "crypto";
+import crypto from 'crypto';
 
-const ALGO = "aes-256-gcm";
+const ALGO = 'aes-256-gcm';
 const IV_BYTES = 12; // 96 bits — recommended for AES-GCM
 const TAG_BYTES = 16;
 
 function getKey(): Buffer {
   const hex = process.env.PASSKEY_ENCRYPTION_KEY;
   if (!hex || hex.length !== 64) {
-    throw new Error("PASSKEY_ENCRYPTION_KEY must be a 64-character hex string (32 bytes).");
+    throw new Error('PASSKEY_ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
   }
-  return Buffer.from(hex, "hex");
+  return Buffer.from(hex, 'hex');
 }
 
 export interface EncryptedValue {
   ciphertext: string; // base64
-  iv: string;         // base64
+  iv: string; // base64
 }
 
 /**
@@ -34,13 +34,13 @@ export function encrypt(plaintext: string): EncryptedValue {
   const key = getKey();
   const iv = crypto.randomBytes(IV_BYTES);
   const cipher = crypto.createCipheriv(ALGO, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   // Store auth tag appended to ciphertext so a single field holds both
   const combined = Buffer.concat([encrypted, tag]);
   return {
-    ciphertext: combined.toString("base64"),
-    iv: iv.toString("base64"),
+    ciphertext: combined.toString('base64'),
+    iv: iv.toString('base64'),
   };
 }
 
@@ -50,12 +50,12 @@ export function encrypt(plaintext: string): EncryptedValue {
  */
 export function decrypt({ ciphertext, iv }: EncryptedValue): string {
   const key = getKey();
-  const combined = Buffer.from(ciphertext, "base64");
-  const ivBuf = Buffer.from(iv, "base64");
+  const combined = Buffer.from(ciphertext, 'base64');
+  const ivBuf = Buffer.from(iv, 'base64');
   // Last 16 bytes are the auth tag
   const tag = combined.subarray(combined.length - TAG_BYTES);
   const data = combined.subarray(0, combined.length - TAG_BYTES);
   const decipher = crypto.createDecipheriv(ALGO, key, ivBuf);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+  return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
 }

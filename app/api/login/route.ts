@@ -1,12 +1,13 @@
 // This route is deprecated, please refer to AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2) (/auth folder)
 
-import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import { db } from "@/app/api/lib/firebaseAdmin";
-import { trackLoginEvent } from "@/app/api/lib/statsHelper";
-import { getUsernameByCode, creditReferral } from "@/app/api/lib/referralDb";
+import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 
-const SCHOOLSOFT_LOGIN_URL = "https://sms.schoolsoft.se/{school}/jsp/Login.jsp";
+import { db } from '@/app/api/lib/firebaseAdmin';
+import { creditReferral, getUsernameByCode } from '@/app/api/lib/referralDb';
+import { trackLoginEvent } from '@/app/api/lib/statsHelper';
+
+const SCHOOLSOFT_LOGIN_URL = 'https://sms.schoolsoft.se/{school}/jsp/Login.jsp';
 
 export async function POST(req: NextRequest) {
   let body: { username?: string; password?: string; usertype?: string };
@@ -14,26 +15,23 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { success: false, message: "Invalid JSON body." },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const { username, password, usertype = "1" } = body;
+  const { username, password, usertype = '1' } = body;
 
   if (!username || !password) {
     return NextResponse.json(
-      { success: false, message: "Username and password are required." },
+      { success: false, message: 'Username and password are required.' },
       { status: 400 }
     );
   }
 
-  const school = req.headers.get("x-school") ?? "engelska";
-  const loginUrl = SCHOOLSOFT_LOGIN_URL.replace("{school}", school);
+  const school = req.headers.get('x-school') ?? 'engelska';
+  const loginUrl = SCHOOLSOFT_LOGIN_URL.replace('{school}', school);
 
-  const time = new Date().toLocaleString("sv-SE", {
-    timeZone: "Europe/Stockholm",
+  const time = new Date().toLocaleString('sv-SE', {
+    timeZone: 'Europe/Stockholm',
   });
 
   // Captured inside the stats transaction — used for referral crediting below
@@ -42,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     // -- Attempt SchoolSoft login ----------------------------------------------
     const form = new URLSearchParams({
-      action: "login",
+      action: 'login',
       ssusername: username,
       sspassword: password,
       usertype,
@@ -52,10 +50,10 @@ export async function POST(req: NextRequest) {
     // a proper 401 for failed logins instead of letting axios throw.
     const response = await axios.post(loginUrl, form.toString(), {
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         Referer: loginUrl,
-        Origin: "https://sms.schoolsoft.se",
+        Origin: 'https://sms.schoolsoft.se',
       },
       maxRedirects: 0,
       validateStatus: () => true,
@@ -67,19 +65,18 @@ export async function POST(req: NextRequest) {
     if (response.status !== 302) {
       console.warn(`[login] unexpected status ${response.status} from ${loginUrl}`);
       return NextResponse.json(
-        { success: false, message: "Login failed. Check your credentials." },
+        { success: false, message: 'Login failed. Check your credentials.' },
         { status: 401 }
       );
     }
 
-    const setCookie: string[] = response.headers["set-cookie"] ?? [];
-    const sessionCookie = setCookie.find((c) => c.includes("JSESSIONID="));
-    const hashCookie = setCookie.find((c) => c.includes("hash="));
-    const usertypeCookie = setCookie.find((c) => c.includes("usertype="));
-
+    const setCookie: string[] = response.headers['set-cookie'] ?? [];
+    const sessionCookie = setCookie.find((c) => c.includes('JSESSIONID='));
+    const hashCookie = setCookie.find((c) => c.includes('hash='));
+    const usertypeCookie = setCookie.find((c) => c.includes('usertype='));
 
     // -- Update Firestore stats ------------------------------------------------
-    const statsRef = db.collection("stats").doc("loginStats");
+    const statsRef = db.collection('stats').doc('loginStats');
 
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(statsRef);
@@ -110,9 +107,7 @@ export async function POST(req: NextRequest) {
         users: [],
       };
 
-      const data: StatsData = doc.exists
-        ? { ...base, ...(doc.data() as StatsData) }
-        : base;
+      const data: StatsData = doc.exists ? { ...base, ...(doc.data() as StatsData) } : base;
 
       data.total_logins += 1;
       data.total_api_calls += 1;
@@ -121,9 +116,7 @@ export async function POST(req: NextRequest) {
         data.total_successful_logins += 1;
 
         const lowerUsername = username.toLowerCase();
-        const existingIndex = data.users.findIndex(
-          (u) => u.username === lowerUsername
-        );
+        const existingIndex = data.users.findIndex((u) => u.username === lowerUsername);
 
         if (existingIndex === -1) {
           isNewUser = true;
@@ -156,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     // -- Referral tracking for first-time users --------------------------------
     if (isNewUser && sessionCookie && hashCookie) {
-      const refCode = req.cookies.get("ssp_ref")?.value ?? "";
+      const refCode = req.cookies.get('ssp_ref')?.value ?? '';
       if (refCode && /^[A-Z0-9]{6,12}$/.test(refCode.toUpperCase())) {
         const lowerUsername = username!.toLowerCase();
         // Fire-and-forget: do not block the login response
@@ -175,40 +168,45 @@ export async function POST(req: NextRequest) {
       // first segment of each Set-Cookie header, e.g.:
       //   "JSESSIONID=ABC123; Path=/; HttpOnly" → "ABC123"
       //   "hash=XYZ; Path=/"                   → "XYZ"
-      const extractValue = (raw: string) => raw.split(";")[0].split("=").slice(1).join("=");
+      const extractValue = (raw: string) => raw.split(';')[0].split('=').slice(1).join('=');
 
       const jsessionidVal = extractValue(sessionCookie);
-      const hashVal       = extractValue(hashCookie);
-      const usertypeVal   = usertypeCookie ? extractValue(usertypeCookie) : "";
+      const hashVal = extractValue(hashCookie);
+      const usertypeVal = usertypeCookie ? extractValue(usertypeCookie) : '';
 
       const response = NextResponse.json({ success: true });
 
       const cookieOpts = {
         httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
+        sameSite: 'lax' as const,
+        path: '/',
         maxAge: 60 * 60 * 24 * 7, // 7 days
       };
-      response.cookies.set("ssp_jsessionid", jsessionidVal, cookieOpts);
-      response.cookies.set("ssp_hash",       hashVal,       cookieOpts);
-      if (usertypeVal) response.cookies.set("ssp_usertype", usertypeVal, cookieOpts);
-      response.cookies.set("ssp_school",   school,     { ...cookieOpts, httpOnly: false });
-      response.cookies.set("ssp_username", username!.toLowerCase(),  { ...cookieOpts, httpOnly: false });
+      response.cookies.set('ssp_jsessionid', jsessionidVal, cookieOpts);
+      response.cookies.set('ssp_hash', hashVal, cookieOpts);
+      if (usertypeVal) response.cookies.set('ssp_usertype', usertypeVal, cookieOpts);
+      response.cookies.set('ssp_school', school, { ...cookieOpts, httpOnly: false });
+      response.cookies.set('ssp_username', username!.toLowerCase(), {
+        ...cookieOpts,
+        httpOnly: false,
+      });
       // Clear the referral cookie after use so it cannot be replayed
-      response.cookies.set("ssp_ref", "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
+      response.cookies.set('ssp_ref', '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+      });
 
       return response;
     }
 
     return NextResponse.json(
-      { success: false, message: "Login failed — cookies missing." },
+      { success: false, message: 'Login failed — cookies missing.' },
       { status: 401 }
     );
   } catch (err) {
-    console.error("[login] Error:", (err as Error).message);
-    return NextResponse.json(
-      { success: false, message: "Server error." },
-      { status: 500 }
-    );
+    console.error('[login] Error:', (err as Error).message);
+    return NextResponse.json({ success: false, message: 'Server error.' }, { status: 500 });
   }
 }

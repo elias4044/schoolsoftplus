@@ -1,6 +1,7 @@
 # AuthV2
 
 After weeks of work and reverse engineering, I'm excited to introduce **AuthV2**.
+
 > Documentation now available at [https://developer.ssp.elias4044.com/docs/auth-v2](https://developer.ssp.elias4044.com/docs/auth-v2)
 
 ## What is AuthV2?
@@ -13,7 +14,6 @@ This is classic “cookie-based session authentication”: the server stores the
 
 AuthV2 is different. It’s not about long‑lived browser sessions; it’s about a **token‑based flow** that the mobile app can re‑use for days without forcing the user to manually log in every hour.
 
-
 ## Why this matters
 
 This means the server only trusts the session cookie for a limited time. After the session expires, the user has to log in again.
@@ -21,12 +21,12 @@ This means the server only trusts the session cookie for a limited time. After t
 In theory, an app could store the username and password and re-authenticate automatically, but that would be a serious security risk. Session-based authentication exists specifically to avoid storing raw credentials and to limit how long a login remains valid.
 
 However, short‑lived sessions are not ideal for mobile apps:
+
 - The app must frequently ask the user to log in.
 - Background operations (syncing, notifications) break when the session expires.
-- The user experience is much worse than on the official SchoolSoft app, which *doesn’t* require re‑login every hour.
+- The user experience is much worse than on the official SchoolSoft app, which _doesn’t_ require re‑login every hour.
 
 So, we need a different mechanism: one that still starts with username/password, but instead of a short cookie, it gives us a **longer‑lived token** that the app can safely cache and use.
-
 
 ## What is PKCE, and why it matters
 
@@ -34,11 +34,11 @@ The mobile app login flow uses **OAuth 2.0 Authorization Code flow with PKCE**, 
 
 **PKCE** stands for **Proof Key for Code Exchange**. It is an extension to OAuth 2.0 designed to protect public clients (like mobile apps and SPAs) that cannot safely store a client secret. The idea is simple but powerful:
 
-1. The app generates a **temporary secret** called the `code_verifier`.  
-2. The app then computes a **hash** of that secret, called the `code_challenge`.  
-3. The app sends the `code_challenge` (not the raw secret) to the authorization server.  
-4. Later, when exchanging the authorization code for an access token, the app must send back the original `code_verifier`.  
-5. The server recomputes the hash of the `code_verifier` and checks that it matches the `code_challenge` it stored earlier.  
+1. The app generates a **temporary secret** called the `code_verifier`.
+2. The app then computes a **hash** of that secret, called the `code_challenge`.
+3. The app sends the `code_challenge` (not the raw secret) to the authorization server.
+4. Later, when exchanging the authorization code for an access token, the app must send back the original `code_verifier`.
+5. The server recomputes the hash of the `code_verifier` and checks that it matches the `code_challenge` it stored earlier.
 
 If the hashes match, the server issues the token. If not, the exchange fails.
 
@@ -48,7 +48,6 @@ In other words, **PKCE adds a “proof” that the same client that initiated th
 
 Because mobile apps are public clients and cannot keep a client secret secure, **PKCE is the recommended way to use OAuth in native apps**.
 
-
 ## How AuthV2 solves this
 
 SchoolSoft’s mobile app appears to use a separate authentication flow from the website.
@@ -57,15 +56,15 @@ Instead of relying on a short-lived browser session, the mobile app uses a flow 
 
 That flow works like this:
 
-1. Your app (or your backend) initiates login by calling SchoolSoft’s student login URL with the PKCE parameters.  
-2. The user enters their SchoolSoft username and password.  
-3. If the credentials are valid, SchoolSoft returns an **authorization code** (often via `redirect_uri` or, in your case, as a JSON response).  
+1. Your app (or your backend) initiates login by calling SchoolSoft’s student login URL with the PKCE parameters.
+2. The user enters their SchoolSoft username and password.
+3. If the credentials are valid, SchoolSoft returns an **authorization code** (often via `redirect_uri` or, in your case, as a JSON response).
 4. Your app then calls the token exchange endpoint (`/rest-api/login/token`) and sends:
    - the `code`,
    - the original `code_verifier`,
    - client identifier (`clientId=eApp`),
    - and the grant type (`grantType=code`).
-5. SchoolSoft verifies the PKCE proof and, if valid, returns an **access token** (often a JWT or a simple bearer token).  
+5. SchoolSoft verifies the PKCE proof and, if valid, returns an **access token** (often a JWT or a simple bearer token).
 
 This access token is then used as a **Bearer token** in API requests:
 
@@ -77,7 +76,6 @@ Because the token can live for days (you return `expires_in: 2592000`, which is 
 
 In AuthV2 terms: we’re **not** using the short‑lived `JSESSIONID`‑based session cookie at all. Instead, we’re reusing the same PKCE‑based flow the official mobile app uses, but wiring it through your backend so the app never stores the raw credentials.
 
-
 ## Why this is useful
 
 This explains how the mobile app can keep working without forcing the user to log in every hour.
@@ -85,15 +83,16 @@ This explains how the mobile app can keep working without forcing the user to lo
 Instead of depending on a short browser session, it can use a token-based flow that is better suited for mobile use. The token can be cached on the device, refreshed when needed, and reused for weeks, while the server still controls lifetime and revocation.
 
 This also explains how features like background syncing or push notifications can work without repeatedly asking the user to sign in. The app can:
+
 - authenticate silently using the cached token,
 - refresh the token (if SchoolSoft supports refresh tokens or a new authorization code flow),
 - and only prompt the user to re‑enter their credentials when the token is truly invalid or expired.
 
 In short, AuthV2 **bridges the web‑session model and the mobile‑token model**:
+
 - It starts where the user normally logs in (username/password).
 - It finishes with a mobile‑friendly, long‑lived token.
 - And it does all of that without ever storing the user’s password in your database or LocalStorage.
-
 
 ## What I found
 
@@ -119,7 +118,6 @@ These parameters are part of the PKCE-based login flow and are used to protect t
 
 `code_challenge` and `code_challenge_method` are the PKCE specific parts: the former is the hash of the `code_verifier`, and the latter indicates how that hash was computed (usually `S256` for SHA‑256). Without them, the flow would be a “plain” authorization code flow, which is much less secure for public clients.
 
-
 ## Implementation overview
 
 My login route automates the process like this:
@@ -129,9 +127,11 @@ My login route automates the process like this:
 
 2. **Send the user credentials to SchoolSoft’s password login endpoint.**  
    The route calls:
+
    ```
    https://sms.schoolsoft.se/YOUR_SCHOOL/rest-api/login/student/password
    ```
+
    with the username, password, and PKCE parameters (`code_challenge`, `client_id`, `redirect_uri`, `state`, etc.). This is the “authorization request” step.
 
 3. **Receive an authorization code.**  
@@ -139,25 +139,26 @@ My login route automates the process like this:
 
 4. **Exchange the code and verifier for an access token.**  
    The backend calls:
+
    ```
    https://sms.schoolsoft.se/YOUR_SCHOOL/rest-api/login/token
    ```
+
    with:
    - `clientId`,
    - `grantType=code`,
    - the `code`,
    - and the `code_verifier`.  
-   SchoolSoft verifies the PKCE proof and returns the access token (or a JSON object containing `access_token` and metadata).
+     SchoolSoft verifies the PKCE proof and returns the access token (or a JSON object containing `access_token` and metadata).
 
 5. **Use that token to authenticate against the mobile API.**  
    The backend can either:
-   - proxy requests to SchoolSoft, attaching the `Authorization: Bearer <token>` header, or  
+   - proxy requests to SchoolSoft, attaching the `Authorization: Bearer <token>` header, or
    - pass the token back to your app so it can call the mobile API directly.
 
    - Or, the best part, you can translate the bearer to a session cookie. This allowes intereacting with the regular API too.
 
 This lets the app perform the login flow programmatically while still following the same authentication model as the official client. The app never sees or stores the username and password; it only receives and caches the token, which is much safer and more aligned with modern mobile auth patterns.
-
 
 ## Important security note
 

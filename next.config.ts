@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-  serverExternalPackages: ["firebase-admin"],
+  serverExternalPackages: ['firebase-admin'],
 
   allowedDevOrigins: ['192.168.1.144'],
 

@@ -1,89 +1,91 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Scan,
-  Plus,
-  Settings2,
-  ChevronDown,
-  Loader2,
-  Target,
-  Pencil,
-  EyeOff,
-  Eye,
   BarChart3,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Loader2,
+  Minus,
+  Pencil,
+  Plus,
+  Scan,
+  Settings2,
   Sparkles,
-} from "lucide-react";
-import { apiFetch, ApiError } from "@/lib/api-client";
-import type { GradeEntry, GradeTrackerDoc, ScannedGradeResult } from "@/lib/grades/types";
-import { computeAnalytics } from "@/lib/grades/analytics";
-import { OVERALL_GRADE_STYLE, GRADE_LETTERS } from "@/lib/grades/constants";
+  Target,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
+
+import { ApiError, apiFetch } from '@/lib/api-client';
+import { computeAnalytics } from '@/lib/grades/analytics';
+import { GRADE_LETTERS, OVERALL_GRADE_STYLE } from '@/lib/grades/constants';
+import type { GradeEntry, GradeTrackerDoc, ScannedGradeResult } from '@/lib/grades/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
 import {
-  GradeTrendChart,
   GradeDistributionChart,
+  GradeTrendChart,
   SnapshotHistoryChart,
-} from "./GradeTrackerCharts";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from './GradeTrackerCharts';
 
 interface GradeTrackerProps {
   subjectId: string;
   subjectName: string;
   subjectColor: string;
   /** desktop sidebar vs mobile inline */
-  variant?: "sidebar" | "mobile";
+  variant?: 'sidebar' | 'mobile';
 }
 
-function GradeBadge({ grade, size = "md" }: { grade: string; size?: "sm" | "md" | "lg" }) {
+function GradeBadge({ grade, size = 'md' }: { grade: string; size?: 'sm' | 'md' | 'lg' }) {
   const g = grade.trim().toUpperCase().charAt(0);
   const style = OVERALL_GRADE_STYLE[g] ?? OVERALL_GRADE_STYLE.F;
   const dim =
-    size === "lg" ? "w-14 h-14 text-2xl" : size === "sm" ? "w-7 h-7 text-xs" : "w-10 h-10 text-lg";
+    size === 'lg' ? 'w-14 h-14 text-2xl' : size === 'sm' ? 'w-7 h-7 text-xs' : 'w-10 h-10 text-lg';
   return (
     <div
-      className={`flex items-center justify-center rounded-xl font-black shrink-0 ${dim}`}
+      className={`flex shrink-0 items-center justify-center rounded-xl font-black ${dim}`}
       style={{
         background: style.bg,
         color: style.color,
         border: `1.5px solid ${style.border}`,
       }}
     >
-      {g || "—"}
+      {g || '—'}
     </div>
   );
 }
 
 function TrendIcon({ label }: { label: string }) {
-  if (label === "improving") return <TrendingUp className="w-3.5 h-3.5 text-green-400" />;
-  if (label === "declining") return <TrendingDown className="w-3.5 h-3.5 text-red-400/80" />;
-  return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  if (label === 'improving') return <TrendingUp className="h-3.5 w-3.5 text-green-400" />;
+  if (label === 'declining') return <TrendingDown className="h-3.5 w-3.5 text-red-400/80" />;
+  return <Minus className="text-muted-foreground h-3.5 w-3.5" />;
 }
 
 export function GradeTracker({
   subjectId,
   subjectName,
   subjectColor,
-  variant = "sidebar",
+  variant = 'sidebar',
 }: GradeTrackerProps) {
   const [tracker, setTracker] = useState<GradeTrackerDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [expanded, setExpanded] = useState(variant === "sidebar");
+  const [expanded, setExpanded] = useState(variant === 'sidebar');
   const [showSettings, setShowSettings] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [chartTab, setChartTab] = useState<"trend" | "dist" | "history">("trend");
+  const [chartTab, setChartTab] = useState<'trend' | 'dist' | 'history'>('trend');
 
-  const [manualTitle, setManualTitle] = useState("");
-  const [manualGrade, setManualGrade] = useState("C");
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualGrade, setManualGrade] = useState('C');
   const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
@@ -94,13 +96,13 @@ export function GradeTracker({
     if (res?.tracker) setTracker(res.tracker);
     else {
       setTracker({
-        username: "",
+        username: '',
         subjectId: Number(subjectId),
         subjectName,
         subjectColor,
         settings: {
-          targetGrade: "C",
-          weightMode: "equal",
+          targetGrade: 'C',
+          weightMode: 'equal',
           showEstimated: true,
           includeManual: true,
         },
@@ -119,7 +121,7 @@ export function GradeTracker({
   const persist = useCallback(
     async (patch: {
       entries?: GradeEntry[];
-      settings?: GradeTrackerDoc["settings"];
+      settings?: GradeTrackerDoc['settings'];
       scanned?: ScannedGradeResult[];
       addSnapshot?: boolean;
     }) => {
@@ -128,7 +130,7 @@ export function GradeTracker({
         const res = await apiFetch<{ success: boolean; tracker: GradeTrackerDoc }>(
           `/api/grade-tracker/${subjectId}`,
           {
-            method: "PUT",
+            method: 'PUT',
             body: {
               subjectName,
               subjectColor,
@@ -154,24 +156,22 @@ export function GradeTracker({
         scanned?: number;
         total?: number;
         skipped?: number;
-      }>(`/api/subjects/${subjectId}/grades`, { method: "POST" });
+      }>(`/api/subjects/${subjectId}/grades`, { method: 'POST' });
       if (scanRes?.grades) {
         await persist({ scanned: scanRes.grades, addSnapshot: true });
         const n = scanRes.scanned ?? scanRes.grades.length;
         const total = scanRes.total ?? n;
         if (n === 0) {
-          setScanMessage("No reported grades found for this subject yet.");
+          setScanMessage('No reported grades found for this subject yet.');
         } else if (scanRes.skipped && scanRes.skipped > 0) {
           setScanMessage(`Imported ${n} of ${total} assignments (some could not be loaded).`);
         } else {
-          setScanMessage(`Imported ${n} grade${n === 1 ? "" : "s"}.`);
+          setScanMessage(`Imported ${n} grade${n === 1 ? '' : 's'}.`);
         }
       }
     } catch (e) {
       const msg =
-        e instanceof ApiError
-          ? e.message
-          : "Scan failed. Try again or add grades manually.";
+        e instanceof ApiError ? e.message : 'Scan failed. Try again or add grades manually.';
       setScanMessage(msg);
     } finally {
       setScanning(false);
@@ -184,26 +184,33 @@ export function GradeTracker({
     const entry: GradeEntry = {
       id,
       title: manualTitle.trim(),
-      type: "Manual",
+      type: 'Manual',
       endDate: manualDate,
-      source: "manual",
+      source: 'manual',
       reported: false,
       grade: manualGrade.toUpperCase(),
-      gradeSource: "manual",
+      gradeSource: 'manual',
       excluded: false,
       userOverride: true,
       scannedAt: Date.now(),
       updatedAt: Date.now(),
     };
     await persist({ entries: [entry, ...tracker.entries], addSnapshot: true });
-    setManualTitle("");
+    setManualTitle('');
     setShowAdd(false);
   };
 
   const updateEntry = async (id: string, patch: Partial<GradeEntry>) => {
     if (!tracker) return;
-    const entries = tracker.entries.map(e =>
-      e.id === id ? { ...e, ...patch, updatedAt: Date.now(), userOverride: patch.grade != null ? true : e.userOverride } : e
+    const entries = tracker.entries.map((e) =>
+      e.id === id
+        ? {
+            ...e,
+            ...patch,
+            updatedAt: Date.now(),
+            userOverride: patch.grade != null ? true : e.userOverride,
+          }
+        : e
     );
     await persist({ entries, addSnapshot: false });
     setEditingId(null);
@@ -214,12 +221,12 @@ export function GradeTracker({
     [tracker]
   );
 
-  const isMobile = variant === "mobile";
+  const isMobile = variant === 'mobile';
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-white/7 bg-card p-4 flex items-center justify-center gap-2 text-sm text-muted-foreground min-h-[120px]">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading grades…
+      <div className="bg-card text-muted-foreground flex min-h-[120px] items-center justify-center gap-2 rounded-xl border border-white/7 p-4 text-sm">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading grades…
       </div>
     );
   }
@@ -232,20 +239,24 @@ export function GradeTracker({
   const summaryBlock = (
     <div className="flex items-center gap-3">
       <GradeBadge grade={analytics.averageGrade} size="lg" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Average</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-muted-foreground text-[10px] tracking-widest uppercase">Average</p>
         <p className="text-lg font-bold" style={{ color: avgStyle.color }}>
-          {analytics.count > 0 ? analytics.averageGrade : "—"}
-          <span className="text-xs font-normal text-muted-foreground ml-1.5">
+          {analytics.count > 0 ? analytics.averageGrade : '—'}
+          <span className="text-muted-foreground ml-1.5 text-xs font-normal">
             {analytics.count} graded
           </span>
         </p>
-        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground">
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[10px]">
           <TrendIcon label={analytics.trendLabel} />
           <span className="capitalize">{analytics.trendLabel}</span>
           {analytics.recentChange != null && (
-            <span style={{ color: analytics.recentChange >= 0 ? "oklch(0.65 0.22 148)" : "oklch(0.65 0.2 25)" }}>
-              {analytics.recentChange >= 0 ? "+" : ""}
+            <span
+              style={{
+                color: analytics.recentChange >= 0 ? 'oklch(0.65 0.22 148)' : 'oklch(0.65 0.2 25)',
+              }}
+            >
+              {analytics.recentChange >= 0 ? '+' : ''}
               {analytics.recentChange.toFixed(1)} last
             </span>
           )}
@@ -255,25 +266,29 @@ export function GradeTracker({
   );
 
   const statsRow = (
-    <div className="grid grid-cols-3 gap-2 mt-3">
+    <div className="mt-3 grid grid-cols-3 gap-2">
       <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-[9px] text-muted-foreground uppercase">Target</p>
+        <p className="text-muted-foreground text-[9px] uppercase">Target</p>
         <p className="text-sm font-bold" style={{ color: targetStyle.color }}>
           {tracker.settings.targetGrade}
         </p>
-        <p className="text-[9px] text-muted-foreground">
-          {analytics.targetGap >= 0 ? "+" : ""}
+        <p className="text-muted-foreground text-[9px]">
+          {analytics.targetGap >= 0 ? '+' : ''}
           {analytics.targetGap.toFixed(1)}
         </p>
       </div>
       <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-[9px] text-muted-foreground uppercase">Volatility</p>
+        <p className="text-muted-foreground text-[9px] uppercase">Volatility</p>
         <p className="text-sm font-bold tabular-nums">{analytics.volatility.toFixed(1)}</p>
       </div>
       <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-[9px] text-muted-foreground uppercase">Streak</p>
+        <p className="text-muted-foreground text-[9px] uppercase">Streak</p>
         <p className="text-sm font-bold tabular-nums">
-          {analytics.streakUp > 0 ? `↑${analytics.streakUp}` : analytics.streakDown > 0 ? `↓${analytics.streakDown}` : "—"}
+          {analytics.streakUp > 0
+            ? `↑${analytics.streakUp}`
+            : analytics.streakDown > 0
+              ? `↓${analytics.streakDown}`
+              : '—'}
         </p>
       </div>
     </div>
@@ -285,65 +300,67 @@ export function GradeTracker({
       {statsRow}
 
       {/* Chart tabs */}
-      <div className="mt-4 flex gap-1 p-0.5 rounded-lg bg-white/4">
+      <div className="mt-4 flex gap-1 rounded-lg bg-white/4 p-0.5">
         {(
           [
-            { id: "trend" as const, label: "Trend", icon: TrendingUp },
-            { id: "dist" as const, label: "Mix", icon: BarChart3 },
-            { id: "history" as const, label: "Scans", icon: Sparkles },
+            { id: 'trend' as const, label: 'Trend', icon: TrendingUp },
+            { id: 'dist' as const, label: 'Mix', icon: BarChart3 },
+            { id: 'history' as const, label: 'Scans', icon: Sparkles },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setChartTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
-              chartTab === id ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+            className={`flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-medium transition-colors ${
+              chartTab === id
+                ? 'text-foreground bg-white/10'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className="w-3 h-3" /> {label}
+            <Icon className="h-3 w-3" /> {label}
           </button>
         ))}
       </div>
       <div className="mt-2">
-        {chartTab === "trend" && (
+        {chartTab === 'trend' && (
           <GradeTrendChart analytics={analytics} subjectColor={subjectColor} />
         )}
-        {chartTab === "dist" && <GradeDistributionChart analytics={analytics} />}
-        {chartTab === "history" && (
+        {chartTab === 'dist' && <GradeDistributionChart analytics={analytics} />}
+        {chartTab === 'history' && (
           <SnapshotHistoryChart snapshots={tracker.snapshots} subjectColor={subjectColor} />
         )}
       </div>
 
       {scanMessage && (
-        <p className="mt-2 text-[10px] text-muted-foreground leading-snug">{scanMessage}</p>
+        <p className="text-muted-foreground mt-2 text-[10px] leading-snug">{scanMessage}</p>
       )}
 
       {/* Actions */}
       <div className="mt-3 flex gap-2">
         <Button
           size="sm"
-          className="flex-1 h-8 text-xs gap-1.5"
+          className="h-8 flex-1 gap-1.5 text-xs"
           onClick={handleScan}
           disabled={scanning || saving}
         >
-          {scanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scan className="w-3 h-3" />}
+          {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scan className="h-3 w-3" />}
           Scan subject
         </Button>
         <Button
           size="sm"
           variant="outline"
-          className="h-8 text-xs px-2.5 border-white/10"
-          onClick={() => setShowAdd(a => !a)}
+          className="h-8 border-white/10 px-2.5 text-xs"
+          onClick={() => setShowAdd((a) => !a)}
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="h-3 w-3" />
         </Button>
         <Button
           size="sm"
           variant="outline"
-          className="h-8 text-xs px-2.5 border-white/10"
-          onClick={() => setShowSettings(s => !s)}
+          className="h-8 border-white/10 px-2.5 text-xs"
+          onClick={() => setShowSettings((s) => !s)}
         >
-          <Settings2 className="w-3 h-3" />
+          <Settings2 className="h-3 w-3" />
         </Button>
       </div>
 
@@ -351,34 +368,41 @@ export function GradeTracker({
         {showSettings && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden mt-3 space-y-2 rounded-lg border border-white/7 p-3 bg-white/2"
+            className="mt-3 space-y-2 overflow-hidden rounded-lg border border-white/7 bg-white/2 p-3"
           >
             <div>
-              <Label className="text-[10px] text-muted-foreground">Target grade</Label>
+              <Label className="text-muted-foreground text-[10px]">Target grade</Label>
               <select
-                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-xs px-2"
+                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs"
                 value={tracker.settings.targetGrade}
-                onChange={e =>
-                  persist({ settings: { ...tracker.settings, targetGrade: e.target.value as typeof tracker.settings.targetGrade } })
+                onChange={(e) =>
+                  persist({
+                    settings: {
+                      ...tracker.settings,
+                      targetGrade: e.target.value as typeof tracker.settings.targetGrade,
+                    },
+                  })
                 }
               >
-                {GRADE_LETTERS.map(g => (
-                  <option key={g} value={g}>{g}</option>
+                {GRADE_LETTERS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <Label className="text-[10px] text-muted-foreground">Weighting</Label>
+              <Label className="text-muted-foreground text-[10px]">Weighting</Label>
               <select
-                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-xs px-2"
+                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs"
                 value={tracker.settings.weightMode}
-                onChange={e =>
+                onChange={(e) =>
                   persist({
                     settings: {
                       ...tracker.settings,
-                      weightMode: e.target.value as "equal" | "recent",
+                      weightMode: e.target.value as 'equal' | 'recent',
                     },
                   })
                 }
@@ -392,34 +416,41 @@ export function GradeTracker({
         {showAdd && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden mt-3 space-y-2 rounded-lg border border-white/7 p-3 bg-white/2"
+            className="mt-3 space-y-2 overflow-hidden rounded-lg border border-white/7 bg-white/2 p-3"
           >
             <Input
               placeholder="Title"
               value={manualTitle}
-              onChange={e => setManualTitle(e.target.value)}
-              className="h-8 text-xs bg-white/5 border-white/10"
+              onChange={(e) => setManualTitle(e.target.value)}
+              className="h-8 border-white/10 bg-white/5 text-xs"
             />
             <div className="flex gap-2">
               <select
-                className="h-8 rounded-md bg-white/5 border border-white/10 text-xs px-2 flex-1"
+                className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-2 text-xs"
                 value={manualGrade}
-                onChange={e => setManualGrade(e.target.value)}
+                onChange={(e) => setManualGrade(e.target.value)}
               >
-                {GRADE_LETTERS.map(g => (
-                  <option key={g} value={g}>{g}</option>
+                {GRADE_LETTERS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
                 ))}
               </select>
               <Input
                 type="date"
                 value={manualDate}
-                onChange={e => setManualDate(e.target.value)}
-                className="h-8 text-xs bg-white/5 border-white/10 flex-1"
+                onChange={(e) => setManualDate(e.target.value)}
+                className="h-8 flex-1 border-white/10 bg-white/5 text-xs"
               />
             </div>
-            <Button size="sm" className="w-full h-8 text-xs" onClick={handleAddManual} disabled={saving}>
+            <Button
+              size="sm"
+              className="h-8 w-full text-xs"
+              onClick={handleAddManual}
+              disabled={saving}
+            >
               Add entry
             </Button>
           </motion.div>
@@ -427,14 +458,14 @@ export function GradeTracker({
       </AnimatePresence>
 
       {/* Entry list */}
-      <div className="mt-4 space-y-1 max-h-[280px] overflow-y-auto pr-0.5 scrollbar-thin">
+      <div className="mt-4 max-h-[280px] scrollbar-thin space-y-1 overflow-y-auto pr-0.5">
         {tracker.entries.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">
+          <p className="text-muted-foreground py-4 text-center text-xs">
             Scan reported assignments or add a grade manually
           </p>
         ) : (
-          tracker.entries.map(entry => {
-            const g = entry.excluded ? "—" : entry.grade;
+          tracker.entries.map((entry) => {
+            const g = entry.excluded ? '—' : entry.grade;
             const href = entry.assignmentId
               ? `/subjects/${subjectId}/${entry.assignmentId}?type=assignment`
               : undefined;
@@ -443,73 +474,85 @@ export function GradeTracker({
             return (
               <div
                 key={entry.id}
-                className={`rounded-lg px-2 py-2 border transition-colors ${
-                  entry.excluded ? "opacity-45 border-white/4" : "border-white/6 hover:bg-white/3"
+                className={`rounded-lg border px-2 py-2 transition-colors ${
+                  entry.excluded ? 'border-white/4 opacity-45' : 'border-white/6 hover:bg-white/3'
                 }`}
               >
                 {isEditing ? (
                   <div className="space-y-2">
                     <select
-                      className="w-full h-7 rounded bg-white/5 border border-white/10 text-xs"
+                      className="h-7 w-full rounded border border-white/10 bg-white/5 text-xs"
                       value={entry.grade}
-                      onChange={e => updateEntry(entry.id, { grade: e.target.value.toUpperCase() })}
+                      onChange={(e) =>
+                        updateEntry(entry.id, { grade: e.target.value.toUpperCase() })
+                      }
                     >
-                      {GRADE_LETTERS.map(l => (
-                        <option key={l} value={l}>{l}</option>
+                      {GRADE_LETTERS.map((l) => (
+                        <option key={l} value={l}>
+                          {l}
+                        </option>
                       ))}
                     </select>
                     <Input
                       placeholder="Notes"
-                      defaultValue={entry.notes ?? ""}
-                      className="h-7 text-xs bg-white/5 border-white/10"
-                      onBlur={e => updateEntry(entry.id, { notes: e.target.value })}
+                      defaultValue={entry.notes ?? ''}
+                      className="h-7 border-white/10 bg-white/5 text-xs"
+                      onBlur={(e) => updateEntry(entry.id, { notes: e.target.value })}
                     />
-                    <button
-                      className="text-[10px] text-primary"
-                      onClick={() => setEditingId(null)}
-                    >
+                    <button className="text-primary text-[10px]" onClick={() => setEditingId(null)}>
                       Done
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
                     <GradeBadge grade={g} size="sm" />
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       {href ? (
-                        <Link href={href} className="text-xs font-medium hover:text-primary line-clamp-1">
+                        <Link
+                          href={href}
+                          className="hover:text-primary line-clamp-1 text-xs font-medium"
+                        >
                           {entry.title}
                         </Link>
                       ) : (
-                        <p className="text-xs font-medium line-clamp-1">{entry.title}</p>
+                        <p className="line-clamp-1 text-xs font-medium">{entry.title}</p>
                       )}
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {entry.source === "manual" && (
-                          <Badge className="text-[8px] h-3.5 px-1 bg-white/8">Manual</Badge>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        {entry.source === 'manual' && (
+                          <Badge className="h-3.5 bg-white/8 px-1 text-[8px]">Manual</Badge>
                         )}
-                        {entry.estimatedGrade && entry.estimatedGrade !== entry.grade && tracker.settings.showEstimated && (
-                          <span className="text-[9px] text-muted-foreground">
-                            est. {entry.estimatedGrade}
-                          </span>
-                        )}
+                        {entry.estimatedGrade &&
+                          entry.estimatedGrade !== entry.grade &&
+                          tracker.settings.showEstimated && (
+                            <span className="text-muted-foreground text-[9px]">
+                              est. {entry.estimatedGrade}
+                            </span>
+                          )}
                         {entry.totalPoints && (
-                          <span className="text-[9px] text-muted-foreground">{entry.totalPoints}</span>
+                          <span className="text-muted-foreground text-[9px]">
+                            {entry.totalPoints}
+                          </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-0.5 shrink-0">
+                    <div className="flex shrink-0 flex-col gap-0.5">
                       <button
-                        className="p-1 rounded hover:bg-white/8 text-muted-foreground"
+                        className="text-muted-foreground rounded p-1 hover:bg-white/8"
                         onClick={() => setEditingId(entry.id)}
                         title="Edit"
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil className="h-3 w-3" />
                       </button>
                       <button
-                        className="p-1 rounded hover:bg-white/8 text-muted-foreground"
+                        className="text-muted-foreground rounded p-1 hover:bg-white/8"
                         onClick={() => updateEntry(entry.id, { excluded: !entry.excluded })}
-                        title={entry.excluded ? "Include" : "Exclude"}
+                        title={entry.excluded ? 'Include' : 'Exclude'}
                       >
-                        {entry.excluded ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        {entry.excluded ? (
+                          <Eye className="h-3 w-3" />
+                        ) : (
+                          <EyeOff className="h-3 w-3" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -521,15 +564,24 @@ export function GradeTracker({
       </div>
 
       {analytics.bestEntry && (
-        <div className="mt-3 pt-3 border-t border-white/6 flex items-center gap-2 text-[10px] text-muted-foreground">
-          <Target className="w-3 h-3 shrink-0" style={{ color: subjectColor }} />
+        <div className="text-muted-foreground mt-3 flex items-center gap-2 border-t border-white/6 pt-3 text-[10px]">
+          <Target className="h-3 w-3 shrink-0" style={{ color: subjectColor }} />
           <span>
-            Best: <span style={{ color: OVERALL_GRADE_STYLE[analytics.bestEntry.grade.charAt(0)]?.color }}>{analytics.bestEntry.grade}</span>
-            {" · "}
+            Best:{' '}
+            <span
+              style={{ color: OVERALL_GRADE_STYLE[analytics.bestEntry.grade.charAt(0)]?.color }}
+            >
+              {analytics.bestEntry.grade}
+            </span>
+            {' · '}
             {analytics.worstEntry && (
               <>
-                Lowest:{" "}
-                <span style={{ color: OVERALL_GRADE_STYLE[analytics.worstEntry.grade.charAt(0)]?.color }}>
+                Lowest:{' '}
+                <span
+                  style={{
+                    color: OVERALL_GRADE_STYLE[analytics.worstEntry.grade.charAt(0)]?.color,
+                  }}
+                >
                   {analytics.worstEntry.grade}
                 </span>
               </>
@@ -542,31 +594,29 @@ export function GradeTracker({
 
   if (isMobile) {
     return (
-      <div className="rounded-xl border border-white/7 bg-card overflow-hidden mb-4">
+      <div className="bg-card mb-4 overflow-hidden rounded-xl border border-white/7">
         <button
           type="button"
-          onClick={() => setExpanded(e => !e)}
-          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/3 transition-colors"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/3"
         >
           <div className="flex items-center gap-2.5">
-            <BarChart3 className="w-4 h-4 text-primary" />
+            <BarChart3 className="text-primary h-4 w-4" />
             <span className="text-sm font-semibold">Grade tracker</span>
-            {analytics.count > 0 && (
-              <GradeBadge grade={analytics.averageGrade} size="sm" />
-            )}
+            {analytics.count > 0 && <GradeBadge grade={analytics.averageGrade} size="sm" />}
           </div>
           <motion.div animate={{ rotate: expanded ? 0 : -90 }} transition={{ duration: 0.2 }}>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground h-4 w-4" />
           </motion.div>
         </button>
         <AnimatePresence initial={false}>
           {expanded && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
+              animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.22 }}
-              style={{ overflow: "hidden" }}
+              style={{ overflow: 'hidden' }}
             >
               <div className="px-4 pb-4">{inner}</div>
             </motion.div>
@@ -577,14 +627,14 @@ export function GradeTracker({
   }
 
   return (
-    <div className="rounded-xl border border-white/7 bg-card overflow-hidden lg:sticky lg:top-6">
+    <div className="bg-card overflow-hidden rounded-xl border border-white/7 lg:sticky lg:top-6">
       <div
-        className="px-4 py-3 border-b border-white/6 flex items-center gap-2"
+        className="flex items-center gap-2 border-b border-white/6 px-4 py-3"
         style={{ borderTop: `2px solid ${subjectColor}55` }}
       >
-        <BarChart3 className="w-4 h-4" style={{ color: subjectColor }} />
-        <span className="text-sm font-semibold flex-1">Grade tracker</span>
-        {saving && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+        <BarChart3 className="h-4 w-4" style={{ color: subjectColor }} />
+        <span className="flex-1 text-sm font-semibold">Grade tracker</span>
+        {saving && <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />}
       </div>
       <div className="p-4">{inner}</div>
     </div>

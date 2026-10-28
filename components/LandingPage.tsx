@@ -1,50 +1,52 @@
 ﻿'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import {
-  motion,
-  AnimatePresence,
-  useInView,
-  useSpring,
-  useScroll,
-  useTransform,
-  easeOut,
-} from 'framer-motion';
-import Link from 'next/link';
-import {
-  CalendarDays,
-  BookOpen,
-  StickyNote,
-  UtensilsCrossed,
-  Newspaper,
-  ArrowRight,
-  Sparkles,
-  Zap,
-  Shield,
-  Brain,
-  Code2,
-  Scale,
-  GitPullRequest,
-  Star,
-  ChevronRight,
-  ChevronDown,
-  Activity,
-  Users,
-  MessageSquare,
-  ExternalLink,
-  HelpCircle,
-  FileText,
-  Package,
-  Cloud,
-  ChartNoAxesCombined,
-  Palette,
-} from 'lucide-react';
-import MessagingShowcase from '@/components/MessagingShowcase';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SiGithub } from '@icons-pack/react-simple-icons';
+import {
+  AnimatePresence,
+  easeOut,
+  motion,
+  useInView,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+  Activity,
+  ArrowRight,
+  BookOpen,
+  Brain,
+  CalendarDays,
+  ChartNoAxesCombined,
+  ChevronDown,
+  ChevronRight,
+  Cloud,
+  Code2,
+  ExternalLink,
+  FileText,
+  GitPullRequest,
+  HelpCircle,
+  MessageSquare,
+  Newspaper,
+  Package,
+  Palette,
+  Scale,
+  Shield,
+  Sparkles,
+  Star,
+  StickyNote,
+  Users,
+  UtensilsCrossed,
+  Zap,
+} from 'lucide-react';
+
+import MessagingShowcase from '@/components/MessagingShowcase';
+
 import { Button } from './ui/button';
 
 if (typeof window !== 'undefined') {
@@ -364,7 +366,6 @@ function FeatureScroller() {
               size,
             ].join(' ')}
           >
-
             <div
               className="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full opacity-[0.07] blur-3xl transition-opacity duration-300 group-hover:opacity-[0.13]"
               style={{ backgroundColor: color }}
@@ -451,7 +452,7 @@ function FeatureScroller() {
                     Sounds good!
                   </span>
                   <span className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs text-white/55">
-                    👍 2 
+                    👍 2
                   </span>
                 </div>
               )}
@@ -829,54 +830,52 @@ export default function LandingPage() {
           className="relative z-10 mx-auto w-full max-w-5xl px-6"
         >
           <div>
-              <div className="mb-5 perspective-midrange">
-                <h1 className="leadqing-[0.95] text-5xl font-black tracking-tighter md:text-6xl">
-                  {'SchoolSoft, done right.'.split(/\s+/).map((word, i) => (
-                    <span key={i} className="lp-word mr-[0.2em] inline-block opacity-0 last:mr-0">
-                      {word}
-                    </span>
-                  ))}
-                </h1>
-              </div>
+            <div className="mb-5 perspective-midrange">
+              <h1 className="leadqing-[0.95] text-5xl font-black tracking-tighter md:text-6xl">
+                {'SchoolSoft, done right.'.split(/\s+/).map((word, i) => (
+                  <span key={i} className="lp-word mr-[0.2em] inline-block opacity-0 last:mr-0">
+                    {word}
+                  </span>
+                ))}
+              </h1>
+            </div>
 
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.75 }}
-                className="mb-8 max-w-xl text-sm leading-relaxed text-white/40 md:text-base"
-              >
-                SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft
-                into one clean interface — completely free, no ads, open source.
-              </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.75 }}
+              className="mb-8 max-w-xl text-sm leading-relaxed text-white/40 md:text-base"
+            >
+              SchoolSoft+ pulls your schedule, assignments, lunch menu, and news from SchoolSoft
+              into one clean interface — completely free, no ads, open source.
+            </motion.p>
 
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.95 }}
-                className="flex flex-wrap items-center gap-3"
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.95 }}
+              className="flex flex-wrap items-center gap-3"
+            >
+              <Link href="/login">
+                <Button className="cursor-pointer">
+                  Sign in <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <a
+                href="https://github.com/elias4044/schoolsoftplus"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:border-white/20 hover:text-white"
               >
-                <Link href="/login">
-                  <Button className="cursor-pointer">
-                    Sign in <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <a
-                  href="https://github.com/elias4044/schoolsoftplus"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:border-white/20 hover:text-white"
-                >
-                  <SiGithub className="h-3.5 w-3.5" /> GitHub
-                </a>
-              </motion.div>
+                <SiGithub className="h-3.5 w-3.5" /> GitHub
+              </a>
+            </motion.div>
           </div>
         </motion.div>
-
       </section>
 
       {/* -- Stats strip -- */}
-      <section className="relative overflow-hidden border-t bg-background border-white/5 px-6 py-16">
-
+      <section className="bg-background relative overflow-hidden border-t border-white/5 px-6 py-16">
         <div className="relative z-10 mx-auto max-w-5xl">
           <Reveal className="mb-6">
             <p className="text-[10px] tracking-widest text-white/25">BY THE NUMBERS</p>

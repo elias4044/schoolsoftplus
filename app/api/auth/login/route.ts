@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import { makePkcePair, makeState, exchangeCodeForToken } from "@/app/api/lib/mobileAuth";
-import { trackLoginEvent } from "@/app/api/lib/statsHelper";
+import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 
-const CLIENT_ID    = "eApp";
+import { exchangeCodeForToken, makePkcePair, makeState } from '@/app/api/lib/mobileAuth';
+import { trackLoginEvent } from '@/app/api/lib/statsHelper';
+
+const CLIENT_ID = 'eApp';
 // SchoolSoft's eApp client only allows this redirect URI — it must match exactly.
 // For the automated flow we read the code from the JSON response, so the redirect
 // never actually fires; we just need it to pass SchoolSoft's validation.
-const SS_REDIRECT  = "com.schoolsoftplus.app://";
+const SS_REDIRECT = 'com.schoolsoftplus.app://';
 
 /* 
    GET /api/mobile/login
@@ -36,9 +37,9 @@ const SS_REDIRECT  = "com.schoolsoftplus.app://";
 */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const school      = searchParams.get("school")       ?? "engelska";
-  const orgid       = searchParams.get("orgid")        ?? "18";
-  const redirectUri = searchParams.get("redirect_uri") ?? SS_REDIRECT;
+  const school = searchParams.get('school') ?? 'engelska';
+  const orgid = searchParams.get('orgid') ?? '18';
+  const redirectUri = searchParams.get('redirect_uri') ?? SS_REDIRECT;
 
   const { verifier, challenge } = makePkcePair();
   const state = makeState();
@@ -95,19 +96,19 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON body." }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
   }
 
   const { username, password } = body;
   if (!username || !password) {
     return NextResponse.json(
-      { success: false, error: "username and password are required." },
+      { success: false, error: 'username and password are required.' },
       { status: 400 }
     );
   }
 
-  const school = (body.school ?? req.headers.get("x-school") ?? "engelska").trim();
-  const orgid  = (body.orgid  ?? "18").trim();
+  const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
+  const orgid = (body.orgid ?? '18').trim();
 
   /* ── Step 1: Ephemeral PKCE pair ─────────────────────────── */
   const { verifier, challenge } = makePkcePair();
@@ -131,32 +132,32 @@ export async function POST(req: NextRequest) {
   let code: string;
   try {
     const loginRes = await axios.get(passwordLoginUrl, {
-      headers: { Accept: "application/json", "User-Agent": "SchoolSoftPlus-Mobile/1.0" },
+      headers: { Accept: 'application/json', 'User-Agent': 'SchoolSoftPlus-Mobile/1.0' },
       validateStatus: () => true,
     });
 
     if (loginRes.status !== 200) {
       console.warn(`[mobile/login POST] password login status ${loginRes.status}`, loginRes.data);
       return NextResponse.json(
-        { success: false, error: loginRes.data?.userMessage || "Authentication failed." },
+        { success: false, error: loginRes.data?.userMessage || 'Authentication failed.' },
         { status: 401 }
       );
     }
 
     const loginData = loginRes.data as { code?: string; state?: string; redirect_uri?: string };
     if (!loginData?.code) {
-      console.error("[mobile/login POST] no code in response", loginData);
+      console.error('[mobile/login POST] no code in response', loginData);
       return NextResponse.json(
-        { success: false, error: "Authentication failed — no authorization code returned." },
+        { success: false, error: 'Authentication failed — no authorization code returned.' },
         { status: 401 }
       );
     }
 
     code = loginData.code;
   } catch (err) {
-    console.error("[mobile/login POST] password login error:", (err as Error).message);
+    console.error('[mobile/login POST] password login error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, error: "Could not reach SchoolSoft. Try again later." },
+      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
       { status: 502 }
     );
   }
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
   /* ── Step 3: Exchange code + verifier for Bearer token ───── */
   const tokenResult = await exchangeCodeForToken(school, code, verifier);
   if (!tokenResult) {
-    return NextResponse.json({ success: false, error: "Token exchange failed." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Token exchange failed.' }, { status: 401 });
   }
 
   trackLoginEvent(school);

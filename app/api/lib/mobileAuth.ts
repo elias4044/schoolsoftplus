@@ -5,28 +5,22 @@
  * PKCE helpers for the SchoolSoft OAuth 2.0 + PKCE flow.
  */
 
-import crypto from "crypto";
-import axios from "axios";
+import crypto from 'crypto';
+import axios from 'axios';
 
 /* ─────────────────────────────────────────────────────────────
    Base64url helpers
 ───────────────────────────────────────────────────────────── */
 
 function b64url(input: Buffer | string): string {
-  const buf = Buffer.isBuffer(input)
-    ? input
-    : Buffer.from(input as string, "utf8");
-  return buf
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const buf = Buffer.isBuffer(input) ? input : Buffer.from(input as string, 'utf8');
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function b64urlDecode(input: string): string {
   // Pad to a multiple of 4 before decoding
-  const padded = input + "=".repeat((4 - (input.length % 4)) % 4);
-  return Buffer.from(padded, "base64").toString("utf8");
+  const padded = input + '='.repeat((4 - (input.length % 4)) % 4);
+  return Buffer.from(padded, 'base64').toString('utf8');
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -52,7 +46,7 @@ export interface MobileTokenPayload {
 
 function getJwtSecret(): string {
   const s = process.env.MOBILE_JWT_SECRET;
-  if (!s) throw new Error("MOBILE_JWT_SECRET env var is not set.");
+  if (!s) throw new Error('MOBILE_JWT_SECRET env var is not set.');
   return s;
 }
 
@@ -60,8 +54,8 @@ function getJwtSecret(): string {
  * Signs a mobile JWT valid for `expiresInDays` days (default 30).
  */
 export function signMobileToken(
-  payload: Omit<MobileTokenPayload, "iat" | "exp">,
-  expiresInDays = 30,
+  payload: Omit<MobileTokenPayload, 'iat' | 'exp'>,
+  expiresInDays = 30
 ): string {
   const secret = getJwtSecret();
   const now = Math.floor(Date.now() / 1000);
@@ -70,11 +64,9 @@ export function signMobileToken(
     iat: now,
     exp: now + expiresInDays * 86400,
   };
-  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const body = b64url(JSON.stringify(full));
-  const sig = b64url(
-    crypto.createHmac("sha256", secret).update(`${header}.${body}`).digest(),
-  );
+  const sig = b64url(crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest());
   return `${header}.${body}.${sig}`;
 }
 
@@ -84,12 +76,12 @@ export function signMobileToken(
 export function verifyMobileToken(token: string): MobileTokenPayload | null {
   try {
     const secret = getJwtSecret();
-    const parts = token.split(".");
+    const parts = token.split('.');
     if (parts.length !== 3) return null;
     const [header, body, sig] = parts;
 
     const expectedSig = b64url(
-      crypto.createHmac("sha256", secret).update(`${header}.${body}`).digest(),
+      crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest()
     );
     if (sig !== expectedSig) return null;
 
@@ -120,15 +112,13 @@ export function extractBearerToken(authHeader: string | null): string | null {
  */
 export function makePkcePair(): { verifier: string; challenge: string } {
   const verifier = b64url(crypto.randomBytes(32));
-  const challenge = b64url(
-    crypto.createHash("sha256").update(verifier).digest(),
-  );
+  const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
   return { verifier, challenge };
 }
 
 /** Generates a random opaque state string. */
 export function makeState(): string {
-  return crypto.randomBytes(12).toString("hex");
+  return crypto.randomBytes(12).toString('hex');
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -142,7 +132,7 @@ export function makeState(): string {
  */
 export async function fetchSchoolsoftSession(
   school: string,
-  accessToken: string,
+  accessToken: string
 ): Promise<{
   username: string;
   firstName: string;
@@ -153,30 +143,27 @@ export async function fetchSchoolsoftSession(
   userId: number | undefined;
 } | null> {
   try {
-    const res = await axios.get(
-      `https://sms.schoolsoft.se/${school}/rest-api/session`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-          "User-Agent": "SchoolSoftPlus-Mobile/1.0",
-        },
-        validateStatus: () => true,
-        responseType: "json",
-        timeout: 5_000,
-        signal: AbortSignal.timeout(5_000),
+    const res = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+        'User-Agent': 'SchoolSoftPlus-Mobile/1.0',
       },
-    );
+      validateStatus: () => true,
+      responseType: 'json',
+      timeout: 5_000,
+      signal: AbortSignal.timeout(5_000),
+    });
     if (res.status !== 200) return null;
     const d = res.data ?? {};
     return {
-      username: (d.user?.userName ?? "").toLowerCase(),
-      firstName: d.user?.firstName ?? "",
-      lastName: d.user?.lastName ?? "",
-      email: d.user?.email ?? "",
-      schoolName: d.organization?.name ?? "",
-      userType: d.userType?.name ?? "",
-      userId:  typeof d.user?.id === "number" ? d.user.id : undefined,
+      username: (d.user?.userName ?? '').toLowerCase(),
+      firstName: d.user?.firstName ?? '',
+      lastName: d.user?.lastName ?? '',
+      email: d.user?.email ?? '',
+      schoolName: d.organization?.name ?? '',
+      userType: d.userType?.name ?? '',
+      userId: typeof d.user?.id === 'number' ? d.user.id : undefined,
     };
   } catch {
     return null;
@@ -192,7 +179,7 @@ export async function exchangeCodeForToken(
   code: string,
   verifier: string
 ): Promise<Record<string, unknown> | null> {
-  const CLIENT_ID = "eApp";
+  const CLIENT_ID = 'eApp';
   const tokenUrl =
     `https://sms.schoolsoft.se/${encodeURIComponent(school)}/rest-api/login/token` +
     `?clientId=${encodeURIComponent(CLIENT_ID)}` +
@@ -202,8 +189,8 @@ export async function exchangeCodeForToken(
 
   try {
     const tokenRes = await fetch(tokenUrl, {
-      method: "POST",
-      headers: { accept: "application/json" },
+      method: 'POST',
+      headers: { accept: 'application/json' },
     });
 
     const text = await tokenRes.text();
@@ -220,8 +207,7 @@ export async function exchangeCodeForToken(
       return text ? { access_token: text } : null;
     }
   } catch (err) {
-    console.error("[mobile] token exchange error:", (err as Error).message);
+    console.error('[mobile] token exchange error:', (err as Error).message);
     return null;
   }
 }
-

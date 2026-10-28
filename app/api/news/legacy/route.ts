@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+
+import { handleApiError } from '@/app/api/lib/apiError';
+import { authUser } from '@/app/api/lib/auth';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  requireSession,
   getSessionCookies,
+  requireSession,
 } from '@/app/api/lib/schoolsoft';
-import { handleApiError } from '@/app/api/lib/apiError';
 import { trackNewsFetch } from '@/app/api/lib/statsHelper';
-import { authUser } from '@/app/api/lib/auth';
 
 // THIS A LEGACY ROUTE, PLEASE REFER TO /api/news/route.ts
 

@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
-import React, { Component } from "react";
-import { AlertTriangle } from "lucide-react";
-import { WIDGET_REGISTRY } from "@/lib/widgets/registry";
-import type { WidgetId } from "@/lib/widgets/types";
+import React, { Component } from 'react';
+import { AlertTriangle } from 'lucide-react';
+
+import { WIDGET_REGISTRY } from '@/lib/widgets/registry';
+import type { WidgetId } from '@/lib/widgets/types';
 
 interface Props {
   widgetId: WidgetId;
@@ -43,17 +44,15 @@ export class WidgetErrorBoundary extends Component<Props, State> {
       const label = meta?.label ?? this.props.widgetId;
 
       return (
-        <div className="flex flex-col items-center justify-center gap-2 px-4 py-6 text-center h-full min-h-30">
-          <AlertTriangle className="w-6 h-6 text-destructive/70" />
-          <p className="text-xs text-destructive/80 font-medium">
-            {label} failed to load
-          </p>
-          <p className="text-[10px] text-muted-foreground max-w-50 leading-relaxed">
-            {this.state.error?.message ?? "An unexpected error occurred."}
+        <div className="flex h-full min-h-30 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+          <AlertTriangle className="text-destructive/70 h-6 w-6" />
+          <p className="text-destructive/80 text-xs font-medium">{label} failed to load</p>
+          <p className="text-muted-foreground max-w-50 text-[10px] leading-relaxed">
+            {this.state.error?.message ?? 'An unexpected error occurred.'}
           </p>
           <button
             onClick={this.handleRetry}
-            className="mt-1 text-[10px] px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors border border-white/5"
+            className="text-muted-foreground hover:text-foreground mt-1 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] transition-colors hover:bg-white/10"
           >
             Try again
           </button>

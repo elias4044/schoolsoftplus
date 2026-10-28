@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   BookOpen,
   CalendarClock,
@@ -18,52 +18,53 @@ import {
   Search,
   Star,
   X,
-} from "lucide-react";
-import { staggerContainer, fadeUp } from "@/lib/animations";
-import { useCachedResource, useIsoLayoutEffect } from "@/lib/cache";
+} from 'lucide-react';
+
+import { fadeUp, staggerContainer } from '@/lib/animations';
+import { useCachedResource, useIsoLayoutEffect } from '@/lib/cache';
 import {
-  COMPLETED_KEY,
-  SUBJECTS_KEY,
   buildInsight,
+  COMPLETED_KEY,
   daysUntil,
   fetchCompleted,
   fetchSubjectAssignments,
   fetchSubjects,
   readCachedInsight,
+  SUBJECTS_KEY,
   type CompletedRow,
   type DueItem,
   type Insight,
   type Subject,
   type Teacher,
-} from "@/lib/cache/subjects";
+} from '@/lib/cache/subjects';
 
 /* 
    Types
  */
-type Tab = "subjects" | "completed";
-type ViewMode = "grid" | "list";
-type SortMode = "name" | "unread" | "due";
-type FilterMode = "all" | "unread" | "active";
-type CompletedSort = "newest" | "oldest" | "title";
+type Tab = 'subjects' | 'completed';
+type ViewMode = 'grid' | 'list';
+type SortMode = 'name' | 'unread' | 'due';
+type FilterMode = 'all' | 'unread' | 'active';
+type CompletedSort = 'newest' | 'oldest' | 'title';
 
 /* 
    Constants / helpers
  */
-const PINS_KEY = "subjects:pins";
-const PREFS_KEY = "subjects:prefs";
-const FALLBACK_COLOR = "#7c6cf0";
+const PINS_KEY = 'subjects:pins';
+const PREFS_KEY = 'subjects:prefs';
+const FALLBACK_COLOR = '#7c6cf0';
 const PAGE_SIZE = 40;
 
 const SORT_LABELS: Record<SortMode, string> = {
-  name: "A–Z",
-  unread: "Unread",
-  due: "Next due",
+  name: 'A–Z',
+  unread: 'Unread',
+  due: 'Next due',
 };
 
 const COMPLETED_SORT_LABELS: Record<CompletedSort, string> = {
-  newest: "Newest",
-  oldest: "Oldest",
-  title: "A–Z",
+  newest: 'Newest',
+  oldest: 'Oldest',
+  title: 'A–Z',
 };
 
 const TYPE_ICON: Record<string, React.ElementType> = {
@@ -71,16 +72,16 @@ const TYPE_ICON: Record<string, React.ElementType> = {
   Checkpoint: CheckSquare,
   Assessment: ClipboardCheck,
   Planning: FileText,
-  "Classroom Activity": ClipboardList,
+  'Classroom Activity': ClipboardList,
 };
 
-const URGENT = "oklch(0.70 0.19 25)";
-const SOON = "oklch(0.80 0.14 80)";
-const CALM = "oklch(0.75 0.15 278)";
+const URGENT = 'oklch(0.70 0.19 25)';
+const SOON = 'oklch(0.80 0.14 80)';
+const CALM = 'oklch(0.75 0.15 278)';
 
 function patchPrefs(next: Record<string, unknown>) {
   try {
-    const cur = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}") ?? {};
+    const cur = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') ?? {};
     localStorage.setItem(PREFS_KEY, JSON.stringify({ ...cur, ...next }));
   } catch {
     /* storage unavailable */
@@ -108,24 +109,24 @@ function initials(name: string): string {
 }
 
 function personInitials(name?: string): string {
-  if (!name) return "?";
+  if (!name) return '?';
   const w = name.trim().split(/\s+/).filter(Boolean);
-  return ((w[0]?.[0] ?? "") + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase() || "?";
+  return ((w[0]?.[0] ?? '') + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase() || '?';
 }
 
 function teacherName(t?: Teacher): string {
-  return t ? `${t.firstName} ${t.lastName}`.trim() : "";
+  return t ? `${t.firstName} ${t.lastName}`.trim() : '';
 }
 
 function dueInfo(dateStr: string): { label: string; color: string } {
   const days = daysUntil(dateStr);
-  if (days === null) return { label: "", color: CALM };
-  if (days < 0) return { label: "Overdue", color: URGENT };
-  if (days === 0) return { label: "Today", color: URGENT };
-  if (days === 1) return { label: "Tomorrow", color: SOON };
+  if (days === null) return { label: '', color: CALM };
+  if (days < 0) return { label: 'Overdue', color: URGENT };
+  if (days === 0) return { label: 'Today', color: URGENT };
+  if (days === 1) return { label: 'Tomorrow', color: SOON };
   if (days <= 2) return { label: `In ${days} days`, color: SOON };
   if (days < 7) return { label: `In ${days} days`, color: CALM };
-  const label = new Date(dateStr).toLocaleDateString("en-SE", { day: "numeric", month: "short" });
+  const label = new Date(dateStr).toLocaleDateString('en-SE', { day: 'numeric', month: 'short' });
   return { label, color: CALM };
 }
 
@@ -138,7 +139,7 @@ function nextDueTime(i?: Insight): number {
 
 function parseResultDate(s: string): Date {
   // "2025-11-26 15:41" -> ISO-ish so Safari parses it too
-  return new Date(s.replace(" ", "T"));
+  return new Date(s.replace(' ', 'T'));
 }
 
 function resultTime(s: string): number {
@@ -148,14 +149,14 @@ function resultTime(s: string): number {
 
 function formatResultDate(s: string): string {
   const d = parseResultDate(s);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-SE", { day: "numeric", month: "short", year: "numeric" });
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-SE', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function monthLabel(s: string): string {
   const d = parseResultDate(s);
-  if (isNaN(d.getTime())) return "Unknown date";
-  return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  if (isNaN(d.getTime())) return 'Unknown date';
+  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
 /* 
@@ -165,11 +166,11 @@ function UnreadBadge({ count }: { count?: number }) {
   if (!count || count <= 0) return null;
   return (
     <span
-      className="text-[10px] font-semibold px-1.5 h-4 min-w-4 inline-flex items-center justify-center rounded-full tabular-nums"
+      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums"
       style={{
-        background: "oklch(0.65 0.22 278 / 20%)",
-        color: "oklch(0.78 0.15 278)",
-        border: "1px solid oklch(0.65 0.22 278 / 30%)",
+        background: 'oklch(0.65 0.22 278 / 20%)',
+        color: 'oklch(0.78 0.15 278)',
+        border: '1px solid oklch(0.65 0.22 278 / 30%)',
       }}
       title={`${count} unread`}
     >
@@ -182,21 +183,21 @@ function PinButton({ pinned, onToggle }: { pinned: boolean; onToggle: () => void
   return (
     <button
       type="button"
-      onClick={e => {
+      onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         onToggle();
       }}
-      aria-label={pinned ? "Unpin subject" : "Pin subject"}
+      aria-label={pinned ? 'Unpin subject' : 'Pin subject'}
       aria-pressed={pinned}
       className={[
-        "relative z-10 p-1 rounded-md transition-all",
+        'relative z-10 rounded-md p-1 transition-all',
         pinned
-          ? "text-amber-300 opacity-100"
-          : "text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground",
-      ].join(" ")}
+          ? 'text-amber-300 opacity-100'
+          : 'text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+      ].join(' ')}
     >
-      <Star className="w-3.5 h-3.5" fill={pinned ? "currentColor" : "none"} />
+      <Star className="h-3.5 w-3.5" fill={pinned ? 'currentColor' : 'none'} />
     </button>
   );
 }
@@ -205,7 +206,7 @@ function DueChip({ item }: { item: DueItem }) {
   const info = dueInfo(item.endDate);
   return (
     <span
-      className="text-[10px] font-medium px-1.5 py-0.5 rounded-md shrink-0 tabular-nums"
+      className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tabular-nums"
       style={{
         color: info.color,
         background: `color-mix(in oklch, ${info.color} 14%, transparent)`,
@@ -229,18 +230,22 @@ function StatTile({
   accent: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/7 bg-card px-4 py-3 flex items-center gap-3">
+    <div className="bg-card flex items-center gap-3 rounded-xl border border-white/7 px-4 py-3">
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
         style={{ background: `color-mix(in oklch, ${accent} 15%, transparent)`, color: accent }}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-lg font-bold leading-none tabular-nums">
-          {value === null ? <span className="inline-block w-5 h-4 rounded bg-white/8 animate-pulse" /> : value}
+        <p className="text-lg leading-none font-bold tabular-nums">
+          {value === null ? (
+            <span className="inline-block h-4 w-5 animate-pulse rounded bg-white/8" />
+          ) : (
+            value
+          )}
         </p>
-        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">{label}</p>
+        <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">{label}</p>
       </div>
     </div>
   );
@@ -261,25 +266,25 @@ function SearchBox({
 }) {
   return (
     <div className="relative flex-1">
-      <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
       <input
         ref={inputRef}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="w-full h-10 rounded-xl border border-white/7 bg-card pl-9 pr-16 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/15 transition"
+        className="bg-card placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-primary/15 h-10 w-full rounded-xl border border-white/7 pr-16 pl-9 text-sm transition focus:ring-2 focus:outline-none"
       />
       {value ? (
         <button
-          onClick={() => onChange("")}
+          onClick={() => onChange('')}
           aria-label="Clear search"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5"
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1 hover:bg-white/5"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="h-3.5 w-3.5" />
         </button>
       ) : (
-        <kbd className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground/70 border border-white/10 rounded px-1.5 py-0.5">
+        <kbd className="text-muted-foreground/70 absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-white/10 px-1.5 py-0.5 text-[10px] sm:block">
           /
         </kbd>
       )}
@@ -290,7 +295,9 @@ function SearchBox({
 /** Small "Updating" hint shown while a background refresh runs on top of cached data. */
 function UpdatingHint({ show }: { show: boolean }) {
   if (!show) return null;
-  return <span className="ml-2 text-[11px] text-muted-foreground/70 animate-pulse">· Updating</span>;
+  return (
+    <span className="text-muted-foreground/70 ml-2 animate-pulse text-[11px]">· Updating</span>
+  );
 }
 
 /** "/" focuses the search box, Escape clears it. Only listens while the tab is active. */
@@ -303,18 +310,18 @@ function useSearchShortcuts(
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
-      const typing = tag === "INPUT" || tag === "TEXTAREA";
-      if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey) {
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA';
+      if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         inputRef.current?.focus();
       }
-      if (e.key === "Escape" && document.activeElement === inputRef.current) {
+      if (e.key === 'Escape' && document.activeElement === inputRef.current) {
         clear();
         inputRef.current?.blur();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [active, inputRef, clear]);
 }
 
@@ -343,64 +350,64 @@ function SubjectCard({
     <motion.div
       variants={fadeUp}
       initial={instant ? false : undefined}
-      className="group relative rounded-xl border border-white/7 bg-card overflow-hidden transition-colors hover:border-white/15"
+      className="group bg-card relative overflow-hidden rounded-xl border border-white/7 transition-colors hover:border-white/15"
     >
       <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
 
       {/* Stretched link covers the whole card */}
       <Link
         href={`/subjects/${subject.id}`}
-        className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-primary"
+        className="focus-visible:outline-primary absolute inset-0 z-0 rounded-xl focus-visible:outline-2"
         aria-label={`Open ${subject.subject}`}
       />
 
-      <div className="relative px-4 pt-4 pb-3 pl-5 pointer-events-none">
+      <div className="pointer-events-none relative px-4 pt-4 pb-3 pl-5">
         <div className="flex items-start gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
             style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
           >
             {initials(subject.subject)}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-snug truncate group-hover:text-primary transition-colors">
+          <div className="min-w-0 flex-1">
+            <p className="group-hover:text-primary truncate text-sm leading-snug font-semibold transition-colors">
               {subject.subject}
             </p>
             {teacher && (
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">
                 {teacher}
                 {extraTeachers > 0 && ` +${extraTeachers}`}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1 pointer-events-auto">
+          <div className="pointer-events-auto flex items-center gap-1">
             <UnreadBadge count={subject.unreadEntities} />
             <PinButton pinned={pinned} onToggle={onTogglePin} />
           </div>
         </div>
 
         {/* Inline info */}
-        <div className="mt-3.5 pt-3 border-t border-white/5 min-h-[58px]">
+        <div className="mt-3.5 min-h-[58px] border-t border-white/5 pt-3">
           {!insight ? (
             <div className="space-y-2">
-              <div className="h-3 w-3/4 rounded bg-white/6 animate-pulse" />
-              <div className="h-3 w-1/2 rounded bg-white/6 animate-pulse" />
+              <div className="h-3 w-3/4 animate-pulse rounded bg-white/6" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-white/6" />
             </div>
           ) : !loaded ? (
-            <p className="text-[11px] text-muted-foreground/70">Couldn&apos;t load details</p>
+            <p className="text-muted-foreground/70 text-[11px]">Couldn&apos;t load details</p>
           ) : insight.upcoming.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground/80 flex items-center gap-1.5">
-              <ClipboardList className="w-3 h-3" /> Nothing due
+            <p className="text-muted-foreground/80 flex items-center gap-1.5 text-[11px]">
+              <ClipboardList className="h-3 w-3" /> Nothing due
             </p>
           ) : (
             <ul className="space-y-1.5">
-              {insight.upcoming.map(item => (
+              {insight.upcoming.map((item) => (
                 <li key={item.id} className="pointer-events-auto relative z-10">
                   <Link
                     href={`/subjects/${subject.id}/${item.id}?type=${item.entityType.toLowerCase()}`}
-                    className="flex items-center gap-2 rounded-md -mx-1.5 px-1.5 py-1 hover:bg-white/5 transition-colors"
+                    className="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-white/5"
                   >
-                    <span className="text-xs text-foreground/85 truncate flex-1">{item.title}</span>
+                    <span className="text-foreground/85 flex-1 truncate text-xs">{item.title}</span>
                     <DueChip item={item} />
                   </Link>
                 </li>
@@ -434,7 +441,7 @@ function SubjectRow({
     <motion.div
       variants={fadeUp}
       initial={instant ? false : undefined}
-      className="group relative flex items-center gap-3 rounded-xl border border-white/7 bg-card pl-4 pr-3 py-2.5 hover:border-white/15 hover:bg-white/3 transition-colors overflow-hidden"
+      className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/7 py-2.5 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
     >
       <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
       <Link
@@ -443,35 +450,35 @@ function SubjectRow({
         aria-label={`Open ${subject.subject}`}
       />
       <div
-        className="relative w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 pointer-events-none"
+        className="pointer-events-none relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold"
         style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
       >
         {initials(subject.subject)}
       </div>
-      <div className="relative flex-1 min-w-0 pointer-events-none">
-        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+      <div className="pointer-events-none relative min-w-0 flex-1">
+        <p className="group-hover:text-primary truncate text-sm font-medium transition-colors">
           {subject.subject}
         </p>
-        {teacher && <p className="text-[11px] text-muted-foreground truncate">{teacher}</p>}
+        {teacher && <p className="text-muted-foreground truncate text-[11px]">{teacher}</p>}
       </div>
 
-      <div className="relative hidden sm:flex items-center gap-2 min-w-0 max-w-[40%] pointer-events-none">
+      <div className="pointer-events-none relative hidden max-w-[40%] min-w-0 items-center gap-2 sm:flex">
         {next ? (
           <>
-            <span className="text-xs text-foreground/75 truncate">{next.title}</span>
+            <span className="text-foreground/75 truncate text-xs">{next.title}</span>
             <DueChip item={next} />
           </>
         ) : insight?.ok ? (
-          <span className="text-[11px] text-muted-foreground/70">Nothing due</span>
+          <span className="text-muted-foreground/70 text-[11px]">Nothing due</span>
         ) : !insight ? (
-          <span className="h-3 w-24 rounded bg-white/6 animate-pulse" />
+          <span className="h-3 w-24 animate-pulse rounded bg-white/6" />
         ) : null}
       </div>
 
-      <div className="relative flex items-center gap-1.5 shrink-0">
+      <div className="relative flex shrink-0 items-center gap-1.5">
         <UnreadBadge count={subject.unreadEntities} />
         <PinButton pinned={pinned} onToggle={onTogglePin} />
-        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors pointer-events-none" />
+        <ChevronRight className="text-muted-foreground group-hover:text-primary pointer-events-none h-4 w-4 transition-colors" />
       </div>
     </motion.div>
   );
@@ -482,28 +489,32 @@ function SubjectRow({
  */
 function SubjectsView({ active }: { active: boolean }) {
   // Cached subject list shows instantly; the API response replaces it when it arrives.
-  const { data: subjectsData, loading, refreshing } = useCachedResource(SUBJECTS_KEY, fetchSubjects);
+  const {
+    data: subjectsData,
+    loading,
+    refreshing,
+  } = useCachedResource(SUBJECTS_KEY, fetchSubjects);
   const subjects = useMemo(() => subjectsData ?? [], [subjectsData]);
 
   const [insights, setInsights] = useState<Record<string, Insight>>({});
 
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterMode>("all");
-  const [sort, setSort] = useState<SortMode>("name");
-  const [view, setView] = useState<ViewMode>("grid");
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<FilterMode>('all');
+  const [sort, setSort] = useState<SortMode>('name');
+  const [view, setView] = useState<ViewMode>('grid');
   const [pins, setPins] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const clearQuery = useCallback(() => setQuery(""), []);
+  const clearQuery = useCallback(() => setQuery(''), []);
   useSearchShortcuts(active, searchRef, clearQuery);
 
   /* Restore prefs + pins */
   useEffect(() => {
     try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
-      if (p?.view === "grid" || p?.view === "list") setView(p.view);
-      if (p?.sort === "name" || p?.sort === "unread" || p?.sort === "due") setSort(p.sort);
-      const stored = JSON.parse(localStorage.getItem(PINS_KEY) ?? "[]");
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null');
+      if (p?.view === 'grid' || p?.view === 'list') setView(p.view);
+      if (p?.sort === 'name' || p?.sort === 'unread' || p?.sort === 'due') setSort(p.sort);
+      const stored = JSON.parse(localStorage.getItem(PINS_KEY) ?? '[]');
       if (Array.isArray(stored)) setPins(stored.map(String));
     } catch {
       /* defaults are fine */
@@ -511,8 +522,8 @@ function SubjectsView({ active }: { active: boolean }) {
   }, []);
 
   const togglePin = useCallback((id: string) => {
-    setPins(prev => {
-      const next = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+    setPins((prev) => {
+      const next = prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id];
       try {
         localStorage.setItem(PINS_KEY, JSON.stringify(next));
       } catch {
@@ -525,7 +536,7 @@ function SubjectsView({ active }: { active: boolean }) {
   /* Hydrate per-subject details from the cache before paint, so cards never flash skeletons */
   useIsoLayoutEffect(() => {
     if (!subjects.length) return;
-    setInsights(prev => {
+    setInsights((prev) => {
       let next: Record<string, Insight> | null = null;
       for (const s of subjects) {
         const key = String(s.id);
@@ -551,12 +562,14 @@ function SubjectsView({ active }: { active: boolean }) {
         try {
           const assignments = await fetchSubjectAssignments(s.id);
           if (cancelled) return;
-          setInsights(prev => ({ ...prev, [key]: buildInsight(assignments) }));
+          setInsights((prev) => ({ ...prev, [key]: buildInsight(assignments) }));
         } catch {
           if (cancelled) return;
           // Keep cached details on screen if the refresh fails.
-          setInsights(prev =>
-            prev[key] ? prev : { ...prev, [key]: { ok: false, active: 0, overdue: 0, upcoming: [] } }
+          setInsights((prev) =>
+            prev[key]
+              ? prev
+              : { ...prev, [key]: { ok: false, active: 0, overdue: 0, upcoming: [] } }
           );
         }
       }
@@ -571,7 +584,7 @@ function SubjectsView({ active }: { active: boolean }) {
   const settled = useSettled(`${view}-${loading}`);
 
   /* Stats */
-  const allLoaded = subjects.length > 0 && subjects.every(s => insights[String(s.id)]);
+  const allLoaded = subjects.length > 0 && subjects.every((s) => insights[String(s.id)]);
   const totalUnread = subjects.reduce((n, s) => n + (s.unreadEntities ?? 0), 0);
   const totalActive = allLoaded
     ? subjects.reduce((n, s) => n + (insights[String(s.id)]?.active ?? 0), 0)
@@ -580,7 +593,7 @@ function SubjectsView({ active }: { active: boolean }) {
     ? subjects.reduce(
         (n, s) =>
           n +
-          (insights[String(s.id)]?.upcoming ?? []).filter(u => {
+          (insights[String(s.id)]?.upcoming ?? []).filter((u) => {
             const d = daysUntil(u.endDate);
             return d !== null && d <= 3;
           }).length,
@@ -591,16 +604,16 @@ function SubjectsView({ active }: { active: boolean }) {
   /* Filtered + sorted */
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = subjects.filter(s => {
+    const list = subjects.filter((s) => {
       if (q) {
         const hay =
           s.subject.toLowerCase() +
-          " " +
-          (s.teachers ?? []).map(t => `${t.firstName} ${t.lastName}`.toLowerCase()).join(" ");
+          ' ' +
+          (s.teachers ?? []).map((t) => `${t.firstName} ${t.lastName}`.toLowerCase()).join(' ');
         if (!hay.includes(q)) return false;
       }
-      if (filter === "unread" && !(s.unreadEntities && s.unreadEntities > 0)) return false;
-      if (filter === "active" && !((insights[String(s.id)]?.active ?? 0) > 0)) return false;
+      if (filter === 'unread' && !(s.unreadEntities && s.unreadEntities > 0)) return false;
+      if (filter === 'active' && !((insights[String(s.id)]?.active ?? 0) > 0)) return false;
       return true;
     });
 
@@ -608,34 +621,34 @@ function SubjectsView({ active }: { active: boolean }) {
       const pa = pins.includes(String(a.id)) ? 0 : 1;
       const pb = pins.includes(String(b.id)) ? 0 : 1;
       if (pa !== pb) return pa - pb;
-      if (sort === "unread") {
+      if (sort === 'unread') {
         const diff = (b.unreadEntities ?? 0) - (a.unreadEntities ?? 0);
         if (diff) return diff;
       }
-      if (sort === "due") {
+      if (sort === 'due') {
         const da = nextDueTime(insights[String(a.id)]);
         const db = nextDueTime(insights[String(b.id)]);
         if (da !== db) return da < db ? -1 : 1;
       }
-      return a.subject.localeCompare(b.subject, "sv");
+      return a.subject.localeCompare(b.subject, 'sv');
     });
     return list;
   }, [subjects, insights, query, filter, sort, pins]);
 
-  const unreadSubjects = subjects.filter(s => (s.unreadEntities ?? 0) > 0).length;
-  const filtersActive = query.trim() !== "" || filter !== "all";
+  const unreadSubjects = subjects.filter((s) => (s.unreadEntities ?? 0) > 0).length;
+  const filtersActive = query.trim() !== '' || filter !== 'all';
 
   const FILTERS: { id: FilterMode; label: string; count?: number }[] = [
-    { id: "all", label: "All", count: subjects.length },
-    { id: "unread", label: "Unread", count: unreadSubjects },
-    { id: "active", label: "Has open tasks" },
+    { id: 'all', label: 'All', count: subjects.length },
+    { id: 'unread', label: 'Unread', count: unreadSubjects },
+    { id: 'active', label: 'Has open tasks' },
   ];
 
   return (
-    <div className={active ? "" : "hidden"}>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className={active ? '' : 'hidden'}>
+      <p className="text-muted-foreground mb-4 text-sm">
         {loading
-          ? "Loading…"
+          ? 'Loading…'
           : filtersActive
             ? `${visible.length} of ${subjects.length} subjects`
             : `${subjects.length} subjects`}
@@ -644,16 +657,26 @@ function SubjectsView({ active }: { active: boolean }) {
 
       {/* Summary strip */}
       {!loading && subjects.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <StatTile label="Unread" value={totalUnread} icon={BookOpen} accent="oklch(0.75 0.15 278)" />
-          <StatTile label="Open tasks" value={totalActive} icon={ClipboardList} accent="oklch(0.70 0.18 148)" />
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <StatTile
+            label="Unread"
+            value={totalUnread}
+            icon={BookOpen}
+            accent="oklch(0.75 0.15 278)"
+          />
+          <StatTile
+            label="Open tasks"
+            value={totalActive}
+            icon={ClipboardList}
+            accent="oklch(0.70 0.18 148)"
+          />
           <StatTile label="Due in 3 days" value={dueSoon} icon={CalendarClock} accent={SOON} />
         </div>
       )}
 
       {/* Toolbar */}
       {!loading && subjects.length > 0 && (
-        <div className="sticky top-0 z-20 -mx-2 px-2 py-2 mb-4 backdrop-blur-md bg-background/70 space-y-2.5">
+        <div className="bg-background/70 sticky top-0 z-20 -mx-2 mb-4 space-y-2.5 px-2 py-2 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <SearchBox
               inputRef={searchRef}
@@ -664,11 +687,13 @@ function SubjectsView({ active }: { active: boolean }) {
             />
 
             {/* View toggle */}
-            <div className="flex rounded-xl border border-white/7 bg-card p-0.5 shrink-0">
-              {([
-                { id: "grid", icon: LayoutGrid, label: "Grid view" },
-                { id: "list", icon: List, label: "List view" },
-              ] as const).map(v => (
+            <div className="bg-card flex shrink-0 rounded-xl border border-white/7 p-0.5">
+              {(
+                [
+                  { id: 'grid', icon: LayoutGrid, label: 'Grid view' },
+                  { id: 'list', icon: List, label: 'List view' },
+                ] as const
+              ).map((v) => (
                 <button
                   key={v.id}
                   onClick={() => {
@@ -678,21 +703,21 @@ function SubjectsView({ active }: { active: boolean }) {
                   aria-label={v.label}
                   aria-pressed={view === v.id}
                   className={[
-                    "w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors",
+                    'flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors',
                     view === v.id
-                      ? "bg-white/10 text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
+                      ? 'text-foreground bg-white/10'
+                      : 'text-muted-foreground hover:text-foreground',
+                  ].join(' ')}
                 >
-                  <v.icon className="w-4 h-4" />
+                  <v.icon className="h-4 w-4" />
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {FILTERS.map(f => {
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {FILTERS.map((f) => {
                 const on = filter === f.id;
                 return (
                   <button
@@ -700,11 +725,11 @@ function SubjectsView({ active }: { active: boolean }) {
                     onClick={() => setFilter(f.id)}
                     aria-pressed={on}
                     className={[
-                      "h-7 px-3 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5",
+                      'flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
                       on
-                        ? "bg-primary/15 border-primary/40 text-primary"
-                        : "border-white/8 text-muted-foreground hover:text-foreground hover:border-white/20",
-                    ].join(" ")}
+                        ? 'bg-primary/15 border-primary/40 text-primary'
+                        : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
+                    ].join(' ')}
                   >
                     {f.label}
                     {f.count != null && <span className="tabular-nums opacity-70">{f.count}</span>}
@@ -713,10 +738,10 @@ function SubjectsView({ active }: { active: boolean }) {
               })}
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
               <span>Sort</span>
-              <div className="flex rounded-lg border border-white/7 bg-card p-0.5">
-                {(Object.keys(SORT_LABELS) as SortMode[]).map(s => (
+              <div className="bg-card flex rounded-lg border border-white/7 p-0.5">
+                {(Object.keys(SORT_LABELS) as SortMode[]).map((s) => (
                   <button
                     key={s}
                     onClick={() => {
@@ -725,9 +750,9 @@ function SubjectsView({ active }: { active: boolean }) {
                     }}
                     aria-pressed={sort === s}
                     className={[
-                      "h-6 px-2.5 rounded-md text-[11px] font-medium transition-colors",
-                      sort === s ? "bg-white/10 text-foreground" : "hover:text-foreground",
-                    ].join(" ")}
+                      'h-6 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                      sort === s ? 'text-foreground bg-white/10' : 'hover:text-foreground',
+                    ].join(' ')}
                   >
                     {SORT_LABELS[s]}
                   </button>
@@ -740,26 +765,26 @@ function SubjectsView({ active }: { active: boolean }) {
 
       {/* Content */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-36 rounded-xl bg-card border border-white/7 animate-pulse" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-card h-36 animate-pulse rounded-xl border border-white/7" />
           ))}
         </div>
       ) : subjects.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-50" />
+        <div className="text-muted-foreground py-20 text-center">
+          <BookOpen className="mx-auto mb-3 h-8 w-8 opacity-50" />
           <p className="text-sm">No subjects found.</p>
         </div>
       ) : visible.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <Search className="w-8 h-8 mx-auto mb-3 opacity-50" />
+        <div className="text-muted-foreground py-20 text-center">
+          <Search className="mx-auto mb-3 h-8 w-8 opacity-50" />
           <p className="text-sm">No subjects match your filters.</p>
           <button
             onClick={() => {
-              setQuery("");
-              setFilter("all");
+              setQuery('');
+              setFilter('all');
             }}
-            className="mt-3 text-xs text-primary hover:underline underline-offset-2"
+            className="text-primary mt-3 text-xs underline-offset-2 hover:underline"
           >
             Clear filters
           </button>
@@ -771,12 +796,12 @@ function SubjectsView({ active }: { active: boolean }) {
           initial="hidden"
           animate="show"
           className={
-            view === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-              : "flex flex-col gap-2"
+            view === 'grid'
+              ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'
+              : 'flex flex-col gap-2'
           }
         >
-          {visible.map(s => {
+          {visible.map((s) => {
             const key = String(s.id);
             const common = {
               subject: s,
@@ -785,7 +810,7 @@ function SubjectsView({ active }: { active: boolean }) {
               onTogglePin: () => togglePin(key),
               instant: settled,
             };
-            return view === "grid" ? (
+            return view === 'grid' ? (
               <SubjectCard key={key} {...common} />
             ) : (
               <SubjectRow key={key} {...common} />
@@ -810,29 +835,29 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
     <motion.div variants={fadeUp} initial={instant ? false : undefined}>
       <Link
         href={`/subjects/${row.activityId}/${row.assignmentId}?type=assignment`}
-        className="group relative flex items-center gap-3 rounded-xl border border-white/7 bg-card pl-4 pr-3 py-3 overflow-hidden hover:border-white/15 hover:bg-white/3 transition-colors"
+        className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/7 py-3 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
       >
         <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
           style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
         >
-          <Icon className="w-4 h-4" />
+          <Icon className="h-4 w-4" />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="group-hover:text-primary truncate text-sm font-medium transition-colors">
               {row.title.trim()}
             </p>
             {!row.read && (
-              <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" title="Unread" />
+              <span className="bg-primary h-1.5 w-1.5 shrink-0 rounded-full" title="Unread" />
             )}
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap text-[11px] text-muted-foreground">
+          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-[11px]">
             {first && (
               <span
-                className="px-1.5 py-0.5 rounded-md font-medium"
+                className="rounded-md px-1.5 py-0.5 font-medium"
                 style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}
               >
                 {first.name}
@@ -841,8 +866,8 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
             )}
             <span>{row.assignmentType}</span>
             {row.teacher && (
-              <span className="flex items-center gap-1.5 min-w-0">
-                <span className="w-4 h-4 rounded-full bg-white/8 text-[8px] font-semibold flex items-center justify-center shrink-0">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/8 text-[8px] font-semibold">
                   {personInitials(row.teacher)}
                 </span>
                 <span className="truncate">{row.teacher}</span>
@@ -851,10 +876,10 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
           </div>
         </div>
 
-        <span className="hidden sm:block text-[11px] text-muted-foreground tabular-nums shrink-0">
+        <span className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:block">
           {formatResultDate(row.publishDate)}
         </span>
-        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+        <ChevronRight className="text-muted-foreground group-hover:text-primary h-4 w-4 shrink-0 transition-colors" />
       </Link>
     </motion.div>
   );
@@ -864,20 +889,25 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
    Completed view
  */
 function CompletedView({ active }: { active: boolean }) {
-  const { data, loading, refreshing, error: fetchFailed } = useCachedResource(COMPLETED_KEY, fetchCompleted);
+  const {
+    data,
+    loading,
+    refreshing,
+    error: fetchFailed,
+  } = useCachedResource(COMPLETED_KEY, fetchCompleted);
   const rows = useMemo(() => data ?? [], [data]);
   // Only show the error state when there's no cached data to fall back on.
   const error = fetchFailed && data === null;
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const [sort, setSort] = useState<CompletedSort>("newest");
+  const [sort, setSort] = useState<CompletedSort>('newest');
   const [limit, setLimit] = useState(PAGE_SIZE);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const clearQuery = useCallback(() => setQuery(""), []);
+  const clearQuery = useCallback(() => setQuery(''), []);
   useSearchShortcuts(active, searchRef, clearQuery);
 
   useEffect(() => {
@@ -895,7 +925,7 @@ function CompletedView({ active }: { active: boolean }) {
         else map.set(s.name, { name: s.name, color: s.color || FALLBACK_COLOR, count: 1 });
       }
     }
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"));
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'sv'));
   }, [rows]);
 
   const typeOptions = useMemo(() => {
@@ -906,21 +936,22 @@ function CompletedView({ active }: { active: boolean }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = rows.filter(r => {
+    const list = rows.filter((r) => {
       if (q) {
-        const hay = `${r.title} ${r.teacher ?? ""} ${r.subjects.map(s => s.name).join(" ")}`.toLowerCase();
+        const hay =
+          `${r.title} ${r.teacher ?? ''} ${r.subjects.map((s) => s.name).join(' ')}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (subjectFilter && !r.subjects.some(s => s.name === subjectFilter)) return false;
+      if (subjectFilter && !r.subjects.some((s) => s.name === subjectFilter)) return false;
       if (typeFilter && r.assignmentType !== typeFilter) return false;
       if (unreadOnly && r.read) return false;
       return true;
     });
 
     list.sort((a, b) => {
-      if (sort === "title") return a.title.localeCompare(b.title, "sv");
+      if (sort === 'title') return a.title.localeCompare(b.title, 'sv');
       const diff = resultTime(b.publishDate) - resultTime(a.publishDate);
-      return sort === "newest" ? diff : -diff;
+      return sort === 'newest' ? diff : -diff;
     });
     return list;
   }, [rows, query, subjectFilter, typeFilter, unreadOnly, sort]);
@@ -928,7 +959,7 @@ function CompletedView({ active }: { active: boolean }) {
   const shown = filtered.slice(0, limit);
 
   const groups = useMemo(() => {
-    if (sort === "title") return [{ label: "", items: shown }];
+    if (sort === 'title') return [{ label: '', items: shown }];
     const out: { label: string; items: CompletedRow[] }[] = [];
     for (const r of shown) {
       const label = monthLabel(r.publishDate);
@@ -939,48 +970,49 @@ function CompletedView({ active }: { active: boolean }) {
     return out;
   }, [shown, sort]);
 
-  const unreadCount = rows.filter(r => !r.read).length;
-  const filtersActive = query.trim() !== "" || subjectFilter !== null || typeFilter !== null || unreadOnly;
+  const unreadCount = rows.filter((r) => !r.read).length;
+  const filtersActive =
+    query.trim() !== '' || subjectFilter !== null || typeFilter !== null || unreadOnly;
 
   const clearAll = () => {
-    setQuery("");
+    setQuery('');
     setSubjectFilter(null);
     setTypeFilter(null);
     setUnreadOnly(false);
   };
 
   return (
-    <div className={active ? "" : "hidden"}>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className={active ? '' : 'hidden'}>
+      <p className="text-muted-foreground mb-4 text-sm">
         {loading
-          ? "Loading…"
+          ? 'Loading…'
           : filtersActive
             ? `${filtered.length} of ${rows.length} assignments`
-            : `${rows.length} assignments${unreadCount > 0 ? ` · ${unreadCount} unread` : ""}`}
+            : `${rows.length} assignments${unreadCount > 0 ? ` · ${unreadCount} unread` : ''}`}
         <UpdatingHint show={refreshing && !loading} />
       </p>
 
       {loading ? (
         <div className="space-y-2">
-          <div className="h-10 rounded-xl bg-card border border-white/7 animate-pulse" />
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-16 rounded-xl bg-card border border-white/7 animate-pulse" />
+          <div className="bg-card h-10 animate-pulse rounded-xl border border-white/7" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-card h-16 animate-pulse rounded-xl border border-white/7" />
           ))}
         </div>
       ) : error ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <X className="w-8 h-8 mx-auto mb-3 opacity-50" />
+        <div className="text-muted-foreground py-20 text-center">
+          <X className="mx-auto mb-3 h-8 w-8 opacity-50" />
           <p className="text-sm">Failed to load completed assignments.</p>
         </div>
       ) : rows.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <CheckCheck className="w-8 h-8 mx-auto mb-3 opacity-50" />
+        <div className="text-muted-foreground py-20 text-center">
+          <CheckCheck className="mx-auto mb-3 h-8 w-8 opacity-50" />
           <p className="text-sm">Nothing completed yet.</p>
         </div>
       ) : (
         <>
           {/* Toolbar */}
-          <div className="sticky top-0 z-20 -mx-2 px-2 py-2 mb-4 backdrop-blur-md bg-background/70 space-y-2.5">
+          <div className="bg-background/70 sticky top-0 z-20 -mx-2 mb-4 space-y-2.5 px-2 py-2 backdrop-blur-md">
             <div className="flex">
               <SearchBox
                 inputRef={searchRef}
@@ -992,34 +1024,38 @@ function CompletedView({ active }: { active: boolean }) {
             </div>
 
             {/* Subject chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-1 scrollbar-thin">
+            <div className="mb-1 flex scrollbar-thin items-center gap-1.5 overflow-x-auto pb-1">
               <button
                 onClick={() => setSubjectFilter(null)}
                 aria-pressed={subjectFilter === null}
                 className={[
-                  "h-7 px-3 rounded-full text-xs font-medium border shrink-0 transition-colors",
+                  'h-7 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors',
                   subjectFilter === null
-                    ? "bg-primary/15 border-primary/40 text-primary"
-                    : "border-white/8 text-muted-foreground hover:text-foreground hover:border-white/20",
-                ].join(" ")}
+                    ? 'bg-primary/15 border-primary/40 text-primary'
+                    : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
+                ].join(' ')}
               >
                 All subjects
               </button>
-              {subjectOptions.map(s => {
+              {subjectOptions.map((s) => {
                 const on = subjectFilter === s.name;
                 return (
                   <button
                     key={s.name}
                     onClick={() => setSubjectFilter(on ? null : s.name)}
                     aria-pressed={on}
-                    className="h-7 px-3 rounded-full text-xs font-medium border shrink-0 transition-colors flex items-center gap-1.5"
+                    className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors"
                     style={
                       on
-                        ? { background: `${s.color}25`, borderColor: `${s.color}70`, color: s.color }
-                        : { borderColor: "oklch(1 0 0 / 8%)", color: "oklch(0.65 0 0)" }
+                        ? {
+                            background: `${s.color}25`,
+                            borderColor: `${s.color}70`,
+                            color: s.color,
+                          }
+                        : { borderColor: 'oklch(1 0 0 / 8%)', color: 'oklch(0.65 0 0)' }
                     }
                   >
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color }} />
                     {s.name}
                     <span className="tabular-nums opacity-60">{s.count}</span>
                   </button>
@@ -1027,8 +1063,8 @@ function CompletedView({ active }: { active: boolean }) {
               })}
             </div>
 
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {typeOptions.map(([type, count]) => {
                   const on = typeFilter === type;
                   return (
@@ -1037,11 +1073,11 @@ function CompletedView({ active }: { active: boolean }) {
                       onClick={() => setTypeFilter(on ? null : type)}
                       aria-pressed={on}
                       className={[
-                        "h-6 px-2.5 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1.5",
+                        'flex h-6 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition-colors',
                         on
-                          ? "bg-white/10 border-white/25 text-foreground"
-                          : "border-white/8 text-muted-foreground hover:text-foreground hover:border-white/20",
-                      ].join(" ")}
+                          ? 'text-foreground border-white/25 bg-white/10'
+                          : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
+                      ].join(' ')}
                     >
                       {type}
                       <span className="tabular-nums opacity-60">{count}</span>
@@ -1050,33 +1086,33 @@ function CompletedView({ active }: { active: boolean }) {
                 })}
                 {unreadCount > 0 && (
                   <button
-                    onClick={() => setUnreadOnly(u => !u)}
+                    onClick={() => setUnreadOnly((u) => !u)}
                     aria-pressed={unreadOnly}
                     className={[
-                      "h-6 px-2.5 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1.5",
+                      'flex h-6 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition-colors',
                       unreadOnly
-                        ? "bg-primary/15 border-primary/40 text-primary"
-                        : "border-white/8 text-muted-foreground hover:text-foreground hover:border-white/20",
-                    ].join(" ")}
+                        ? 'bg-primary/15 border-primary/40 text-primary'
+                        : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
+                    ].join(' ')}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="bg-primary h-1.5 w-1.5 rounded-full" />
                     Unread only
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <span>Sort</span>
-                <div className="flex rounded-lg border border-white/7 bg-card p-0.5">
-                  {(Object.keys(COMPLETED_SORT_LABELS) as CompletedSort[]).map(s => (
+                <div className="bg-card flex rounded-lg border border-white/7 p-0.5">
+                  {(Object.keys(COMPLETED_SORT_LABELS) as CompletedSort[]).map((s) => (
                     <button
                       key={s}
                       onClick={() => setSort(s)}
                       aria-pressed={sort === s}
                       className={[
-                        "h-6 px-2.5 rounded-md text-[11px] font-medium transition-colors",
-                        sort === s ? "bg-white/10 text-foreground" : "hover:text-foreground",
-                      ].join(" ")}
+                        'h-6 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                        sort === s ? 'text-foreground bg-white/10' : 'hover:text-foreground',
+                      ].join(' ')}
                     >
                       {COMPLETED_SORT_LABELS[s]}
                     </button>
@@ -1088,22 +1124,22 @@ function CompletedView({ active }: { active: boolean }) {
 
           {/* List */}
           {filtered.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">
-              <Search className="w-8 h-8 mx-auto mb-3 opacity-50" />
+            <div className="text-muted-foreground py-20 text-center">
+              <Search className="mx-auto mb-3 h-8 w-8 opacity-50" />
               <p className="text-sm">No assignments match your filters.</p>
               <button
                 onClick={clearAll}
-                className="mt-3 text-xs text-primary hover:underline underline-offset-2"
+                className="text-primary mt-3 text-xs underline-offset-2 hover:underline"
               >
                 Clear filters
               </button>
             </div>
           ) : (
             <div className="space-y-5">
-              {groups.map(g => (
-                <section key={g.label || "all"}>
+              {groups.map((g) => (
+                <section key={g.label || 'all'}>
                   {g.label && (
-                    <h2 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1 flex items-center gap-2">
+                    <h2 className="text-muted-foreground mb-2 flex items-center gap-2 px-1 text-[10px] tracking-widest uppercase">
                       {g.label}
                       <span className="tabular-nums opacity-60">{g.items.length}</span>
                     </h2>
@@ -1114,7 +1150,7 @@ function CompletedView({ active }: { active: boolean }) {
                     animate="show"
                     className="space-y-2"
                   >
-                    {g.items.map(r => (
+                    {g.items.map((r) => (
                       <CompletedRowItem
                         key={`${r.activityId}-${r.assignmentId}`}
                         row={r}
@@ -1128,8 +1164,8 @@ function CompletedView({ active }: { active: boolean }) {
               {filtered.length > shown.length && (
                 <div className="flex justify-center pt-2">
                   <button
-                    onClick={() => setLimit(l => l + PAGE_SIZE)}
-                    className="h-9 px-5 rounded-xl border border-white/10 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
+                    onClick={() => setLimit((l) => l + PAGE_SIZE)}
+                    className="bg-card text-muted-foreground hover:text-foreground h-9 rounded-xl border border-white/10 px-5 text-xs font-medium transition-colors hover:border-white/20"
                   >
                     Show more ({filtered.length - shown.length} left)
                   </button>
@@ -1147,14 +1183,14 @@ function CompletedView({ active }: { active: boolean }) {
    Page
  */
 export default function SubjectsPage() {
-  const [tab, setTab] = useState<Tab>("subjects");
+  const [tab, setTab] = useState<Tab>('subjects');
   const [completedVisited, setCompletedVisited] = useState(false);
 
   useEffect(() => {
     try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
-      if (p?.tab === "completed") {
-        setTab("completed");
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null');
+      if (p?.tab === 'completed') {
+        setTab('completed');
         setCompletedVisited(true);
       }
     } catch {
@@ -1164,46 +1200,46 @@ export default function SubjectsPage() {
 
   const switchTab = (t: Tab) => {
     setTab(t);
-    if (t === "completed") setCompletedVisited(true);
+    if (t === 'completed') setCompletedVisited(true);
     patchPrefs({ tab: t });
   };
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "subjects", label: "Subjects", icon: BookOpen },
-    { id: "completed", label: "Completed", icon: CheckCheck },
+    { id: 'subjects', label: 'Subjects', icon: BookOpen },
+    { id: 'completed', label: 'Completed', icon: CheckCheck },
   ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl p-6">
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-5 flex items-center justify-between gap-4 flex-wrap"
+        className="mb-5 flex flex-wrap items-center justify-between gap-4"
       >
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          {tab === "subjects" ? (
-            <BookOpen className="w-6 h-6 text-primary" />
+        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+          {tab === 'subjects' ? (
+            <BookOpen className="text-primary h-6 w-6" />
           ) : (
-            <CheckCheck className="w-6 h-6 text-primary" />
+            <CheckCheck className="text-primary h-6 w-6" />
           )}
-          {tab === "subjects" ? "Subjects" : "Completed"}
+          {tab === 'subjects' ? 'Subjects' : 'Completed'}
         </h1>
 
-        <div role="tablist" className="inline-flex rounded-xl border border-white/7 bg-card p-0.5">
-          {TABS.map(t => (
+        <div role="tablist" className="bg-card inline-flex rounded-xl border border-white/7 p-0.5">
+          {TABS.map((t) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => switchTab(t.id)}
               className={[
-                "h-8 px-3.5 rounded-[10px] text-xs font-medium flex items-center gap-1.5 transition-colors",
+                'flex h-8 items-center gap-1.5 rounded-[10px] px-3.5 text-xs font-medium transition-colors',
                 tab === t.id
-                  ? "bg-white/10 text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              ].join(" ")}
+                  ? 'text-foreground bg-white/10'
+                  : 'text-muted-foreground hover:text-foreground',
+              ].join(' ')}
             >
-              <t.icon className="w-3.5 h-3.5" />
+              <t.icon className="h-3.5 w-3.5" />
               {t.label}
             </button>
           ))}
@@ -1211,8 +1247,8 @@ export default function SubjectsPage() {
       </motion.div>
 
       {/* Both views stay mounted once opened, so switching tabs is instant and keeps filters */}
-      <SubjectsView active={tab === "subjects"} />
-      {completedVisited && <CompletedView active={tab === "completed"} />}
+      <SubjectsView active={tab === 'subjects'} />
+      {completedVisited && <CompletedView active={tab === 'completed'} />}
     </div>
   );
 }

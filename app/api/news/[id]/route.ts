@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sanitizeHtml from 'sanitize-html';
 
-import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 import { handleApiError } from '@/app/api/lib/apiError';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 interface RouteContext {
   params: Promise<{ id: string }>;

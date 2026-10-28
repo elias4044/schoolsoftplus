@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/app/api/lib/schoolsoft";
-import { authUserWithUsername } from "@/app/api/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { createSnapshot, mergeScannedEntries } from '@/lib/grades/analytics';
+import type { GradeEntry, GradeTrackerDoc } from '@/lib/grades/types';
+import { authUserWithUsername } from '@/app/api/lib/auth';
 import {
   getGradeTracker,
   getOrCreateGradeTracker,
   saveGradeTracker,
-} from "@/app/api/lib/gradeTrackerDb";
-import { mergeScannedEntries, createSnapshot } from "@/lib/grades/analytics";
-import type { GradeEntry, GradeTrackerDoc } from "@/lib/grades/types";
+} from '@/app/api/lib/gradeTrackerDb';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 async function authenticate(req: NextRequest) {
   const sess = await requireSession(req);
@@ -24,12 +25,12 @@ export async function GET(
   { params }: { params: Promise<{ subjectId: string }> }
 ) {
   const username = await authenticate(req);
-  if (!username) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { subjectId } = await params;
   const sid = Number(subjectId);
   if (!Number.isFinite(sid)) {
-    return NextResponse.json({ error: "Invalid subject id" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid subject id' }, { status: 400 });
   }
 
   const tracker = await getGradeTracker(username, sid);
@@ -42,18 +43,18 @@ export async function PUT(
   { params }: { params: Promise<{ subjectId: string }> }
 ) {
   const username = await authenticate(req);
-  if (!username) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { subjectId } = await params;
   const sid = Number(subjectId);
   if (!Number.isFinite(sid)) {
-    return NextResponse.json({ error: "Invalid subject id" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid subject id' }, { status: 400 });
   }
 
   let body: {
     subjectName?: string;
     subjectColor?: string;
-    settings?: GradeTrackerDoc["settings"];
+    settings?: GradeTrackerDoc['settings'];
     entries?: GradeEntry[];
     scanned?: Parameters<typeof mergeScannedEntries>[1];
     addSnapshot?: boolean;
@@ -61,13 +62,13 @@ export async function PUT(
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   let tracker = await getOrCreateGradeTracker(
     username,
     sid,
-    body.subjectName ?? "Subject",
+    body.subjectName ?? 'Subject',
     body.subjectColor
   );
 

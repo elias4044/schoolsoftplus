@@ -1,35 +1,36 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Loader2,
-  CalendarDays,
-  BookOpen,
-  StickyNote,
-  Search,
-  ChevronDown,
-  Check,
-  ExternalLink,
-  ShieldCheck,
-  GraduationCap,
-  Fingerprint,
-  Lock,
-  SlidersHorizontal,
+  browserSupportsWebAuthn,
+  startAuthentication,
+  type PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
   AlertCircle,
+  BookOpen,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Fingerprint,
+  GraduationCap,
+  Loader2,
+  Lock,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  StickyNote,
 } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+
 import { useAuth } from '@/lib/auth-context';
 import { markTransitionPending } from '@/lib/page-transition';
 import { cn } from '@/lib/utils';
-import {
-  startAuthentication,
-  browserSupportsWebAuthn,
-  type PublicKeyCredentialRequestOptionsJSON,
-} from '@simplewebauthn/browser';
+import { Label } from '@/components/ui/label';
 
 const DEFAULT_SCHOOL_ID = 'engelska';
 const DEFAULT_SCHOOL_NAME = 'Internationella Engelska Skolan - IES Halmstad';
@@ -586,7 +587,7 @@ function LoginPageInner() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.ctrlKey && event.key === 'Enter') {
         event.preventDefault();
-        handleAuthV2ExternalLogin()
+        handleAuthV2ExternalLogin();
       }
     }
 
@@ -630,9 +631,7 @@ function LoginPageInner() {
       {/* ----------------------------------------------------------------- */}
       {/* Left panel: Original 3D Hero Mockup (Scaled up & roomier)        */}
       {/* ----------------------------------------------------------------- */}
-      <div
-        className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex lg:w-[54%] xl:p-14 border-r-border border-r-[1] bg-background"
-      >
+      <div className="border-r-border bg-background relative hidden flex-col justify-between overflow-hidden border-r-[1] p-12 lg:flex lg:w-[54%] xl:p-14">
         {/* dot grid */}
         <div
           className="pointer-events-none absolute inset-0"
@@ -811,7 +810,7 @@ function LoginPageInner() {
       {/* ----------------------------------------------------------------- */}
       {/* Right panel: Fast, 1-Click Form (No walls of text)                */}
       {/* ----------------------------------------------------------------- */}
-      <div className="flex flex-1 flex-col justify-between p-6 bg-background sm:p-10 lg:p-12">
+      <div className="bg-background flex flex-1 flex-col justify-between p-6 sm:p-10 lg:p-12">
         {/* Mobile brand header */}
         <Link href="/" className="relative flex items-center gap-3 lg:hidden">
           <Image

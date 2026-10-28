@@ -1,8 +1,8 @@
-export const TRANSITION_KEY = "ssp_cinematic_transition";
+export const TRANSITION_KEY = 'ssp_cinematic_transition';
 
 /** Call on the login page right before navigating to dashboard. */
 export function markTransitionPending(): void {
-  if (typeof window !== "undefined") sessionStorage.setItem(TRANSITION_KEY, "1");
+  if (typeof window !== 'undefined') sessionStorage.setItem(TRANSITION_KEY, '1');
 }
 
 /**
@@ -10,7 +10,7 @@ export function markTransitionPending(): void {
  * the flash caused by starting hidden then switching to covering in useEffect.
  */
 export function peekTransitionPending(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === 'undefined') return false;
   return Boolean(sessionStorage.getItem(TRANSITION_KEY));
 }
 
@@ -20,7 +20,7 @@ export function peekTransitionPending(): boolean {
  * transition should play.
  */
 export function consumeTransitionPending(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === 'undefined') return false;
   const has = Boolean(sessionStorage.getItem(TRANSITION_KEY));
   if (has) sessionStorage.removeItem(TRANSITION_KEY);
   return has;

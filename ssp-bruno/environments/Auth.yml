@@ -1,5 +1,5 @@
 name: Auth
 variables:
   - name: ssp_cookie
-    value: "{{process.env.ssp_cookie}}"
-    description: ""
+    value: '{{process.env.ssp_cookie}}'
+    description: ''

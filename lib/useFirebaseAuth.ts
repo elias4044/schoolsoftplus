@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { signInWithCustomToken, onAuthStateChanged, User } from "firebase/auth";
-import { clientAuth } from "./firebase";
+import { useEffect, useRef, useState } from 'react';
+import { onAuthStateChanged, signInWithCustomToken, User } from 'firebase/auth';
+
+import { clientAuth } from './firebase';
 
 type Subscriber = (state: { fbUser: User | null; ready: boolean }) => void;
 
@@ -18,13 +19,13 @@ async function signInShared() {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch("/api/firebase-token");
+      const res = await fetch('/api/firebase-token');
       const data = await res.json();
       if (data.success && data.token) {
         await signInWithCustomToken(clientAuth, data.token);
       }
     } catch (err) {
-      console.error("[useFirebaseAuth] sign-in error:", err);
+      console.error('[useFirebaseAuth] sign-in error:', err);
     }
   })();
 
@@ -52,9 +53,12 @@ function ensureAuthBootstrap() {
 
   if (!refreshTimer) {
     void signInShared();
-    refreshTimer = setInterval(() => {
-      void signInShared();
-    }, 55 * 60 * 1000);
+    refreshTimer = setInterval(
+      () => {
+        void signInShared();
+      },
+      55 * 60 * 1000
+    );
   }
 }
 

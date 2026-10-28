@@ -1,13 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { CalendarDays, ChevronLeft, ChevronRight, Printer } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCachedResource } from "@/lib/cache";
-import { fetchSchedule, prefetchScheduleWeeks, scheduleKey } from "@/lib/cache/schedule";
-import { cn } from "@/lib/utils";
-import { PrintScheduleDialog } from "@/components/schedule-print";
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { CalendarDays, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+
+import { useCachedResource } from '@/lib/cache';
+import { fetchSchedule, prefetchScheduleWeeks, scheduleKey } from '@/lib/cache/schedule';
 import {
   DAYS,
   DAYS_SHORT,
@@ -20,10 +18,13 @@ import {
   localDateKey,
   toMinutes,
   type Lesson,
-} from "@/lib/schedule-utils";
+} from '@/lib/schedule-utils';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { PrintScheduleDialog } from '@/components/schedule-print';
 
-type View = "days" | "timetable";
-type LessonState = "none" | "past" | "now" | "upcoming";
+type View = 'days' | 'timetable';
+type LessonState = 'none' | 'past' | 'now' | 'upcoming';
 
 interface WeekDay {
   key: string;
@@ -35,13 +36,13 @@ interface WeekDay {
   lessons: Lesson[];
 }
 
-const VIEW_KEY = "schedule:view";
+const VIEW_KEY = 'schedule:view';
 const PX_PER_MIN = 2;
-const pillSpring = { type: "spring", stiffness: 420, damping: 34 } as const;
+const pillSpring = { type: 'spring', stiffness: 420, damping: 34 } as const;
 
 export default function SchedulePage() {
   const [weekOffset, setWeekOffset] = useState(0);
-  const [view, setView] = useState<View>("days");
+  const [view, setView] = useState<View>('days');
   const [selectedDay, setSelectedDay] = useState(0);
   const [printOpen, setPrintOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -65,7 +66,7 @@ export default function SchedulePage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(VIEW_KEY);
-      if (saved === "days" || saved === "timetable") setView(saved);
+      if (saved === 'days' || saved === 'timetable') setView(saved);
     } catch {}
   }, []);
 
@@ -91,12 +92,13 @@ export default function SchedulePage() {
     function onKey(e: KeyboardEvent) {
       if (printOpen || e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable) return;
-      if (e.key === "ArrowLeft") setWeekOffset((o) => o - 1);
-      if (e.key === "ArrowRight") setWeekOffset((o) => o + 1);
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)
+        return;
+      if (e.key === 'ArrowLeft') setWeekOffset((o) => o - 1);
+      if (e.key === 'ArrowRight') setWeekOffset((o) => o + 1);
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [printOpen]);
 
   // Once the visible week has settled, quietly warm the neighbouring weeks so the arrows feel instant.
@@ -116,7 +118,7 @@ export default function SchedulePage() {
           key,
           label: dayLabel,
           short: DAYS_SHORT[i],
-          date: d.toLocaleDateString("en-SE", { month: "short", day: "numeric" }),
+          date: d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' }),
           dayNumber: d.getDate(),
           isToday: key === todayKey,
           lessons: lessons
@@ -130,10 +132,10 @@ export default function SchedulePage() {
   const totalLessons = lessons.length;
 
   function stateOf(l: Lesson): LessonState {
-    if (l.date !== todayKey) return "none";
-    if (nowMinutes >= toMinutes(l.end)) return "past";
-    if (nowMinutes >= toMinutes(l.start)) return "now";
-    return "upcoming";
+    if (l.date !== todayKey) return 'none';
+    if (nowMinutes >= toMinutes(l.end)) return 'past';
+    if (nowMinutes >= toMinutes(l.start)) return 'now';
+    return 'upcoming';
   }
 
   return (
@@ -145,10 +147,10 @@ export default function SchedulePage() {
       >
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <CalendarDays className="size-6 text-brand-strong" />
+            <CalendarDays className="text-brand-strong size-6" />
             Schedule
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-0.5 text-sm">
             {label}
             {!loading && totalLessons > 0 && (
               <span className="ml-2 opacity-60">· {totalLessons} lessons</span>
@@ -211,8 +213,11 @@ export default function SchedulePage() {
           }
         />
       ) : totalLessons === 0 ? (
-        <EmptyState title="No lessons this week" description="Nothing is scheduled for these days." />
-      ) : view === "timetable" ? (
+        <EmptyState
+          title="No lessons this week"
+          description="Nothing is scheduled for these days."
+        />
+      ) : view === 'timetable' ? (
         <Timetable
           days={days}
           nowMinutes={nowMinutes}
@@ -242,27 +247,27 @@ export default function SchedulePage() {
 
 function ViewToggle({ value, onChange }: { value: View; onChange: (v: View) => void }) {
   const options: { value: View; label: string }[] = [
-    { value: "days", label: "Days" },
-    { value: "timetable", label: "Timetable" },
+    { value: 'days', label: 'Days' },
+    { value: 'timetable', label: 'Timetable' },
   ];
 
   return (
-    <div className="relative flex rounded-lg border border-border bg-overlay p-0.5">
+    <div className="border-border bg-overlay relative flex rounded-lg border p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "relative h-8 rounded-md px-3 text-xs font-medium transition-colors",
-            value === o.value ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            'relative h-8 rounded-md px-3 text-xs font-medium transition-colors',
+            value === o.value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
           )}
         >
           {value === o.value && (
             <motion.span
               layoutId="schedule-view-pill"
               transition={pillSpring}
-              className="absolute inset-0 rounded-md bg-brand-soft"
+              className="bg-brand-soft absolute inset-0 rounded-md"
             />
           )}
           <span className="relative z-10">{o.label}</span>
@@ -291,9 +296,9 @@ function DaysView({
         {days.map((day, i) => (
           <motion.div
             key={day.key}
-            initial={{ opacity: 0, y: 8, filter: "blur(5px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ delay: i * 0.05, duration: 0.3, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 8, filter: 'blur(5px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ delay: i * 0.05, duration: 0.3, ease: 'easeOut' }}
           >
             <DayCard day={day} stateOf={stateOf} />
           </motion.div>
@@ -301,28 +306,28 @@ function DaysView({
       </div>
 
       <div className="lg:hidden">
-        <div className="mb-3 grid grid-cols-5 gap-1 rounded-xl border border-border bg-card p-1">
+        <div className="border-border bg-card mb-3 grid grid-cols-5 gap-1 rounded-xl border p-1">
           {days.map((day, i) => (
             <button
               key={day.key}
               type="button"
               onClick={() => onSelectDay(i)}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 rounded-lg py-2 transition-colors",
-                selectedDay === i ? "text-foreground" : "text-muted-foreground"
+                'relative flex flex-col items-center gap-0.5 rounded-lg py-2 transition-colors',
+                selectedDay === i ? 'text-foreground' : 'text-muted-foreground'
               )}
             >
               {selectedDay === i && (
                 <motion.span
                   layoutId="schedule-day-pill"
                   transition={pillSpring}
-                  className="absolute inset-0 rounded-lg bg-brand-soft"
+                  className="bg-brand-soft absolute inset-0 rounded-lg"
                 />
               )}
-              <span className="relative z-10 text-[11px] uppercase tracking-wide">{day.short}</span>
+              <span className="relative z-10 text-[11px] tracking-wide uppercase">{day.short}</span>
               <span className="relative z-10 text-sm font-semibold">{day.dayNumber}</span>
               {day.isToday && (
-                <span className="absolute bottom-1 z-10 size-1 rounded-full bg-brand" />
+                <span className="bg-brand absolute bottom-1 z-10 size-1 rounded-full" />
               )}
             </button>
           ))}
@@ -343,22 +348,24 @@ function DaysView({
 
 function DayCard({ day, stateOf }: { day: WeekDay; stateOf: (l: Lesson) => LessonState }) {
   return (
-    <section className={cn("rounded-xl border", day.isToday ? "today-card" : "card-base")}>
-      <header className="flex items-center justify-between px-4 pb-1.5 pt-3">
+    <section className={cn('rounded-xl border', day.isToday ? 'today-card' : 'card-base')}>
+      <header className="flex items-center justify-between px-4 pt-3 pb-1.5">
         <div className="flex items-baseline gap-2">
-          <h2 className={cn("text-sm font-semibold", day.isToday && "text-brand-strong")}>
+          <h2 className={cn('text-sm font-semibold', day.isToday && 'text-brand-strong')}>
             {day.label}
           </h2>
-          <span className="text-xs text-muted-foreground">{day.date}</span>
+          <span className="text-muted-foreground text-xs">{day.date}</span>
         </div>
         {day.isToday && (
-          <span className="badge-today rounded-full px-2 py-0.5 text-[10px] font-medium">Today</span>
+          <span className="badge-today rounded-full px-2 py-0.5 text-[10px] font-medium">
+            Today
+          </span>
         )}
       </header>
 
       <div className="space-y-0.5 p-1.5">
         {day.lessons.length === 0 ? (
-          <p className="py-8 text-center text-xs text-muted-foreground/60">No lessons</p>
+          <p className="text-muted-foreground/60 py-8 text-center text-xs">No lessons</p>
         ) : (
           day.lessons.map((l) => <LessonRow key={l.eventId} lesson={l} state={stateOf(l)} />)
         )}
@@ -368,33 +375,33 @@ function DayCard({ day, stateOf }: { day: WeekDay; stateOf: (l: Lesson) => Lesso
 }
 
 function LessonRow({ lesson, state }: { lesson: Lesson; state: LessonState }) {
-  const accent = lessonAccent(lesson.eventColor, "var(--brand)");
+  const accent = lessonAccent(lesson.eventColor, 'var(--brand)');
   const duration = durationLabel(lesson.start, lesson.end);
-  const details = [lesson.room, lesson.teacher, lesson.teachingGroup].filter(Boolean).join(" · ");
+  const details = [lesson.room, lesson.teacher, lesson.teachingGroup].filter(Boolean).join(' · ');
 
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-lg px-2.5 py-2 transition-colors",
-        state === "now" ? "bg-brand-dim ring-1 ring-inset ring-brand/25" : "hover:bg-overlay",
-        state === "past" && "opacity-50"
+        'flex gap-3 rounded-lg px-2.5 py-2 transition-colors',
+        state === 'now' ? 'bg-brand-dim ring-brand/25 ring-1 ring-inset' : 'hover:bg-overlay',
+        state === 'past' && 'opacity-50'
       )}
     >
       <span className="w-1 shrink-0 self-stretch rounded-full" style={{ background: accent }} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-medium">{lesson.name}</p>
-          {state === "now" && (
-            <span className="shrink-0 rounded-full bg-brand-soft px-1.5 py-0.5 text-[9px] font-medium text-brand-strong">
+          {state === 'now' && (
+            <span className="bg-brand-soft text-brand-strong shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium">
               Now
             </span>
           )}
         </div>
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p className="text-muted-foreground text-xs tabular-nums">
           {lesson.start}–{lesson.end}
           {duration && <span className="opacity-60"> · {duration}</span>}
         </p>
-        {details && <p className="mt-0.5 truncate text-xs text-muted-foreground">{details}</p>}
+        {details && <p className="text-muted-foreground mt-0.5 truncate text-xs">{details}</p>}
       </div>
     </div>
   );
@@ -430,11 +437,12 @@ function Timetable({
             <div
               key={d.key}
               className={cn(
-                "pb-2 text-center text-sm",
-                d.isToday ? "font-semibold text-brand-strong" : "font-medium"
+                'pb-2 text-center text-sm',
+                d.isToday ? 'text-brand-strong font-semibold' : 'font-medium'
               )}
             >
-              {d.short} <span className="text-xs font-normal text-muted-foreground">{d.dayNumber}</span>
+              {d.short}{' '}
+              <span className="text-muted-foreground text-xs font-normal">{d.dayNumber}</span>
             </div>
           ))}
 
@@ -442,7 +450,7 @@ function Timetable({
             {hours.map((m) => (
               <span
                 key={m}
-                className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-muted-foreground"
+                className="text-muted-foreground absolute right-2 -translate-y-1/2 text-[10px] tabular-nums"
                 style={{ top: (m - range.start) * PX_PER_MIN }}
               >
                 {formatMinutes(m)}
@@ -453,13 +461,13 @@ function Timetable({
           {laid.map(({ day, items }) => (
             <div
               key={day.key}
-              className={cn("relative border-l border-border", day.isToday && "bg-brand-dim")}
+              className={cn('border-border relative border-l', day.isToday && 'bg-brand-dim')}
               style={{ height }}
             >
               {hours.map((m) => (
                 <div
                   key={m}
-                  className="absolute inset-x-0 border-t border-border/60"
+                  className="border-border/60 absolute inset-x-0 border-t"
                   style={{ top: (m - range.start) * PX_PER_MIN }}
                 />
               ))}
@@ -478,8 +486,8 @@ function Timetable({
                   className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
                   style={{ top: (nowMinutes - range.start) * PX_PER_MIN }}
                 >
-                  <span className="size-2 -translate-x-1 rounded-full bg-brand" />
-                  <span className="h-px flex-1 bg-brand" />
+                  <span className="bg-brand size-2 -translate-x-1 rounded-full" />
+                  <span className="bg-brand h-px flex-1" />
                 </div>
               )}
             </div>
@@ -500,18 +508,18 @@ function TimetableBlock({
   state: LessonState;
 }) {
   const { lesson, lane, lanes } = item;
-  const accent = lessonAccent(lesson.eventColor, "var(--brand)");
+  const accent = lessonAccent(lesson.eventColor, 'var(--brand)');
   const top = (item.start - rangeStart) * PX_PER_MIN;
   const blockHeight = Math.max((item.end - item.start) * PX_PER_MIN - 2, 18);
-  const details = [lesson.room, lesson.teacher].filter(Boolean).join(" · ");
+  const details = [lesson.room, lesson.teacher].filter(Boolean).join(' · ');
 
   return (
     <div
       title={`${lesson.name}\n${lesson.start}–${lesson.end}`}
       className={cn(
-        "absolute overflow-hidden rounded-md px-2.5 py-1 text-xs leading-tight",
-        state === "now" && "ring-1 ring-brand/50",
-        state === "past" && "opacity-50"
+        'absolute overflow-hidden rounded-md px-2.5 py-1 text-xs leading-tight',
+        state === 'now' && 'ring-brand/50 ring-1',
+        state === 'past' && 'opacity-50'
       )}
       style={{
         top: top + 1,
@@ -522,12 +530,10 @@ function TimetableBlock({
         boxShadow: `inset 3px 0 0 ${accent}`,
       }}
     >
-      <p className="truncate font-medium text-foreground">{lesson.name}</p>
-      {blockHeight >= 40 && details && (
-        <p className="truncate text-muted-foreground">{details}</p>
-      )}
+      <p className="text-foreground truncate font-medium">{lesson.name}</p>
+      {blockHeight >= 40 && details && <p className="text-muted-foreground truncate">{details}</p>}
       {blockHeight >= 58 && (
-        <p className="tabular-nums text-muted-foreground">
+        <p className="text-muted-foreground tabular-nums">
           {lesson.start}–{lesson.end}
         </p>
       )}
@@ -561,9 +567,9 @@ function EmptyState({
 }) {
   return (
     <div className="card-base flex flex-col items-center gap-2 px-6 py-16 text-center">
-      <CalendarDays className="size-8 text-muted-foreground/50" />
+      <CalendarDays className="text-muted-foreground/50 size-8" />
       <p className="text-sm font-medium">{title}</p>
-      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      {description && <p className="text-muted-foreground text-xs">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

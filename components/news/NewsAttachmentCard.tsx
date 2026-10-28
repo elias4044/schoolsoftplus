@@ -1,23 +1,25 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
-  FileText,
-  Image as ImageIcon,
-  FileSpreadsheet,
-  Presentation,
   Archive,
-  FileAudio,
-  FileVideo,
-  File,
+  Check,
+  Copy,
   Download,
   ExternalLink,
   Eye,
-  Check,
-  Copy,
-} from "lucide-react";
-import { type NewsAttachment, getAttachmentInfo, type AttachmentCategory } from "./news-types";
-import { Button } from "@/components/ui/button";
+  File,
+  FileAudio,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
+  Image as ImageIcon,
+  Presentation,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+
+import { getAttachmentInfo, type AttachmentCategory, type NewsAttachment } from './news-types';
 
 interface NewsAttachmentCardProps {
   attachment: NewsAttachment;
@@ -38,40 +40,40 @@ const CATEGORY_ICONS: Record<AttachmentCategory, React.ElementType> = {
 
 const CATEGORY_COLORS: Record<AttachmentCategory, { iconColor: string; bgColor: string }> = {
   pdf: {
-    iconColor: "oklch(0.68 0.20 25)", // red
-    bgColor: "oklch(0.68 0.20 25 / 10%)",
+    iconColor: 'oklch(0.68 0.20 25)', // red
+    bgColor: 'oklch(0.68 0.20 25 / 10%)',
   },
   image: {
-    iconColor: "oklch(0.68 0.18 240)", // blue
-    bgColor: "oklch(0.68 0.18 240 / 10%)",
+    iconColor: 'oklch(0.68 0.18 240)', // blue
+    bgColor: 'oklch(0.68 0.18 240 / 10%)',
   },
   document: {
-    iconColor: "oklch(0.70 0.16 220)", // cyan-blue
-    bgColor: "oklch(0.70 0.16 220 / 10%)",
+    iconColor: 'oklch(0.70 0.16 220)', // cyan-blue
+    bgColor: 'oklch(0.70 0.16 220 / 10%)',
   },
   spreadsheet: {
-    iconColor: "oklch(0.68 0.18 148)", // emerald/green
-    bgColor: "oklch(0.68 0.18 148 / 10%)",
+    iconColor: 'oklch(0.68 0.18 148)', // emerald/green
+    bgColor: 'oklch(0.68 0.18 148 / 10%)',
   },
   presentation: {
-    iconColor: "oklch(0.75 0.18 70)", // amber
-    bgColor: "oklch(0.75 0.18 70 / 10%)",
+    iconColor: 'oklch(0.75 0.18 70)', // amber
+    bgColor: 'oklch(0.75 0.18 70 / 10%)',
   },
   archive: {
-    iconColor: "oklch(0.70 0.15 45)", // orange
-    bgColor: "oklch(0.70 0.15 45 / 10%)",
+    iconColor: 'oklch(0.70 0.15 45)', // orange
+    bgColor: 'oklch(0.70 0.15 45 / 10%)',
   },
   audio: {
-    iconColor: "oklch(0.68 0.18 300)", // magenta
-    bgColor: "oklch(0.68 0.18 300 / 10%)",
+    iconColor: 'oklch(0.68 0.18 300)', // magenta
+    bgColor: 'oklch(0.68 0.18 300 / 10%)',
   },
   video: {
-    iconColor: "oklch(0.68 0.20 280)", // purple
-    bgColor: "oklch(0.68 0.20 280 / 10%)",
+    iconColor: 'oklch(0.68 0.20 280)', // purple
+    bgColor: 'oklch(0.68 0.20 280 / 10%)',
   },
   file: {
-    iconColor: "oklch(0.75 0 0)",
-    bgColor: "oklch(1 0 0 / 8%)",
+    iconColor: 'oklch(0.75 0 0)',
+    bgColor: 'oklch(1 0 0 / 8%)',
   },
 };
 
@@ -96,33 +98,36 @@ export function NewsAttachmentCard({ attachment, onPreviewImage }: NewsAttachmen
     if (info.isImage && onPreviewImage) {
       onPreviewImage(info.downloadUrl, attachment.name);
     } else {
-      window.open(info.downloadUrl, "_blank", "noopener,noreferrer");
+      window.open(info.downloadUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex items-center justify-between gap-3 p-3 rounded-xl bg-surface-1 border border-border hover:border-white/20 transition-all cursor-pointer active:scale-[0.99]"
+      className="group bg-surface-1 border-border relative flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all hover:border-white/20 active:scale-[0.99]"
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex min-w-0 items-center gap-3">
         <div
-          className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
           style={{ background: colors.bgColor }}
         >
-          <Icon className="w-5 h-5" style={{ color: colors.iconColor }} />
+          <Icon className="h-5 w-5" style={{ color: colors.iconColor }} />
         </div>
 
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground truncate max-w-[200px] sm:max-w-[280px] md:max-w-[340px]" title={attachment.name}>
+          <p
+            className="text-foreground max-w-[200px] truncate text-xs font-semibold sm:max-w-[280px] md:max-w-[340px]"
+            title={attachment.name}
+          >
             {attachment.name}
           </p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-surface-2 text-muted-foreground">
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span className="py-0.2 bg-surface-2 text-muted-foreground rounded px-1.5 text-[10px] font-bold uppercase">
               {info.extension}
             </span>
             {info.isImage && (
-              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
                 • Click to preview
               </span>
             )}
@@ -130,27 +135,27 @@ export function NewsAttachmentCard({ attachment, onPreviewImage }: NewsAttachmen
         </div>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
         {info.isImage && onPreviewImage && (
           <Button
             variant="ghost"
             size="icon"
-            className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-2"
+            className="text-muted-foreground hover:text-foreground hover:bg-surface-2 h-8 w-8 rounded-lg"
             onClick={() => onPreviewImage(info.downloadUrl, attachment.name)}
             title="Preview Image"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="h-4 w-4" />
           </Button>
         )}
 
         <Button
           variant="ghost"
           size="icon"
-          className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-2"
+          className="text-muted-foreground hover:text-foreground hover:bg-surface-2 h-8 w-8 rounded-lg"
           onClick={handleCopy}
           title="Copy file URL"
         >
-          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
         </Button>
 
         <a
@@ -158,10 +163,10 @@ export function NewsAttachmentCard({ attachment, onPreviewImage }: NewsAttachmen
           target="_blank"
           rel="noreferrer"
           download={attachment.name}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-surface-2 transition-colors"
+          className="text-muted-foreground hover:text-primary hover:bg-surface-2 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
           title="Download file"
         >
-          <Download className="w-4 h-4" />
+          <Download className="h-4 w-4" />
         </a>
       </div>
     </div>

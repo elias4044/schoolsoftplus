@@ -20,8 +20,8 @@ export interface PositionedLesson {
   lanes: number;
 }
 
-export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-export const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+export const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 export function isoWeek(date: Date): number {
   const d = new Date(date);
@@ -30,9 +30,7 @@ export function isoWeek(date: Date): number {
   const week1 = new Date(d.getFullYear(), 0, 4);
   return (
     1 +
-    Math.round(
-      ((d.getTime() - week1.getTime()) / 86_400_000 - 3 + ((week1.getDay() + 6) % 7)) / 7
-    )
+    Math.round(((d.getTime() - week1.getTime()) / 86_400_000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
   );
 }
 
@@ -48,7 +46,7 @@ export function getWeekBounds(offset: number) {
   friday.setDate(monday.getDate() + 4);
 
   const week = isoWeek(monday);
-  const fmt = (d: Date) => d.toLocaleDateString("en-SE", { month: "short", day: "numeric" });
+  const fmt = (d: Date) => d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' });
   const range = `${fmt(monday)} – ${fmt(friday)}, ${monday.getFullYear()}`;
 
   return { monday, friday, week, range, label: `Week ${week} · ${range}` };
@@ -56,25 +54,25 @@ export function getWeekBounds(offset: number) {
 
 export function localDateKey(d: Date) {
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
 export function timeStr(raw: string) {
   const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? "" : d.toTimeString().slice(0, 5);
+  return Number.isNaN(d.getTime()) ? '' : d.toTimeString().slice(0, 5);
 }
 
 export function toMinutes(t: string) {
-  const [h, m] = t.split(":").map(Number);
+  const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
 export function formatMinutes(total: number) {
   const h = Math.floor(total / 60);
   const m = total % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 export function durationLabel(start: string, end: string) {
@@ -92,13 +90,13 @@ export function lessonAccent(hex: string | undefined, fallback: string): string 
 }
 
 export function mapScheduleEvent(ev: any): Lesson | null {
-  const start = timeStr(ev?.startDate ?? "");
-  const end = timeStr(ev?.endDate ?? "");
+  const start = timeStr(ev?.startDate ?? '');
+  const end = timeStr(ev?.endDate ?? '');
   if (!start || !end) return null;
 
   return {
     eventId: ev.eventId,
-    name: ev.name ?? ev.title ?? ev.subject ?? "Lesson",
+    name: ev.name ?? ev.title ?? ev.subject ?? 'Lesson',
     teacher: ev.teacher || undefined,
     room: ev.room || undefined,
     teachingGroup: ev.teachingGroup || undefined,

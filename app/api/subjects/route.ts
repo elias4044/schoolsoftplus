@@ -1,7 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { authUser } from "@/app/api/lib/auth";
-import { createSchoolsoftClient, requireSession, applySessionCookieUpdates } from "@/app/api/lib/schoolsoft";
-import { handleApiError } from "@/app/api/lib/apiError";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { handleApiError } from '@/app/api/lib/apiError';
+import { authUser } from '@/app/api/lib/auth';
+import {
+  applySessionCookieUpdates,
+  createSchoolsoftClient,
+  requireSession,
+} from '@/app/api/lib/schoolsoft';
 
 type SubjectEntity = {
   planningId?: string;
@@ -13,17 +18,14 @@ type SubjectEntity = {
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated." },
-      { status: 401 }
-    );
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school } = sess;
 
   const authOk = await authUser(cookies, school);
   if (!authOk) {
-    const res = NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    const res = NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
     applySessionCookieUpdates(res, sess.cookieUpdates ?? null);
     return res;
   }
@@ -31,10 +33,10 @@ export async function GET(req: NextRequest) {
   const api = createSchoolsoftClient(school);
 
   try {
-    const { data: subjects } = await api.get(
-      "/rest-api/student/ps/subjectroom/all",
-      { headers: { Cookie: cookies }, responseType: "json" }
-    );
+    const { data: subjects } = await api.get('/rest-api/student/ps/subjectroom/all', {
+      headers: { Cookie: cookies },
+      responseType: 'json',
+    });
 
     const enriched = await Promise.all(
       (subjects as { activityId: string }[]).map(async (subject) => {
@@ -43,21 +45,21 @@ export async function GET(req: NextRequest) {
           const [entitiesRes, unreadRes, teachersRes] = await Promise.all([
             api.get(`/rest-api/student/ps/subjectroom/${id}/entities`, {
               headers: { Cookie: cookies },
-              responseType: "json",
+              responseType: 'json',
             }),
             api.get(`/rest-api/student/ps/subjectroom/${id}/unread_entities`, {
               headers: { Cookie: cookies },
-              responseType: "json",
+              responseType: 'json',
             }),
             api.get(`/rest-api/student/ps/subjectroom/${id}/teachers`, {
               headers: { Cookie: cookies },
-              responseType: "json",
+              responseType: 'json',
             }),
           ]);
 
           const entities = (entitiesRes.data as SubjectEntity[]).map((e) => ({
             ...e,
-            entityType: e.planningId ? "PLANNING" : "ASSIGNMENT",
+            entityType: e.planningId ? 'PLANNING' : 'ASSIGNMENT',
           }));
 
           return {
@@ -81,7 +83,7 @@ export async function GET(req: NextRequest) {
     applySessionCookieUpdates(res, sess.cookieUpdates ?? null);
     return res;
   } catch (error) {
-    const errRes = handleApiError(error, "subjects");
+    const errRes = handleApiError(error, 'subjects');
     applySessionCookieUpdates(errRes as NextResponse, sess?.cookieUpdates ?? null);
     return errRes;
   }

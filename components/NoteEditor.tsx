@@ -9,79 +9,65 @@ import {
   useRef,
   useState,
 } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlignLeft,
+  ArrowDownToLine,
+  ArrowLeft,
   Bold,
-  Italic,
-  Strikethrough,
+  Braces,
+  CaseSensitive,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Code,
+  Columns2,
+  Copy,
+  CopyPlus,
+  Download,
+  Expand,
+  Eye,
+  FileText,
   Heading1,
   Heading2,
   Heading3,
-  Code,
-  Braces,
+  Image as ImageIcon,
+  Italic,
+  Keyboard,
   Link2,
   List,
-  ListOrdered,
   ListChecks,
-  Quote,
-  Minus,
-  Table2,
-  Image as ImageIcon,
-  Undo2,
-  Redo2,
-  Eye,
-  PenLine,
-  Columns2,
-  Check,
-  Copy,
-  X,
-  Loader2,
-  ArrowLeft,
-  Sparkles,
-  Wand2,
-  FileText,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-  AlignLeft,
-  Minimize2,
-  Maximize2,
   List as ListIcon,
-  Type,
-  Pencil,
-  ThumbsUp,
-  Send,
-  Download,
-  Expand,
-  Shrink,
-  Share2,
+  ListOrdered,
+  Loader2,
+  Maximize2,
+  MessageSquare,
+  Minimize2,
+  Minus,
   MoreHorizontal,
+  Pencil,
+  PenLine,
+  Quote,
+  Redo2,
   Search,
-  Keyboard,
+  Send,
+  Share2,
+  Shrink,
+  Sparkles,
+  Strikethrough,
+  Table2,
+  ThumbsUp,
   Trash2,
-  CopyPlus,
-  CaseSensitive,
-  ArrowDownToLine,
+  Type,
+  Undo2,
+  Wand2,
+  X,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 import { apiFetch } from '@/lib/api-client';
-import type { NoteStatus } from '@/app/api/lib/notesDb';
-import type { NoteAiAction } from '@/app/api/ai/note/route';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +79,14 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +94,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { NoteAiAction } from '@/app/api/ai/note/route';
+import type { NoteStatus } from '@/app/api/lib/notesDb';
 
 export interface Note {
   id: string;
@@ -1616,7 +1617,7 @@ export default function NoteEditor({
         {/* ---- Toolbar ---- */}
         {showEditor && (
           <div
-            className="scrollbar-none flex shrink-0 items-center gap-0.5 overflow-x-auto border-y px-3 py-1"
+            className="flex shrink-0 scrollbar-none items-center gap-0.5 overflow-x-auto border-y px-3 py-1"
             style={{ borderColor: 'oklch(1 0 0 / 6%)' }}
           >
             <IconBtn label="Undo" shortcut={`${MOD}+Z`} onClick={undo} disabled={!canUndo}>

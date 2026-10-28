@@ -5,16 +5,16 @@ info:
 
 http:
   method: GET
-  url: "{{local_url}}/api/file?type=pdf&id=486979"
+  url: '{{local_url}}/api/file?type=pdf&id=486979'
   headers:
     - name: Cookie
-      value: "{{ssp_cookie}}"
+      value: '{{ssp_cookie}}'
   params:
     - name: type
       value: pdf
       type: query
     - name: id
-      value: "486979"
+      value: '486979'
       type: query
   auth: inherit
 

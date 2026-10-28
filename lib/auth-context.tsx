@@ -1,17 +1,18 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "./useSession";
-import { clearCache } from "./cache";
-import { prefetch } from "./cache/prefetch";
+import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { clearCache } from './cache';
+import { prefetch } from './cache/prefetch';
+import { useSession } from './useSession';
 
 export interface AuthSession {
   school: string;
   username: string;
   name?: string;
   theme: string;
-  authType?: "classic" | "authv2";
+  authType?: 'classic' | 'authv2';
 }
 
 interface AuthContextValue {
@@ -29,20 +30,20 @@ const AuthContext = createContext<AuthContextValue>({
   login: () => {},
   logout: () => {},
   isAuthenticated: false,
-  theme: "light",
+  theme: 'light',
 });
 
 /** Returns the AuthV2 token expiry timestamp from the client-readable cookie, or null. */
 function getAuthV2ExpiresAt(): number | null {
-  if (typeof document === "undefined") return null;
+  if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|;\s*)ssp_ss_token_expires=([^;]+)/);
   return match ? parseInt(match[1], 10) : null;
 }
 
 /** Returns true if the user is logged in via AuthV2 (client cookie). */
 function isAuthV2(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie.includes("ssp_auth_type=authv2");
+  if (typeof document === 'undefined') return false;
+  return document.cookie.includes('ssp_auth_type=authv2');
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -56,8 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           school: sessionData.school,
           username: sessionData.username ?? sessionData.user.userName,
           name: `${sessionData.user.firstName} ${sessionData.user.lastName}`.trim() || undefined,
-          theme: sessionData.theme ?? "light",
-          authType: isAuthV2() ? "authv2" : "classic",
+          theme: sessionData.theme ?? 'light',
+          authType: isAuthV2() ? 'authv2' : 'classic',
         }
       : null;
 
@@ -66,18 +67,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // login() is a no-op — the browser already has the cookies set by the auth flow.
   // Callers should simply redirect to /dashboard after authentication succeeds.
   const login = useCallback(() => {
-    void prefetch()
-    router.replace("/dashboard");
+    void prefetch();
+    router.replace('/dashboard');
   }, [router]);
 
   const logout = useCallback(async () => {
-    await fetch("/api/logout", { method: "POST" });
-    clearCache()
-    router.replace("/login");
+    await fetch('/api/logout', { method: 'POST' });
+    clearCache();
+    router.replace('/login');
   }, [router]);
 
   useEffect(() => {
-    if (!session || session.authType !== "authv2") return;
+    if (!session || session.authType !== 'authv2') return;
 
     async function maybeRefresh() {
       // Avoid concurrent refresh attempts
@@ -90,12 +91,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (secsLeft < 300) {
         refreshInFlight.current = true;
         try {
-          const res = await fetch("/api/auth/v2/token-refresh", { method: "POST" });
+          const res = await fetch('/api/auth/v2/token-refresh', { method: 'POST' });
           if (!res.ok) {
-            console.warn("[auth] token-refresh failed:", res.status);
+            console.warn('[auth] token-refresh failed:', res.status);
           }
         } catch (err) {
-          console.error("[auth] token-refresh error:", err);
+          console.error('[auth] token-refresh error:', err);
         } finally {
           refreshInFlight.current = false;
         }
@@ -103,9 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Run immediately and then on an interval, catching any unexpected errors.
-    maybeRefresh().catch((err) => console.error("[auth] maybeRefresh error:", err));
+    maybeRefresh().catch((err) => console.error('[auth] maybeRefresh error:', err));
     const interval = setInterval(() => {
-      maybeRefresh().catch((err) => console.error("[auth] maybeRefresh error:", err));
+      maybeRefresh().catch((err) => console.error('[auth] maybeRefresh error:', err));
     }, 60 * 1000);
 
     return () => {
@@ -122,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isAuthenticated: session !== null,
-        theme: session?.theme ?? "light",
+        theme: session?.theme ?? 'light',
       }}
     >
       {children}
@@ -132,4 +133,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuthContext = () => useContext(AuthContext);
 export const useAuth = () => useContext(AuthContext);
-

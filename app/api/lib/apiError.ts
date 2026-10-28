@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import type { AxiosError } from "axios";
+import { NextResponse } from 'next/server';
+import type { AxiosError } from 'axios';
 
 interface ApiError extends Error {
   response?: {
@@ -15,7 +15,10 @@ interface ApiError extends Error {
  * Logs the error and returns a standardised NextResponse with the
  * appropriate HTTP status code.
  */
-export function handleApiError(error: ApiError | AxiosError | unknown, context: string): NextResponse {
+export function handleApiError(
+  error: ApiError | AxiosError | unknown,
+  context: string
+): NextResponse {
   const err = error as ApiError;
   console.error(`[${context}] Error:`, err.message);
 
@@ -31,13 +34,10 @@ export function handleApiError(error: ApiError | AxiosError | unknown, context: 
 
   if (err.request) {
     return NextResponse.json(
-      { success: false, error: "No response from upstream server." },
+      { success: false, error: 'No response from upstream server.' },
       { status: 504 }
     );
   }
 
-  return NextResponse.json(
-    { success: false, error: "Internal Server Error" },
-    { status: 500 }
-  );
+  return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
 }

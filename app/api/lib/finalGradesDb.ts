@@ -1,7 +1,8 @@
-import { db } from "./firebaseAdmin";
-import type { FinalGradesDoc, FinalGradeSubject } from "@/lib/final-grades/types";
+import type { FinalGradesDoc, FinalGradeSubject } from '@/lib/final-grades/types';
 
-const COL = "final_grades_v1";
+import { db } from './firebaseAdmin';
+
+const COL = 'final_grades_v1';
 
 function docId(username: string): string {
   return username.toLowerCase().trim();
@@ -11,9 +12,9 @@ function docId(username: string): string {
 function docToFinalGrades(doc: FirebaseFirestore.DocumentSnapshot<any>): FinalGradesDoc {
   const data = doc.data() ?? {};
   return {
-    username: data.username ?? "",
+    username: data.username ?? '',
     subjects: Array.isArray(data.subjects) ? data.subjects : [],
-    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : Date.now(),
+    updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : Date.now(),
   };
 }
 

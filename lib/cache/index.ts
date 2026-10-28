@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /**
  * Bump CACHE_VERSION whenever a cached shape changes, so old entries are ignored.
@@ -14,17 +14,17 @@ export interface CacheEntry<T> {
 const memory = new Map<string, CacheEntry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
 
-export const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+export const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export function readCache<T>(key: string): CacheEntry<T> | null {
   const hit = memory.get(key);
   if (hit) return hit as CacheEntry<T>;
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(PREFIX + key);
     if (!raw) return null;
     const entry = JSON.parse(raw) as CacheEntry<T>;
-    if (!entry || typeof entry.savedAt !== "number" || !("data" in entry)) return null;
+    if (!entry || typeof entry.savedAt !== 'number' || !('data' in entry)) return null;
     memory.set(key, entry);
     return entry;
   } catch {
@@ -35,7 +35,7 @@ export function readCache<T>(key: string): CacheEntry<T> | null {
 export function writeCache<T>(key: string, data: T): void {
   const entry: CacheEntry<T> = { data, savedAt: Date.now() };
   memory.set(key, entry);
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(entry));
   } catch {
@@ -44,9 +44,9 @@ export function writeCache<T>(key: string, data: T): void {
 }
 
 /** Remove cached entries whose key starts with `keyPrefix` (everything when omitted). */
-export function clearCache(keyPrefix = ""): void {
+export function clearCache(keyPrefix = ''): void {
   for (const k of [...memory.keys()]) if (k.startsWith(keyPrefix)) memory.delete(k);
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
     const full = PREFIX + keyPrefix;
     for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -98,10 +98,10 @@ export function useCachedResource<T>(key: string, fetcher: () => Promise<T>) {
     setError(false);
     fetcherRef
       .current()
-      .then(fresh => {
+      .then((fresh) => {
         if (cancelled) return;
         // Keep the old reference when nothing changed so dependants don't re-run.
-        setData(prev => (prev !== null && sameJson(prev, fresh) ? prev : fresh));
+        setData((prev) => (prev !== null && sameJson(prev, fresh) ? prev : fresh));
       })
       .catch(() => {
         if (!cancelled) setError(true);

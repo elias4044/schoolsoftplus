@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getLeaderboard } from "@/app/api/lib/referralDb";
-import { getProfile } from "@/app/api/lib/profileDb";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getProfile } from '@/app/api/lib/profileDb';
+import { getLeaderboard } from '@/app/api/lib/referralDb';
 
 /**
  * GET /api/referrals/leaderboard
@@ -8,7 +9,7 @@ import { getProfile } from "@/app/api/lib/profileDb";
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 50);
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20', 10), 50);
 
   try {
     const entries = await getLeaderboard(limit);
@@ -20,8 +21,8 @@ export async function GET(req: NextRequest) {
           rank: entry.rank,
           username: entry.username,
           displayName: profile?.displayName || entry.username,
-          pfpUrl: profile?.pfpUrl || "",
-          schoolName: profile?.schoolName || "",
+          pfpUrl: profile?.pfpUrl || '',
+          schoolName: profile?.schoolName || '',
           totalReferrals: entry.totalReferrals,
         };
       })
@@ -29,9 +30,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: enriched });
   } catch (err) {
-    console.error("[referrals/leaderboard] error:", err);
+    console.error('[referrals/leaderboard] error:', err);
     return NextResponse.json(
-      { success: false, error: "Failed to load leaderboard." },
+      { success: false, error: 'Failed to load leaderboard.' },
       { status: 500 }
     );
   }

@@ -1,19 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { authUser } from "@/app/api/lib/auth";
-import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { authUser } from '@/app/api/lib/auth';
 import {
-  getFriends, getPendingRequestsReceived, getPendingRequestsSent,
-  sendFriendRequest, getFriendship,
-} from "@/app/api/lib/friendsDb";
-import { getProfile } from "@/app/api/lib/profileDb";
+  getFriends,
+  getFriendship,
+  getPendingRequestsReceived,
+  getPendingRequestsSent,
+  sendFriendRequest,
+} from '@/app/api/lib/friendsDb';
+import { getProfile } from '@/app/api/lib/profileDb';
+import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
 
 // GET /api/friends  — friends list + pending requests
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const [friends, received, sent] = await Promise.all([
@@ -35,17 +40,20 @@ export async function GET(req: NextRequest) {
     allUsernames.add(other);
   }
 
-  const profileMap: Record<string, { displayName: string; pfpUrl: string; schoolName: string }> = {};
-  await Promise.all([...allUsernames].map(async u => {
-    const p = await getProfile(u);
-    if (p) {
-      profileMap[u] = {
-        displayName: p.displayName || `${p.firstName} ${p.lastName}`.trim() || u,
-        pfpUrl:      p.pfpUrl ?? "",
-        schoolName:  p.schoolName ?? "",
-      };
-    }
-  }));
+  const profileMap: Record<string, { displayName: string; pfpUrl: string; schoolName: string }> =
+    {};
+  await Promise.all(
+    [...allUsernames].map(async (u) => {
+      const p = await getProfile(u);
+      if (p) {
+        profileMap[u] = {
+          displayName: p.displayName || `${p.firstName} ${p.lastName}`.trim() || u,
+          pfpUrl: p.pfpUrl ?? '',
+          schoolName: p.schoolName ?? '',
+        };
+      }
+    })
+  );
 
   return NextResponse.json({ success: true, friends, received, sent, profileMap });
 }
@@ -54,31 +62,36 @@ export async function GET(req: NextRequest) {
 // Body: { targetUsername: string }
 export async function POST(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: { targetUsername?: string } = {};
-  try { body = await req.json(); } catch { /* empty */ }
+  try {
+    body = await req.json();
+  } catch {
+    /* empty */
+  }
 
-  const target = (body.targetUsername ?? "").trim();
+  const target = (body.targetUsername ?? '').trim();
   if (!target || target === username) {
-    return NextResponse.json({ success: false, error: "Invalid target user." }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 });
   }
 
   // Make sure the target profile exists
   const targetProfile = await getProfile(target);
   if (!targetProfile) {
-    return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
   }
 
   try {
     const friendship = await sendFriendRequest(username, target);
     return NextResponse.json({ success: true, friendship });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Request failed.";
+    const message = err instanceof Error ? err.message : 'Request failed.';
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
@@ -86,19 +99,25 @@ export async function POST(req: NextRequest) {
 // DELETE /api/friends  — unfriend (body: { targetUsername })
 export async function DELETE(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: { targetUsername?: string } = {};
-  try { body = await req.json(); } catch { /* empty */ }
+  try {
+    body = await req.json();
+  } catch {
+    /* empty */
+  }
 
-  const target = (body.targetUsername ?? "").trim();
-  if (!target) return NextResponse.json({ success: false, error: "Invalid target." }, { status: 400 });
+  const target = (body.targetUsername ?? '').trim();
+  if (!target)
+    return NextResponse.json({ success: false, error: 'Invalid target.' }, { status: 400 });
 
-  const { removeFriend } = await import("@/app/api/lib/friendsDb");
+  const { removeFriend } = await import('@/app/api/lib/friendsDb');
   await removeFriend(username, target);
   return NextResponse.json({ success: true });
 }
@@ -107,21 +126,28 @@ export async function DELETE(req: NextRequest) {
 // Body: { fromUsername: string, accept: boolean }
 export async function PATCH(req: NextRequest) {
   const sess = await requireSession(req);
-  if (!sess) return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+  if (!sess)
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const { cookieString, school, username } = sess;
   if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: { fromUsername?: string; accept?: boolean } = {};
-  try { body = await req.json(); } catch { /* empty */ }
+  try {
+    body = await req.json();
+  } catch {
+    /* empty */
+  }
 
-  const from = (body.fromUsername ?? "").trim();
-  if (!from) return NextResponse.json({ success: false, error: "Missing fromUsername." }, { status: 400 });
+  const from = (body.fromUsername ?? '').trim();
+  if (!from)
+    return NextResponse.json({ success: false, error: 'Missing fromUsername.' }, { status: 400 });
 
-  const { respondToFriendRequest } = await import("@/app/api/lib/friendsDb");
+  const { respondToFriendRequest } = await import('@/app/api/lib/friendsDb');
   const friendship = await respondToFriendRequest(username, from, body.accept !== false);
-  if (!friendship) return NextResponse.json({ success: false, error: "Request not found." }, { status: 404 });
+  if (!friendship)
+    return NextResponse.json({ success: false, error: 'Request not found.' }, { status: 404 });
 
   // If checking status only
   const existing = await getFriendship(username, from);

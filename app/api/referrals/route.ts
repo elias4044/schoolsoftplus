@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession, applySessionCookieUpdates } from "@/app/api/lib/schoolsoft";
-import { authUser } from "@/app/api/lib/auth";
-import { getOrCreateReferralCode } from "@/app/api/lib/referralDb";
-import { getProfile } from "@/app/api/lib/profileDb";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { authUser } from '@/app/api/lib/auth';
+import { getProfile } from '@/app/api/lib/profileDb';
+import { getOrCreateReferralCode } from '@/app/api/lib/referralDb';
+import { applySessionCookieUpdates, requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
  * GET /api/referrals
@@ -12,10 +13,10 @@ import { getProfile } from "@/app/api/lib/profileDb";
 export async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
-    return NextResponse.json({ success: false, error: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
   if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, error: "Session expired." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Session expired.' }, { status: 401 });
   }
 
   try {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
         return {
           username: entry.username,
           displayName: profile?.displayName || entry.username,
-          pfpUrl: profile?.pfpUrl || "",
+          pfpUrl: profile?.pfpUrl || '',
           joinedAt: entry.joinedAt,
         };
       })
@@ -44,9 +45,9 @@ export async function GET(req: NextRequest) {
     applySessionCookieUpdates(res, sess.cookieUpdates);
     return res;
   } catch (err) {
-    console.error("[referrals] GET error:", err);
+    console.error('[referrals] GET error:', err);
     return NextResponse.json(
-      { success: false, error: "Failed to load referral data." },
+      { success: false, error: 'Failed to load referral data.' },
       { status: 500 }
     );
   }

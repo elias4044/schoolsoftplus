@@ -1,34 +1,34 @@
-import { db } from "./firebaseAdmin";
+import { db } from './firebaseAdmin';
 
-const COL = "profiles_v1";
+const COL = 'profiles_v1';
 
 export interface UserProfile {
-  username: string;       // key — SchoolSoft userName
-  displayName: string;    // custom display name (editable)
+  username: string; // key — SchoolSoft userName
+  displayName: string; // custom display name (editable)
   bio: string;
   pronouns: string;
   location: string;
   website: string;
-  pfpUrl: string;         // hosted on imgbb
-  coverUrl: string;       // banner image, hosted on imgbb
-  accentColor: string;    // profile accent e.g. "#7c6af7"
+  pfpUrl: string; // hosted on imgbb
+  coverUrl: string; // banner image, hosted on imgbb
+  accentColor: string; // profile accent e.g. "#7c6af7"
   // social links
   github: string;
   twitter: string;
   instagram: string;
   linkedin: string;
   // calls
-  ringtone: string;  // ringtone ID, e.g. "default" | "classic" | "digital" | "soft" | "pulse" | "custom"
-  ringtoneCustomUrl: string;  // custom MP3 URL, used when ringtone === "custom"
+  ringtone: string; // ringtone ID, e.g. "default" | "classic" | "digital" | "soft" | "pulse" | "custom"
+  ringtoneCustomUrl: string; // custom MP3 URL, used when ringtone === "custom"
   // privacy
-  dmPrivacy: "everyone" | "nobody";  // who can initiate DMs
+  dmPrivacy: 'everyone' | 'nobody'; // who can initiate DMs
   // read-only snapshot fields (refreshed from session on every save)
   firstName: string;
   lastName: string;
   email: string;
   schoolName: string;
   userType: string;
-  joinedAt: number;   // first profile creation timestamp
+  joinedAt: number; // first profile creation timestamp
   updatedAt: number;
 }
 
@@ -36,29 +36,29 @@ export interface UserProfile {
 function docToProfile(doc: FirebaseFirestore.DocumentSnapshot<any>): UserProfile {
   const d = doc.data()!;
   return {
-    username:    doc.id,
-    displayName: d.displayName ?? "",
-    bio:         d.bio         ?? "",
-    pronouns:    d.pronouns    ?? "",
-    location:    d.location    ?? "",
-    website:     d.website     ?? "",
-    pfpUrl:      d.pfpUrl      ?? "",
-    coverUrl:    d.coverUrl    ?? "",
-    accentColor: d.accentColor ?? "",
-    github:      d.github      ?? "",
-    twitter:     d.twitter     ?? "",
-    instagram:   d.instagram   ?? "",
-    linkedin:    d.linkedin    ?? "",
-    ringtone:         d.ringtone ?? "default",
-    ringtoneCustomUrl: d.ringtoneCustomUrl ?? "",
-    dmPrivacy:   d.dmPrivacy === "nobody" ? "nobody" : "everyone",
-    firstName:   d.firstName   ?? "",
-    lastName:    d.lastName    ?? "",
-    email:       d.email       ?? "",
-    schoolName:  d.schoolName  ?? "",
-    userType:    d.userType    ?? "",
-    joinedAt:    typeof d.joinedAt === "number" ? d.joinedAt : Date.now(),
-    updatedAt:   typeof d.updatedAt === "number" ? d.updatedAt : Date.now(),
+    username: doc.id,
+    displayName: d.displayName ?? '',
+    bio: d.bio ?? '',
+    pronouns: d.pronouns ?? '',
+    location: d.location ?? '',
+    website: d.website ?? '',
+    pfpUrl: d.pfpUrl ?? '',
+    coverUrl: d.coverUrl ?? '',
+    accentColor: d.accentColor ?? '',
+    github: d.github ?? '',
+    twitter: d.twitter ?? '',
+    instagram: d.instagram ?? '',
+    linkedin: d.linkedin ?? '',
+    ringtone: d.ringtone ?? 'default',
+    ringtoneCustomUrl: d.ringtoneCustomUrl ?? '',
+    dmPrivacy: d.dmPrivacy === 'nobody' ? 'nobody' : 'everyone',
+    firstName: d.firstName ?? '',
+    lastName: d.lastName ?? '',
+    email: d.email ?? '',
+    schoolName: d.schoolName ?? '',
+    userType: d.userType ?? '',
+    joinedAt: typeof d.joinedAt === 'number' ? d.joinedAt : Date.now(),
+    updatedAt: typeof d.updatedAt === 'number' ? d.updatedAt : Date.now(),
   };
 }
 
@@ -92,10 +92,7 @@ export interface ProfileUpdate {
   userType?: string;
 }
 
-export async function upsertProfile(
-  username: string,
-  update: ProfileUpdate
-): Promise<UserProfile> {
+export async function upsertProfile(username: string, update: ProfileUpdate): Promise<UserProfile> {
   const ref = db.collection(COL).doc(username.toLowerCase());
   const existing = await ref.get();
   const payload: Record<string, unknown> = { ...update, updatedAt: Date.now() };

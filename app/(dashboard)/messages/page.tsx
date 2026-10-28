@@ -3242,7 +3242,7 @@ const DECK_BUBBLE_COLORS: Record<string, { from: string; to: string }> = {
     slate: { from: "oklch(0.60 0.04 255)", to: "oklch(0.48 0.05 265)" },
 };
 
-function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: boolean }) {
+function FlashDeckCardBubble({ card, isMe, messageId }: { card: FlashDeckShareCard; isMe: boolean; messageId: string }) {
     const [importing, setImporting] = useState(false);
     const [imported, setImported] = useState(false);
     const [importErr, setImportErr] = useState("");
@@ -3256,7 +3256,7 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
             const res = await fetch("/api/flashcards/import", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ deckId: card.deckId }),
+                body: JSON.stringify({ deckId: card.deckId, messageId }),
             });
             const data = await res.json();
             if (data.success) {
@@ -3354,9 +3354,9 @@ function FlashDeckCardBubble({ card, isMe }: { card: FlashDeckShareCard; isMe: b
     );
 }
 
-function ShareCardBubble({ card, isMe }: { card: ShareCard; isMe: boolean }) {
+function ShareCardBubble({ card, isMe, messageId }: { card: ShareCard; isMe: boolean; messageId: string }) {
     if (card.type === "note") return <NoteCardBubble card={card} isMe={isMe} />;
-    if (card.type === "flashdeck") return <FlashDeckCardBubble card={card} isMe={isMe} />;
+    if (card.type === "flashdeck") return <FlashDeckCardBubble card={card} isMe={isMe} messageId={messageId} />;
     return <GradeCardBubble card={card} isMe={isMe} />;
 }
 
@@ -3477,7 +3477,7 @@ function MessageBubble({
                             onClick={() => { if (isMobile) onMobileTap(); }}
                         >
                             {msg.shareCard ? (
-                                <ShareCardBubble card={msg.shareCard} isMe={isMe} />
+                                <ShareCardBubble card={msg.shareCard} isMe={isMe} messageId={msg.id} />
                             ) : isEncryptedConvo && displayContent === null ? (
                                 <span className="flex items-center gap-1.5 text-muted-foreground/60 italic text-xs">
                                     <Loader2 className="w-3 h-3 animate-spin" /> Decrypting…

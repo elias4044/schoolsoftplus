@@ -1,5 +1,6 @@
-import { db } from "./firebaseAdmin";
-import { randomBytes } from "crypto";
+import { randomBytes } from 'crypto';
+
+import { db } from './firebaseAdmin';
 
 export interface ReferredUserEntry {
   username: string;
@@ -20,17 +21,17 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-const COL = "referrals_v1";
-const CODES_COL = "referral_codes_v1";
+const COL = 'referrals_v1';
+const CODES_COL = 'referral_codes_v1';
 
 // Unambiguous alphanumeric characters (no 0/O, 1/I/l)
-const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function generateCode(length = 8): string {
   const bytes = randomBytes(length);
   return Array.from(bytes)
     .map((b) => CHARSET[b % CHARSET.length])
-    .join("");
+    .join('');
 }
 
 export async function getOrCreateReferralCode(username: string): Promise<ReferralData> {
@@ -50,7 +51,7 @@ export async function getOrCreateReferralCode(username: string): Promise<Referra
   }
 
   // Generate a collision-free code (up to 10 attempts)
-  let code = "";
+  let code = '';
   for (let attempt = 0; attempt < 10; attempt++) {
     const candidate = generateCode();
     const existing = await db.collection(CODES_COL).doc(candidate).get();
@@ -59,7 +60,7 @@ export async function getOrCreateReferralCode(username: string): Promise<Referra
       break;
     }
   }
-  if (!code) throw new Error("Could not generate unique referral code");
+  if (!code) throw new Error('Could not generate unique referral code');
 
   const now = Date.now();
   const data: ReferralData = {
@@ -143,8 +144,8 @@ export async function creditReferral(
 export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   const snap = await db
     .collection(COL)
-    .where("totalReferrals", ">", 0)
-    .orderBy("totalReferrals", "desc")
+    .where('totalReferrals', '>', 0)
+    .orderBy('totalReferrals', 'desc')
     .limit(limit)
     .get();
 

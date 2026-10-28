@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import {
-  startRegistration,
-  startAuthentication,
   browserSupportsWebAuthn,
+  startAuthentication,
+  startRegistration,
   type PublicKeyCredentialCreationOptionsJSON,
   type PublicKeyCredentialRequestOptionsJSON,
 } from '@simplewebauthn/browser';
-import { KeyRound, Plus, Trash2, Loader2, ShieldCheck, MonitorSmartphone } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { KeyRound, Loader2, MonitorSmartphone, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface CredentialRow {
   id: string;
@@ -168,7 +169,7 @@ export default function PasskeyManager() {
               style={{ borderColor: 'oklch(1 0 0 / 8%)', background: 'oklch(1 0 0 / 2%)' }}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent">
+                <div className="bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
                   <MonitorSmartphone className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0">

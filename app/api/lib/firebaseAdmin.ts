@@ -1,5 +1,5 @@
-import admin from 'firebase-admin';
 import { MetricServiceClient } from '@google-cloud/monitoring';
+import admin from 'firebase-admin';
 
 const rawBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 

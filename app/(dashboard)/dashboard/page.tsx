@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, easeOut, motion } from 'framer-motion';
 import {
   CalendarDays,
+  Check,
   ClipboardList,
   MessageSquare,
   Moon,
@@ -14,20 +16,17 @@ import {
   StickyNote,
   Sun,
   Sunrise,
-  Check,
   type LucideIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 import { useAuth } from '@/lib/auth-context';
-import { DashboardGrid } from '@/components/widgets/DashboardGrid';
-import { AddWidgetPanel } from '@/components/widgets/AddWidgetPanel';
-import { useWidgetLayout } from '@/lib/widgets/useWidgetLayout';
+import { prefetch } from '@/lib/cache/prefetch';
 import { prefetchSchedulePage } from '@/lib/cache/schedule';
 import { prefetchSubjectsPage } from '@/lib/cache/subjects';
-import { prefetch } from '@/lib/cache/prefetch';
-import { useSearchParams } from 'next/navigation';
-
-
+import { useWidgetLayout } from '@/lib/widgets/useWidgetLayout';
+import { Button } from '@/components/ui/button';
+import { AddWidgetPanel } from '@/components/widgets/AddWidgetPanel';
+import { DashboardGrid } from '@/components/widgets/DashboardGrid';
 
 export default function DashboardPage() {
   const { session } = useAuth();
@@ -37,10 +36,10 @@ export default function DashboardPage() {
   const now = useNow(1000);
 
   // Preload on login
-  const searchParams = useSearchParams()
-   if (searchParams.has("init")) {
-    prefetch()
-   }
+  const searchParams = useSearchParams();
+  if (searchParams.has('init')) {
+    prefetch();
+  }
 
   if (!hydrated) return null;
 
@@ -49,7 +48,6 @@ export default function DashboardPage() {
 
   return (
     <div className="relative mx-auto max-w-350 p-6">
-
       {/* Hero header */}
       <motion.section
         initial={{ opacity: 0, y: -12 }}
@@ -66,19 +64,15 @@ export default function DashboardPage() {
             <h1 className="from-foreground to-foreground/60 mt-1 bg-linear-to-r bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               {greeting}
             </h1>
-
-            
           </div>
 
-
           <div className="flex flex-col items-end gap-2 pr-10">
-            <div className="font-mono text-5xl mt-2 font-semibold tracking-tight tabular-nums">
+            <div className="mt-2 font-mono text-5xl font-semibold tracking-tight tabular-nums">
               {now.toLocaleTimeString('en-SE', { hour: '2-digit', minute: '2-digit' })}
               <span className="text-muted-foreground/50 ml-1 text-base">
                 {String(now.getSeconds()).padStart(2, '0')}
               </span>
             </div>
-           
           </div>
         </div>
 

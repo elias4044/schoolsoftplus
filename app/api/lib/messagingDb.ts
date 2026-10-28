@@ -1,5 +1,6 @@
-import { db } from "./firebaseAdmin";
-import { FieldPath } from "firebase-admin/firestore";
+import { FieldPath } from 'firebase-admin/firestore';
+
+import { db } from './firebaseAdmin';
 
 /* 
    Types
@@ -16,29 +17,29 @@ export interface ReplyTo {
  */
 
 export interface NoteShareCard {
-  type: "note";
+  type: 'note';
   noteId: string;
   title: string;
-  preview: string;       // first 220 chars of stripped content
-  fullContent?: string;  // full raw markdown (stored at share time so recipient can read it)
-  status: "draft" | "published" | "archived";
+  preview: string; // first 220 chars of stripped content
+  fullContent?: string; // full raw markdown (stored at share time so recipient can read it)
+  status: 'draft' | 'published' | 'archived';
   sharedAt: number;
 }
 
 export interface GradeShareCard {
-  type: "grade";
+  type: 'grade';
   assignmentId: number;
   assignmentTitle: string;
   subjectName: string;
   assignmentType: string;
   grade: string;
-  confidence: "confirmed" | "estimated";
+  confidence: 'confirmed' | 'estimated';
   totalPoints: string | null; // e.g. "45 / 50"
   sharedAt: number;
 }
 
 export interface FlashDeckShareCard {
-  type: "flashdeck";
+  type: 'flashdeck';
   deckId: string;
   title: string;
   description: string;
@@ -71,14 +72,14 @@ export interface Message {
 
 export interface Conversation {
   id: string;
-  type: "dm" | "group";
-  participants: string[];        // usernames
+  type: 'dm' | 'group';
+  participants: string[]; // usernames
   participantNames: Record<string, string>; // username → displayName
   participantPfpUrls: Record<string, string>; // username → pfp URL
-  groupName: string | null;       // null for DMs
+  groupName: string | null; // null for DMs
   groupDescription: string | null;
-  adminUsername: string | null;   // null for DMs
-  encrypted: boolean;             // E2EE group
+  adminUsername: string | null; // null for DMs
+  encrypted: boolean; // E2EE group
   lastMessage: string;
   lastSenderUsername: string;
   lastAt: number;
@@ -89,9 +90,9 @@ export interface Conversation {
    Collections
  */
 
-const CONV_COL = "conversations_v1";
-const MSG_COL  = "messages_v1";
-const PROF_COL = "profiles_v1";
+const CONV_COL = 'conversations_v1';
+const MSG_COL = 'messages_v1';
+const PROF_COL = 'profiles_v1';
 
 /* 
    Helpers
@@ -102,18 +103,18 @@ function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conver
   const d = doc.data()!;
   return {
     id: doc.id,
-    type:                (d.type === "group" ? "group" : "dm") as "dm" | "group",
-    participants:        d.participants ?? [],
-    participantNames:    d.participantNames ?? {},
-    participantPfpUrls:  d.participantPfpUrls ?? {},
-    groupName:           d.groupName           ?? null,
-    groupDescription:    d.groupDescription    ?? null,
-    adminUsername:       d.adminUsername        ?? null,
-    encrypted:           d.encrypted           ?? false,
-    lastMessage:         d.lastMessage ?? "",
-    lastSenderUsername:  d.lastSenderUsername ?? "",
-    lastAt:              typeof d.lastAt    === "number" ? d.lastAt    : 0,
-    createdAt:           typeof d.createdAt === "number" ? d.createdAt : 0,
+    type: (d.type === 'group' ? 'group' : 'dm') as 'dm' | 'group',
+    participants: d.participants ?? [],
+    participantNames: d.participantNames ?? {},
+    participantPfpUrls: d.participantPfpUrls ?? {},
+    groupName: d.groupName ?? null,
+    groupDescription: d.groupDescription ?? null,
+    adminUsername: d.adminUsername ?? null,
+    encrypted: d.encrypted ?? false,
+    lastMessage: d.lastMessage ?? '',
+    lastSenderUsername: d.lastSenderUsername ?? '',
+    lastAt: typeof d.lastAt === 'number' ? d.lastAt : 0,
+    createdAt: typeof d.createdAt === 'number' ? d.createdAt : 0,
   };
 }
 
@@ -121,19 +122,19 @@ function docToConversation(doc: FirebaseFirestore.DocumentSnapshot<any>): Conver
 function docToMessage(doc: FirebaseFirestore.DocumentSnapshot<any>): Message {
   const d = doc.data()!;
   return {
-    id:                  doc.id,
-    conversationId:      d.conversationId      ?? "",
-    senderUsername:      d.senderUsername      ?? "",
-    senderDisplayName:   d.senderDisplayName   ?? "",
-    content:             d.content             ?? "",
-    edited:              d.edited              ?? false,
-    editedAt:            d.editedAt            ?? null,
-    pinned:              d.pinned              ?? false,
-    deletedAt:           d.deletedAt           ?? null,
-    createdAt:           typeof d.createdAt === "number" ? d.createdAt : 0,
-    reactions:           d.reactions           ?? {},
-    replyTo:             d.replyTo             ?? null,
-    shareCard:           d.shareCard            ?? null,
+    id: doc.id,
+    conversationId: d.conversationId ?? '',
+    senderUsername: d.senderUsername ?? '',
+    senderDisplayName: d.senderDisplayName ?? '',
+    content: d.content ?? '',
+    edited: d.edited ?? false,
+    editedAt: d.editedAt ?? null,
+    pinned: d.pinned ?? false,
+    deletedAt: d.deletedAt ?? null,
+    createdAt: typeof d.createdAt === 'number' ? d.createdAt : 0,
+    reactions: d.reactions ?? {},
+    replyTo: d.replyTo ?? null,
+    shareCard: d.shareCard ?? null,
   };
 }
 
@@ -144,8 +145,8 @@ function docToMessage(doc: FirebaseFirestore.DocumentSnapshot<any>): Message {
 export async function getConversationsForUser(username: string): Promise<Conversation[]> {
   const snap = await db
     .collection(CONV_COL)
-    .where("participants", "array-contains", username)
-    .orderBy("lastAt", "desc")
+    .where('participants', 'array-contains', username)
+    .orderBy('lastAt', 'desc')
     .limit(50)
     .get();
   return snap.docs.map(docToConversation);
@@ -163,33 +164,33 @@ export async function findOrCreateDM(
   displayNameA: string,
   usernameB: string,
   displayNameB: string,
-  pfpUrlA = "",
-  pfpUrlB = ""
+  pfpUrlA = '',
+  pfpUrlB = ''
 ): Promise<{ conversation: Conversation; created: boolean }> {
   // Canonical participant order so duplicate DMs can't be created
   const participants = [usernameA, usernameB].sort();
 
   const snap = await db
     .collection(CONV_COL)
-    .where("participants", "==", participants)
+    .where('participants', '==', participants)
     .limit(1)
     .get();
 
   if (!snap.empty) return { conversation: docToConversation(snap.docs[0]), created: false };
 
   const now = Date.now();
-  const ref  = db.collection(CONV_COL).doc();
+  const ref = db.collection(CONV_COL).doc();
   const data = {
-    type: "dm",
+    type: 'dm',
     participants,
     participantNames: { [usernameA]: displayNameA, [usernameB]: displayNameB },
     participantPfpUrls: { [usernameA]: pfpUrlA, [usernameB]: pfpUrlB },
-    groupName:        null,
+    groupName: null,
     groupDescription: null,
-    adminUsername:    null,
-    lastMessage:        "",
-    lastSenderUsername: "",
-    lastAt:    now,
+    adminUsername: null,
+    lastMessage: '',
+    lastSenderUsername: '',
+    lastAt: now,
     createdAt: now,
   };
   await ref.set(data);
@@ -201,7 +202,7 @@ export async function findOrCreateDM(
 export async function updateParticipantName(username: string, displayName: string) {
   const snap = await db
     .collection(CONV_COL)
-    .where("participants", "array-contains", username)
+    .where('participants', 'array-contains', username)
     .get();
   const batch = db.batch();
   for (const doc of snap.docs) {
@@ -214,7 +215,7 @@ export async function updateParticipantName(username: string, displayName: strin
 export async function updateParticipantPfp(username: string, pfpUrl: string) {
   const snap = await db
     .collection(CONV_COL)
-    .where("participants", "array-contains", username)
+    .where('participants', 'array-contains', username)
     .get();
   const batch = db.batch();
   for (const doc of snap.docs) {
@@ -230,8 +231,8 @@ export async function updateParticipantPfp(username: string, pfpUrl: string) {
 export async function getMessages(conversationId: string, limit = 60): Promise<Message[]> {
   const snap = await db
     .collection(MSG_COL)
-    .where("conversationId", "==", conversationId)
-    .orderBy("createdAt", "asc")
+    .where('conversationId', '==', conversationId)
+    .orderBy('createdAt', 'asc')
     .limitToLast(limit)
     .get();
   return snap.docs.map(docToMessage);
@@ -240,11 +241,11 @@ export async function getMessages(conversationId: string, limit = 60): Promise<M
 export async function getPinnedMessages(conversationId: string): Promise<Message[]> {
   const snap = await db
     .collection(MSG_COL)
-    .where("conversationId", "==", conversationId)
-    .where("pinned", "==", true)
-    .orderBy("createdAt", "asc")
+    .where('conversationId', '==', conversationId)
+    .where('pinned', '==', true)
+    .orderBy('createdAt', 'asc')
     .get();
-  return snap.docs.map(docToMessage).filter(m => m.deletedAt === null);
+  return snap.docs.map(docToMessage).filter((m) => m.deletedAt === null);
 }
 
 export async function createMessage(
@@ -256,29 +257,38 @@ export async function createMessage(
   shareCard?: ShareCard | null
 ): Promise<Message> {
   const now = Date.now();
-  const ref  = db.collection(MSG_COL).doc();
+  const ref = db.collection(MSG_COL).doc();
   const data = {
     conversationId,
     senderUsername,
     senderDisplayName,
     content,
-    edited:    false,
-    editedAt:  null,
-    pinned:    false,
+    edited: false,
+    editedAt: null,
+    pinned: false,
     deletedAt: null,
     createdAt: now,
     reactions: {},
-    replyTo:   replyTo ?? null,
+    replyTo: replyTo ?? null,
     shareCard: shareCard ?? null,
   };
   await ref.set(data);
 
   // Update conversation meta
-  await db.collection(CONV_COL).doc(conversationId).update({
-    lastMessage:        shareCard ? (shareCard.type === "note" ? `📎 Shared a note` : shareCard.type === "flashdeck" ? `Shared a flashcard deck` : `📊 Shared a grade`) : content.slice(0, 120),
-    lastSenderUsername: senderUsername,
-    lastAt:             now,
-  });
+  await db
+    .collection(CONV_COL)
+    .doc(conversationId)
+    .update({
+      lastMessage: shareCard
+        ? shareCard.type === 'note'
+          ? `📎 Shared a note`
+          : shareCard.type === 'flashdeck'
+            ? `Shared a flashcard deck`
+            : `📊 Shared a grade`
+        : content.slice(0, 120),
+      lastSenderUsername: senderUsername,
+      lastAt: now,
+    });
 
   return { id: ref.id, ...data };
 }
@@ -310,7 +320,8 @@ export async function deleteMessage(
   if (!doc.exists) return false;
   const msg = docToMessage(doc);
   // Allow sender OR group admin to delete
-  if (msg.senderUsername !== senderUsername && conversationAdminUsername !== senderUsername) return false;
+  if (msg.senderUsername !== senderUsername && conversationAdminUsername !== senderUsername)
+    return false;
 
   await ref.update({ deletedAt: Date.now(), pinned: false });
   return true;
@@ -349,7 +360,7 @@ export async function toggleReaction(
   const reactions = { ...msg.reactions };
   const users = reactions[emoji] ?? [];
   if (users.includes(username)) {
-    reactions[emoji] = users.filter(u => u !== username);
+    reactions[emoji] = users.filter((u) => u !== username);
     if (reactions[emoji].length === 0) delete reactions[emoji];
   } else {
     reactions[emoji] = [...users, username];
@@ -382,9 +393,9 @@ export async function searchUsers(
 
   const snap = await db
     .collection(PROF_COL)
-    .orderBy("__name__")
+    .orderBy('__name__')
     .startAt(q)
-    .endAt(q + "\uf8ff")
+    .endAt(q + '\uf8ff')
     .limit(15)
     .get();
 
@@ -393,14 +404,14 @@ export async function searchUsers(
     if (doc.id === excludeUsername) continue;
     const d = doc.data();
     results.push({
-      username:    doc.id,
-      displayName: d.displayName || `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim() || doc.id,
-      bio:         d.bio         ?? "",
-      location:    d.location    ?? "",
-      pfpUrl:      d.pfpUrl      ?? "",
-      pronouns:    d.pronouns    ?? "",
-      schoolName:  d.schoolName  ?? "",
-      userType:    d.userType    ?? "",
+      username: doc.id,
+      displayName: d.displayName || `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim() || doc.id,
+      bio: d.bio ?? '',
+      location: d.location ?? '',
+      pfpUrl: d.pfpUrl ?? '',
+      pronouns: d.pronouns ?? '',
+      schoolName: d.schoolName ?? '',
+      userType: d.userType ?? '',
     });
   }
   return results;
@@ -424,32 +435,32 @@ export async function createGroupChat(input: CreateGroupInput): Promise<Conversa
   const now = Date.now();
   const participants = [
     input.creatorUsername,
-    ...input.members.map(m => m.username).filter(u => u !== input.creatorUsername),
+    ...input.members.map((m) => m.username).filter((u) => u !== input.creatorUsername),
   ];
   const participantNames: Record<string, string> = {
     [input.creatorUsername]: input.creatorDisplayName,
   };
   const participantPfpUrls: Record<string, string> = {
-    [input.creatorUsername]: input.creatorPfpUrl ?? "",
+    [input.creatorUsername]: input.creatorPfpUrl ?? '',
   };
   for (const m of input.members) {
     participantNames[m.username] = m.displayName;
-    participantPfpUrls[m.username] = m.pfpUrl ?? "";
+    participantPfpUrls[m.username] = m.pfpUrl ?? '';
   }
 
   const ref = db.collection(CONV_COL).doc();
   await ref.set({
-    type:             "group",
+    type: 'group',
     participants,
     participantNames,
     participantPfpUrls,
-    groupName:        input.groupName.slice(0, 80),
-    groupDescription: (input.groupDescription ?? "").slice(0, 200) || null,
-    adminUsername:    input.creatorUsername,
-    encrypted:        input.encrypted ?? false,
-    lastMessage:      "",
-    lastSenderUsername: "",
-    lastAt:    now,
+    groupName: input.groupName.slice(0, 80),
+    groupDescription: (input.groupDescription ?? '').slice(0, 200) || null,
+    adminUsername: input.creatorUsername,
+    encrypted: input.encrypted ?? false,
+    lastMessage: '',
+    lastSenderUsername: '',
+    lastAt: now,
     createdAt: now,
   });
   const doc = await ref.get();
@@ -465,12 +476,13 @@ export async function updateGroupInfo(
   const doc = await ref.get();
   if (!doc.exists) return null;
   const convo = docToConversation(doc);
-  if (convo.type !== "group") return null;
+  if (convo.type !== 'group') return null;
   if (convo.adminUsername !== requestingUsername) return null;
 
   const update: Record<string, string> = {};
-  if (patch.groupName !== undefined)       update.groupName        = patch.groupName.slice(0, 80);
-  if (patch.groupDescription !== undefined) update.groupDescription = patch.groupDescription.slice(0, 200);
+  if (patch.groupName !== undefined) update.groupName = patch.groupName.slice(0, 80);
+  if (patch.groupDescription !== undefined)
+    update.groupDescription = patch.groupDescription.slice(0, 200);
   await ref.update(update);
   const updated = await ref.get();
   return docToConversation(updated);
@@ -486,11 +498,11 @@ export async function addGroupMember(
   const doc = await ref.get();
   if (!doc.exists) return null;
   const convo = docToConversation(doc);
-  if (convo.type !== "group") return null;
+  if (convo.type !== 'group') return null;
   if (convo.adminUsername !== requestingUsername) return null;
   if (convo.participants.includes(newUsername)) return convo; // already a member
 
-  const { FieldValue } = await import("firebase-admin/firestore");
+  const { FieldValue } = await import('firebase-admin/firestore');
   await ref.update({
     participants: FieldValue.arrayUnion(newUsername),
     [`participantNames.${newUsername}`]: newDisplayName,
@@ -508,11 +520,12 @@ export async function removeGroupMember(
   const doc = await ref.get();
   if (!doc.exists) return null;
   const convo = docToConversation(doc);
-  if (convo.type !== "group") return null;
+  if (convo.type !== 'group') return null;
   // Admin can remove anyone; members can remove themselves (leave)
-  if (convo.adminUsername !== requestingUsername && requestingUsername !== targetUsername) return null;
+  if (convo.adminUsername !== requestingUsername && requestingUsername !== targetUsername)
+    return null;
 
-  const { FieldValue } = await import("firebase-admin/firestore");
+  const { FieldValue } = await import('firebase-admin/firestore');
   await ref.update({
     participants: FieldValue.arrayRemove(targetUsername),
   });
@@ -531,7 +544,7 @@ export async function markConversationRead(
     if (!conversation || !conversation.participants?.includes(username)) return;
     if ((conversation.lastReadAt?.[username] ?? 0) >= (conversation.lastAt ?? 0)) return;
     // Usernames contain dots, which must be literal field-name characters.
-    transaction.update(ref, new FieldPath("lastReadAt", username), Date.now());
+    transaction.update(ref, new FieldPath('lastReadAt', username), Date.now());
   });
 }
 
@@ -544,7 +557,7 @@ export async function transferGroupAdmin(
   const doc = await ref.get();
   if (!doc.exists) return null;
   const convo = docToConversation(doc);
-  if (convo.type !== "group") return null;
+  if (convo.type !== 'group') return null;
   if (convo.adminUsername !== requestingUsername) return null;
   if (!convo.participants.includes(newAdminUsername)) return null;
 

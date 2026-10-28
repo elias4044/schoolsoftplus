@@ -1,38 +1,39 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowUpRight,
   Bug,
-  Lightbulb,
-  MessageCircle,
-  ExternalLink,
-  RefreshCw,
+  CheckCircle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleDot,
-  CheckCircle2,
-  AlertCircle,
-  Tag,
   Clock,
-  User2,
-  MessageSquare,
+  ExternalLink,
   Filter,
-  Search,
-  Plus,
   GitPullRequest,
-  ArrowUpRight,
   Inbox,
-  Send,
-  ArrowLeft,
-  CheckCircle,
+  Lightbulb,
   Loader2,
+  MessageCircle,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Tag,
+  User2,
 } from 'lucide-react';
-import { staggerContainer, fadeUp } from '@/lib/animations';
+
+import { fadeUp, staggerContainer } from '@/lib/animations';
+import { useAuth } from '@/lib/auth-context';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/auth-context';
 
 // Constants
 const REPO_URL = 'https://github.com/elias4044/schoolsoftplus';
