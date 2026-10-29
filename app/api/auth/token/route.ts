@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { signMobileToken, fetchSchoolsoftSession, exchangeCodeForToken } from "@/app/api/lib/mobileAuth";
-import { trackLoginEvent } from "@/app/api/lib/statsHelper";
+import { NextRequest, NextResponse } from 'next/server';
+
+import {
+  exchangeCodeForToken,
+  fetchSchoolsoftSession,
+  signMobileToken,
+} from '@/app/api/lib/mobileAuth';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
 /* 
    POST /api/mobile/token
@@ -34,53 +41,68 @@ import { trackLoginEvent } from "@/app/api/lib/statsHelper";
        expiresIn: 2592000   ← 30 days in seconds
      }
 */
-export async function POST(req: NextRequest) {
-  let body: { code?: string; verifier?: string; school?: string; orgid?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON body." }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as {
+    code?: string;
+    verifier?: string;
+    school?: string;
+    orgid?: string;
+  };
 
   const { code, verifier } = body;
   if (!code || !verifier) {
     return NextResponse.json(
-      { success: false, error: "code and verifier are required." },
+      { success: false, error: 'code and verifier are required.' },
       { status: 400 }
     );
   }
 
-  const school = (body.school ?? req.headers.get("x-school") ?? "engelska").trim();
+  const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
 
   /* ── Exchange code + verifier for SchoolSoft token ─────── */
   const tokenResult = await exchangeCodeForToken(school, code, verifier);
   if (!tokenResult) {
     return NextResponse.json(
-      { success: false, error: "Token exchange failed. The code may have expired." },
+      { success: false, error: 'Token exchange failed. The code may have expired.' },
       { status: 401 }
     );
   }
 
   // Extract fields from the raw SchoolSoft response
-  const ssToken           = tokenResult.access_token as string | undefined;
-  const refreshToken      = tokenResult.refresh_token as string | undefined;
-  const expiresIn         = typeof tokenResult.expires === "number" ? tokenResult.expires : undefined;
-  const ssTokenExpiresAt  = expiresIn != null ? Math.floor(Date.now() / 1000) + expiresIn : undefined;
+  const ssToken = tokenResult.access_token as string | undefined;
+  const refreshToken = tokenResult.refresh_token as string | undefined;
+  const expiresIn = typeof tokenResult.expires === 'number' ? tokenResult.expires : undefined;
+  const ssTokenExpiresAt =
+    expiresIn != null ? Math.floor(Date.now() / 1000) + expiresIn : undefined;
 
   if (!ssToken) {
     return NextResponse.json(
-      { success: false, error: "Token exchange failed — no access_token returned." },
+      { success: false, error: 'Token exchange failed — no access_token returned.' },
       { status: 401 }
     );
   }
 
   /* ── Confirm session / get canonical username ───────────── */
-  const sessionInfo = await fetchSchoolsoftSession(school, ssToken);
-  const username    = sessionInfo?.username ?? "unknown";
+  const sessionInfo = await fetchSchoolsoftSession(school, ssToken, body.orgid ?? '18');
+  if (!sessionInfo)
+    return NextResponse.json({ error: 'Account verification failed.' }, { status: 401 });
+  const username = sessionInfo.username;
 
   /* ── Issue signed JWT ────────────────────────────────────── */
-  const token = signMobileToken({ username, school, ssToken, refreshToken, ssTokenExpiresAt, userId: sessionInfo?.userId });
+  const token = signMobileToken({
+    username,
+    school,
+    ssToken,
+    refreshToken,
+    ssTokenExpiresAt,
+    userId: sessionInfo?.userId,
+  });
   trackLoginEvent(school);
 
-  return NextResponse.json({ success: true, token, tokenType: "Bearer", expiresIn: 30 * 24 * 60 * 60 });
-}
+  return NextResponse.json({
+    success: true,
+    token,
+    tokenType: 'Bearer',
+    expiresIn: 30 * 24 * 60 * 60,
+  });
+});

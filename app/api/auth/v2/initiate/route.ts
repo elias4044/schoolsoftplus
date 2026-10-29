@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { makePkcePair, makeState } from "@/app/api/lib/mobileAuth";
+import { NextRequest, NextResponse } from 'next/server';
 
-const CLIENT_ID = "eApp";
+import { makePkcePair, makeState } from '@/app/api/lib/mobileAuth';
+import { withValidation } from '@/app/api/lib/routeValidation';
+
+const CLIENT_ID = 'eApp';
 
 /**
  * GET /api/auth/v2/initiate?school=engelska&orgid=18
@@ -16,15 +18,15 @@ const CLIENT_ID = "eApp";
  * SchoolSoft will redirect back to /api/auth/v2/callback after the user
  * enters their credentials.
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const school = (searchParams.get("school") ?? "engelska").trim();
-  const orgid  = (searchParams.get("orgid")  ?? "18").trim();
+  const school = (searchParams.get('school') ?? 'engelska').trim();
+  const orgid = (searchParams.get('orgid') ?? '18').trim();
 
   /*  Determine callback URL  */
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
-    `${req.headers.get("x-forwarded-proto") ?? "https"}://${req.headers.get("host")}`;
+    `${req.headers.get('x-forwarded-proto') ?? 'https'}://${req.headers.get('host')}`;
   const redirectUri = `${appUrl}/api/auth/v2/callback`;
 
   /*  Generate PKCE + state  */
@@ -46,12 +48,13 @@ export async function GET(req: NextRequest) {
   const pkcePayload = JSON.stringify({ verifier, state, school, orgid, redirectUri });
 
   const res = NextResponse.redirect(authUrl);
-  res.cookies.set("ssp_v2_pkce", pkcePayload, {
+  res.cookies.set('ssp_v2_pkce', pkcePayload, {
     httpOnly: true,
-    sameSite: "lax",
-    path: "/",
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
     maxAge: 60 * 10, // 10 minutes — enough to complete the login
   });
 
   return res;
-}
+});

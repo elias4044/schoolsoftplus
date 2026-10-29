@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sanitizeHtml from 'sanitize-html';
 
-import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 import { handleApiError } from '@/app/api/lib/apiError';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -530,9 +531,8 @@ function sanitizeNewsDescription(description: string, attachments: Attachment[])
 }
 
 // -- GET /api/news/:id ---------------------------------------------------------
-export async function GET(req: NextRequest, context: RouteContext) {
+export const GET = withValidation(async function GET(req: NextRequest, context: RouteContext) {
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get('orgid') ?? 18;
 
   const { id } = await context.params;
 
@@ -579,6 +579,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     );
   }
 
+  const orgId = searchParams.get('orgid') ?? sess.user?.orgId;
   const api = createSchoolsoftClient(sess.school);
 
   try {
@@ -607,4 +608,4 @@ export async function GET(req: NextRequest, context: RouteContext) {
   } catch (err) {
     return handleApiError(err, 'news');
   }
-}
+});

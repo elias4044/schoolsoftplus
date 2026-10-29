@@ -1,12 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import type { DashboardLayout, WidgetInstance, WidgetId, WidgetSize } from "./types";
-import { WIDGET_REGISTRY } from "./registry";
-import { apiFetch } from "@/lib/api-client";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const STORAGE_KEY   = "ssp_dashboard_layout";
-const TIMESTAMP_KEY = "ssp_dashboard_layout_ts";
+import { apiFetch } from '@/lib/api-client';
+
+import { WIDGET_REGISTRY } from './registry';
+import type { DashboardLayout, WidgetId, WidgetInstance, WidgetSize } from './types';
+
+const STORAGE_KEY = 'ssp_dashboard_layout';
+const TIMESTAMP_KEY = 'ssp_dashboard_layout_ts';
 const CURRENT_VERSION = 1;
 /** Re-fetch from the server at most once every 7 minutes */
 const REMOTE_TTL_MS = 7 * 60 * 1000;
@@ -16,11 +18,11 @@ const SAVE_DEBOUNCE_MS = 2000;
 export const DEFAULT_LAYOUT: DashboardLayout = {
   version: CURRENT_VERSION,
   widgets: [
-    { instanceId: "homework-default", widgetId: "homework", size: "2x2" },
-    { instanceId: "schedule-default", widgetId: "schedule", size: "2x2" },
-    { instanceId: "notes-default",    widgetId: "notes",    size: "2x2" },
-    { instanceId: "lunch-default",    widgetId: "lunch",    size: "2x2" },
-    { instanceId: "news-default",     widgetId: "news",     size: "2x2" },
+    { instanceId: 'homework-default', widgetId: 'homework', size: '2x2' },
+    { instanceId: 'schedule-default', widgetId: 'schedule', size: '2x2' },
+    { instanceId: 'notes-default', widgetId: 'notes', size: '2x2' },
+    { instanceId: 'lunch-default', widgetId: 'lunch', size: '2x2' },
+    { instanceId: 'news-default', widgetId: 'news', size: '2x2' },
   ],
 };
 
@@ -29,10 +31,10 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
 /* ------------------------------------------------------------------ */
 
 function readLocal(): { layout: DashboardLayout; ts: number } | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const ts  = Number(localStorage.getItem(TIMESTAMP_KEY) ?? "0");
+    const ts = Number(localStorage.getItem(TIMESTAMP_KEY) ?? '0');
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DashboardLayout;
     if (parsed.version !== CURRENT_VERSION) return null;
@@ -47,13 +49,13 @@ function readLocal(): { layout: DashboardLayout; ts: number } | null {
 }
 
 function writeLocal(layout: DashboardLayout) {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
   localStorage.setItem(TIMESTAMP_KEY, String(Date.now()));
 }
 
 function mkId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID
+  return typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 }
@@ -63,19 +65,19 @@ function mkId() {
 /* ------------------------------------------------------------------ */
 
 export function useWidgetLayout() {
-  const [layout,    setLayout]    = useState<DashboardLayout>(DEFAULT_LAYOUT);
-  const [hydrated,  setHydrated]  = useState(false);
-  const [syncing,   setSyncing]   = useState(false);
+  const [layout, setLayout] = useState<DashboardLayout>(DEFAULT_LAYOUT);
+  const [hydrated, setHydrated] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Tracks whether the current layout came from a local or remote change
   // so we don't echo it back to the server unnecessarily.
   const skipNextSave = useRef(false);
-  const saveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---- Initial hydration ---- */
   useEffect(() => {
     const local = readLocal();
-    const now   = Date.now();
+    const now = Date.now();
 
     if (local && now - local.ts < REMOTE_TTL_MS) {
       // Cache is fresh — use it immediately, no network call
@@ -86,7 +88,7 @@ export function useWidgetLayout() {
 
     // Cache is stale (or absent) — fetch from server
     setSyncing(true);
-    apiFetch<{ layout: DashboardLayout | null }>("/api/layout")
+    apiFetch<{ layout: DashboardLayout | null }>('/api/layout')
       .then(({ layout: remote }) => {
         if (remote && Array.isArray(remote.widgets)) {
           writeLocal(remote);
@@ -125,8 +127,8 @@ export function useWidgetLayout() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       try {
-        await apiFetch("/api/layout", {
-          method: "PUT",
+        await apiFetch('/api/layout', {
+          method: 'PUT',
           body: JSON.stringify({ layout }) as unknown as BodyInit,
         });
         // Refresh the timestamp so we don't re-fetch too soon
@@ -146,9 +148,7 @@ export function useWidgetLayout() {
   const resize = useCallback((instanceId: string, size: WidgetSize) => {
     setLayout((l) => ({
       ...l,
-      widgets: l.widgets.map((w) =>
-        w.instanceId === instanceId ? { ...w, size } : w
-      ),
+      widgets: l.widgets.map((w) => (w.instanceId === instanceId ? { ...w, size } : w)),
     }));
   }, []);
 

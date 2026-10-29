@@ -1,27 +1,29 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
-import { GoogleAnalytics } from '@next/third-parties/google'
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppThemeProvider } from "@/lib/theme-context";
-import "./globals.css";
+
+import { AppThemeProvider } from '@/lib/theme-context';
+import { TooltipProvider } from '@/components/ui/tooltip';
+
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
-const APP_URL = "https://ssp.elias4044.com";
+const APP_URL = 'https://ssp.elias4044.com';
 
 export const viewport: Viewport = {
-  themeColor: "#0f0f14",
-  colorScheme: "dark",
-  width: "device-width",
+  themeColor: '#0f0f14',
+  colorScheme: 'dark',
+  width: 'device-width',
   initialScale: 1,
 };
 
@@ -29,56 +31,55 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
 
   title: {
-    default: "SchoolSoft+",
-    template: "%s · SchoolSoft+",
+    default: 'SchoolSoft+',
+    template: '%s · SchoolSoft+',
   },
   description:
-    "A fast, modern, AI-powered dashboard for your SchoolSoft account. Better UI, keyboard shortcuts, AI assistant, notes, live stats — built by a student, for students.",
+    'A fast, modern, AI-powered dashboard for your SchoolSoft account. Better UI, keyboard shortcuts, AI assistant, notes, live stats — built by a student, for students.',
 
-  applicationName: "SchoolSoft+",
-  authors: [{ name: "Elias", url: "https://github.com/elias4044" }],
+  applicationName: 'SchoolSoft+',
+  authors: [{ name: 'Elias', url: 'https://github.com/elias4044' }],
   keywords: [
-    "SchoolSoft",
-    "SchoolSoft+",
-    "school dashboard",
-    "student portal",
-    "schedule",
-    "assignments",
-    "lunch menu",
-    "AI assistant",
-    "Internationella Engelska Skolan",
-    "IES",
+    'SchoolSoft',
+    'SchoolSoft+',
+    'school dashboard',
+    'student portal',
+    'schedule',
+    'assignments',
+    'lunch menu',
+    'AI assistant',
+    'Internationella Engelska Skolan',
+    'IES',
   ],
-  creator: "Elias",
-  publisher: "Elias",
+  creator: 'Elias',
+  publisher: 'Elias',
 
   // Open Graph
   openGraph: {
-    type: "website",
-    locale: "en_US",
+    type: 'website',
+    locale: 'en_US',
     url: APP_URL,
-    siteName: "SchoolSoft+",
-    title: "SchoolSoft+ — A better student dashboard",
+    siteName: 'SchoolSoft+',
+    title: 'SchoolSoft+ — A better student dashboard',
     description:
-      "Fast, modern, AI-powered interface for your SchoolSoft account. Schedule, assignments, lunch, notes, and more.",
+      'Fast, modern, AI-powered interface for your SchoolSoft account. Schedule, assignments, lunch, notes, and more.',
     images: [
       {
-        url: "/social-preview.png",
+        url: '/social-preview.png',
         width: 1200,
         height: 630,
-        alt: "SchoolSoft+ dashboard preview",
+        alt: 'SchoolSoft+ dashboard preview',
       },
     ],
   },
 
   // Twitter / X
   twitter: {
-    card: "summary_large_image",
-    title: "SchoolSoft+ — A better student dashboard",
-    description:
-      "Fast, modern, AI-powered interface for your SchoolSoft account.",
-    images: ["/social-preview.png"],
-    creator: "@elias4044_",
+    card: 'summary_large_image',
+    title: 'SchoolSoft+ — A better student dashboard',
+    description: 'Fast, modern, AI-powered interface for your SchoolSoft account.',
+    images: ['/social-preview.png'],
+    creator: '@elias4044_',
   },
 
   // Robots
@@ -88,18 +89,16 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
 
   // Icons
   icons: {
-    icon: [
-      { url: "/icon.png", type: "image/png" },
-    ],
-    apple: "/icon.png",
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+    apple: '/icon.png',
   },
 };
 
@@ -118,7 +117,7 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </AppThemeProvider>
         <Analytics />
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""} />
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
       </body>
     </html>
   );

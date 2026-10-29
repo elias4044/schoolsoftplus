@@ -1,0 +1,22 @@
+info:
+  name: Session
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: https://sms.schoolsoft.se/engelska/rest-api/session
+  headers:
+    - name: Cookie
+      value: ""
+      disabled: true
+  auth:
+    type: bearer
+    token: BPrEqJb2WTjNUH9Yi_y1IvQUcK59vJUXOhu5X0OoK6J6xxWEM8Mf7J4_gv9I3i74mrfL9FC7kg8O9Uv5crFRhbOY7Gcos0a1iYhed8AUo92Gi2UQwHEQ10tf0H1dqKopjaG0WpMaYmAPUAtWdXa_wiO97w
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

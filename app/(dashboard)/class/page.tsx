@@ -1,24 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Users,
-  GraduationCap,
-  Search,
-  X,
-  Download,
-  ChevronDown,
-  Mail,
-  Phone,
-  MapPin,
   Briefcase,
+  ChevronDown,
+  Download,
+  GraduationCap,
   Loader2,
+  Mail,
+  MapPin,
+  Phone,
   RefreshCw,
+  Search,
+  Users,
+  X,
 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 // Types
 interface ClassStudent {

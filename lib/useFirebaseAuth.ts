@@ -1,13 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { signInWithCustomToken, onAuthStateChanged, User } from "firebase/auth";
-import { clientAuth } from "./firebase";
+import { useEffect, useRef, useState } from 'react';
+import { onAuthStateChanged, signInWithCustomToken, User } from 'firebase/auth';
+
+import { clientAuth } from './firebase';
 
 type Subscriber = (state: { fbUser: User | null; ready: boolean }) => void;
 
 let sharedUser: User | null = clientAuth.currentUser;
-let sharedReady = Boolean(clientAuth.currentUser);
+let sharedReady = false;
 let authObserverAttached = false;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 let refreshPromise: Promise<void> | null = null;
@@ -18,13 +19,13 @@ async function signInShared() {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch("/api/firebase-token");
+      const res = await fetch('/api/firebase-token');
       const data = await res.json();
       if (data.success && data.token) {
         await signInWithCustomToken(clientAuth, data.token);
       }
     } catch (err) {
-      console.error("[useFirebaseAuth] sign-in error:", err);
+      console.error('[useFirebaseAuth] sign-in error:', err);
     }
   })();
 
@@ -43,25 +44,37 @@ function emitAuthState() {
 function ensureAuthBootstrap() {
   if (!authObserverAttached) {
     authObserverAttached = true;
-    onAuthStateChanged(clientAuth, (user) => {
+    onAuthStateChanged(clientAuth, async (user) => {
       sharedUser = user;
-      sharedReady = true;
+      sharedReady = false;
+      if (user) {
+        try {
+          const token = await user.getIdTokenResult();
+          if (sharedUser?.uid !== user.uid) return;
+          sharedReady = token.claims.identityVersion === 2;
+        } catch {
+          console.error('[useFirebaseAuth] Could not verify Firebase identity');
+        }
+      }
       emitAuthState();
     });
   }
 
   if (!refreshTimer) {
     void signInShared();
-    refreshTimer = setInterval(() => {
-      void signInShared();
-    }, 55 * 60 * 1000);
+    refreshTimer = setInterval(
+      () => {
+        void signInShared();
+      },
+      55 * 60 * 1000
+    );
   }
 }
 
 /**
  * Fetches a custom Firebase token from our API (which validates the SchoolSoft
  * session), then signs into Firebase Auth with it.  Subsequent Firestore
- * onSnapshot calls will be authenticated as the SchoolSoft username.
+ * onSnapshot calls will be authenticated as the SchoolSoft user ID.
  *
  * The token is refreshed every 55 minutes (Firebase custom tokens expire in
  * 1 hour; Firebase ID tokens expire in 1 hour but are auto-refreshed by the SDK).

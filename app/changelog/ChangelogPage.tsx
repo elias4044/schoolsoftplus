@@ -1,29 +1,33 @@
-"use client";
-
-import { useState } from "react";
-import { motion } from "framer-motion";
-import Link from "next/link";
-import {
-  Sparkles,
-  ArrowLeft,
-  GitBranch,
-  ExternalLink,
-  Tag,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import { CHANGELOG, type ChangelogEntry, type ChangelogTag } from "@/lib/changelog";
-import { cn } from "@/lib/utils";
+'use client';
 
 /* ── Reveal wrapper ─────────────────────────────────────── */
-import { useRef } from "react";
-import { useInView } from "framer-motion";
+import { useRef, useState } from 'react';
+import Link from 'next/link';
+import { motion, useInView } from 'framer-motion';
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  GitBranch,
+  Sparkles,
+  Tag,
+} from 'lucide-react';
 
-function Reveal({ children, delay = 0, className = "" }: {
-  children: React.ReactNode; delay?: number; className?: string;
+import { CHANGELOG, type ChangelogEntry, type ChangelogTag } from '@/lib/changelog';
+import { cn } from '@/lib/utils';
+
+function Reveal({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-5% 0px" });
+  const inView = useInView(ref, { once: true, margin: '-5% 0px' });
   return (
     <motion.div
       ref={ref}
@@ -39,11 +43,15 @@ function Reveal({ children, delay = 0, className = "" }: {
 
 /* ── Tag pill ───────────────────────────────────────────── */
 const TAG_META: Record<ChangelogTag, { label: string; color: string; bg: string }> = {
-  feature:     { label: "Feature",     color: "oklch(0.65 0.22 278)", bg: "oklch(0.65 0.22 278 / 12%)" },
-  improvement: { label: "Improvement", color: "oklch(0.72 0.18 148)", bg: "oklch(0.72 0.18 148 / 12%)" },
-  fix:         { label: "Fix",         color: "oklch(0.78 0.16 55)",  bg: "oklch(0.78 0.16 55  / 12%)" },
-  security:    { label: "Security",    color: "oklch(0.72 0.18 310)", bg: "oklch(0.72 0.18 310 / 12%)" },
-  breaking:    { label: "Breaking",    color: "oklch(0.68 0.22 25)",  bg: "oklch(0.68 0.22 25  / 12%)" },
+  feature: { label: 'Feature', color: 'oklch(0.65 0.22 278)', bg: 'oklch(0.65 0.22 278 / 12%)' },
+  improvement: {
+    label: 'Improvement',
+    color: 'oklch(0.72 0.18 148)',
+    bg: 'oklch(0.72 0.18 148 / 12%)',
+  },
+  fix: { label: 'Fix', color: 'oklch(0.78 0.16 55)', bg: 'oklch(0.78 0.16 55  / 12%)' },
+  security: { label: 'Security', color: 'oklch(0.72 0.18 310)', bg: 'oklch(0.72 0.18 310 / 12%)' },
+  breaking: { label: 'Breaking', color: 'oklch(0.68 0.22 25)', bg: 'oklch(0.68 0.22 25  / 12%)' },
 };
 
 function TagPill({ tag, small = false }: { tag: ChangelogTag; small?: boolean }) {
@@ -51,109 +59,123 @@ function TagPill({ tag, small = false }: { tag: ChangelogTag; small?: boolean })
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap",
-        small ? "text-[9px] px-1.5 py-0.5" : "text-[11px] px-2.5 py-0.5"
+        'inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap',
+        small ? 'px-1.5 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[11px]'
       )}
       style={{ color: m.color, background: m.bg }}
     >
-      {!small && <Tag className="w-2.5 h-2.5" />}
+      {!small && <Tag className="h-2.5 w-2.5" />}
       {m.label}
     </span>
   );
 }
 
 /* ── Entry card ─────────────────────────────────────────── */
-function EntryCard({ entry, defaultOpen = false }: { entry: ChangelogEntry; defaultOpen?: boolean }) {
+function EntryCard({
+  entry,
+  defaultOpen = false,
+}: {
+  entry: ChangelogEntry;
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
 
-  const dateStr = new Date(entry.date).toLocaleDateString("en-SE", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const dateStr = new Date(entry.date).toLocaleDateString('en-SE', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card overflow-hidden",
+        'bg-card overflow-hidden rounded-2xl border',
         entry.highlight
-          ? "border-primary/30 shadow-[0_0_0_1px_oklch(0.65_0.22_278/15%),0_8px_40px_oklch(0_0_0/0.3)]"
-          : "border-border"
+          ? 'border-primary/30 shadow-[0_0_0_1px_oklch(0.65_0.22_278/15%),0_8px_40px_oklch(0_0_0/0.3)]'
+          : 'border-border'
       )}
     >
       {/* Highlight glow line */}
       {entry.highlight && (
         <div
           className="h-px w-full"
-          style={{ background: "linear-gradient(90deg, transparent, oklch(0.65 0.22 278 / 60%), transparent)" }}
+          style={{
+            background:
+              'linear-gradient(90deg, transparent, oklch(0.65 0.22 278 / 60%), transparent)',
+          }}
         />
       )}
 
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-start gap-5 px-7 py-6 text-left hover:bg-white/3 transition-colors"
+        className="flex w-full items-start gap-5 px-7 py-6 text-left transition-colors hover:bg-white/3"
       >
         {/* Version chip */}
         <div
-          className="shrink-0 mt-1 rounded-xl px-3 py-1.5 text-xs font-bold font-mono tracking-tight"
+          className="mt-1 shrink-0 rounded-xl px-3 py-1.5 font-mono text-xs font-bold tracking-tight"
           style={{
             background: entry.highlight
-              ? "linear-gradient(135deg, oklch(0.65 0.22 278 / 20%), oklch(0.55 0.25 295 / 20%))"
-              : "oklch(1 0 0 / 6%)",
-            color: entry.highlight ? "oklch(0.78 0.18 278)" : "oklch(0.65 0 0)",
+              ? 'linear-gradient(135deg, oklch(0.65 0.22 278 / 20%), oklch(0.55 0.25 295 / 20%))'
+              : 'oklch(1 0 0 / 6%)',
+            color: entry.highlight ? 'oklch(0.78 0.18 278)' : 'oklch(0.65 0 0)',
           }}
         >
           v{entry.version}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             {entry.highlight && (
               <span
-                className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest rounded-full px-2 py-0.5"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold tracking-widest uppercase"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.65 0.22 278 / 22%), oklch(0.55 0.25 295 / 22%))",
-                  color: "oklch(0.78 0.18 278)",
+                  background:
+                    'linear-gradient(135deg, oklch(0.65 0.22 278 / 22%), oklch(0.55 0.25 295 / 22%))',
+                  color: 'oklch(0.78 0.18 278)',
                 }}
               >
-                <Sparkles className="w-2.5 h-2.5" /> Latest
+                <Sparkles className="h-2.5 w-2.5" /> Latest
               </span>
             )}
             {entry.tags.map((t) => (
               <TagPill key={t} tag={t} />
             ))}
           </div>
-          <p className="text-base font-semibold leading-snug text-foreground">{entry.title}</p>
-          <p className="text-xs text-muted-foreground mt-1">{dateStr}</p>
+          <p className="text-foreground text-base leading-snug font-semibold">{entry.title}</p>
+          <p className="text-muted-foreground mt-1 text-xs">{dateStr}</p>
           {!open && (
-            <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-2">
+            <p className="text-muted-foreground mt-2 line-clamp-2 text-sm leading-relaxed">
               {entry.summary}
             </p>
           )}
         </div>
 
-        <div className="shrink-0 text-muted-foreground mt-2">
-          {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <div className="text-muted-foreground mt-2 shrink-0">
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </div>
       </button>
 
       {/* Expanded body */}
       {open && (
-        <div className="px-7 pb-7 pt-0 border-t border-border">
-          <p className="text-sm text-muted-foreground leading-relaxed mt-5 mb-6">{entry.summary}</p>
+        <div className="border-border border-t px-7 pt-0 pb-7">
+          <p className="text-muted-foreground mt-5 mb-6 text-sm leading-relaxed">{entry.summary}</p>
 
           <div className="space-y-6">
             {entry.sections.map((section) => (
               <div key={section.title}>
-                <p className="text-sm font-semibold text-foreground mb-3">{section.title}</p>
+                <p className="text-foreground mb-3 text-sm font-semibold">{section.title}</p>
                 <ul className="space-y-2.5">
                   {section.items.map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <div
-                        className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
-                        style={{ background: item.tag ? TAG_META[item.tag].color : "oklch(0.5 0 0)" }}
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{
+                          background: item.tag ? TAG_META[item.tag].color : 'oklch(0.5 0 0)',
+                        }}
                       />
-                      <span className="text-sm text-muted-foreground leading-relaxed flex-1">{item.text}</span>
+                      <span className="text-muted-foreground flex-1 text-sm leading-relaxed">
+                        {item.text}
+                      </span>
                       {item.tag && <TagPill tag={item.tag} small />}
                     </li>
                   ))}
@@ -167,11 +189,11 @@ function EntryCard({ entry, defaultOpen = false }: { entry: ChangelogEntry; defa
               href={entry.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground mt-6 inline-flex items-center gap-1.5 text-xs transition-colors"
             >
-              <GitBranch className="w-3.5 h-3.5" />
+              <GitBranch className="h-3.5 w-3.5" />
               View release on GitHub
-              <ExternalLink className="w-3 h-3 opacity-60" />
+              <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           )}
         </div>
@@ -183,51 +205,53 @@ function EntryCard({ entry, defaultOpen = false }: { entry: ChangelogEntry; defa
 /* ── Page ───────────────────────────────────────────────── */
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-
+    <div className="bg-background text-foreground min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="border-border bg-background/90 sticky top-0 z-50 border-b backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"
+              className="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-white/8"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-sm">SchoolSoft+</span>
+              <Sparkles className="text-primary h-4 w-4" />
+              <span className="text-sm font-semibold">SchoolSoft+</span>
             </div>
           </div>
           <a
             href="https://github.com/elias4044/schoolsoftplus/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors"
           >
-            <GitBranch className="w-3.5 h-3.5" />
+            <GitBranch className="h-3.5 w-3.5" />
             GitHub releases
-            <ExternalLink className="w-3 h-3 opacity-50" />
+            <ExternalLink className="h-3 w-3 opacity-50" />
           </a>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="border-b border-border">
-        <div className="max-w-3xl mx-auto px-6 py-14">
+      <section className="border-border border-b">
+        <div className="mx-auto max-w-3xl px-6 py-14">
           <Reveal>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Release notes</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">What&rsquo;s new</h1>
-            <p className="text-sm text-muted-foreground max-w-lg leading-relaxed">
-              Every change, improvement, and fix to SchoolSoft+. The latest version is always at the top.
+            <p className="text-muted-foreground mb-3 text-xs tracking-widest uppercase">
+              Release notes
+            </p>
+            <h1 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">What&rsquo;s new</h1>
+            <p className="text-muted-foreground max-w-lg text-sm leading-relaxed">
+              Every change, improvement, and fix to SchoolSoft+. The latest version is always at the
+              top.
             </p>
           </Reveal>
         </div>
       </section>
 
       {/* Entries */}
-      <section className="max-w-3xl mx-auto px-6 py-10 space-y-4">
+      <section className="mx-auto max-w-3xl space-y-4 px-6 py-10">
         {CHANGELOG.map((entry, i) => (
           <Reveal key={entry.version} delay={i * 0.04}>
             <EntryCard entry={entry} defaultOpen={i === 0} />
@@ -236,10 +260,10 @@ export default function ChangelogPage() {
 
         {/* GitHub CTA */}
         <Reveal delay={0.2}>
-          <div className="rounded-xl border border-border bg-card p-5 flex items-center justify-between gap-4 mt-2">
+          <div className="border-border bg-card mt-2 flex items-center justify-between gap-4 rounded-xl border p-5">
             <div>
-              <p className="text-sm font-medium mb-0.5">Want to see what&rsquo;s coming?</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="mb-0.5 text-sm font-medium">Want to see what&rsquo;s coming?</p>
+              <p className="text-muted-foreground text-xs">
                 Check open issues and pull requests on GitHub.
               </p>
             </div>
@@ -247,9 +271,9 @@ export default function ChangelogPage() {
               href="https://github.com/elias4044/schoolsoftplus/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+              className="bg-primary text-primary-foreground inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90"
             >
-              <GitBranch className="w-3.5 h-3.5" />
+              <GitBranch className="h-3.5 w-3.5" />
               GitHub
             </a>
           </div>
@@ -257,18 +281,33 @@ export default function ChangelogPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-10">
-        <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <footer className="border-border mt-10 border-t">
+        <div className="mx-auto flex max-w-3xl flex-col items-start justify-between gap-4 px-6 py-8 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
+            <Sparkles className="text-primary h-4 w-4" />
             <span className="text-sm font-semibold">SchoolSoft+</span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <Link href="/"            className="hover:text-foreground transition-colors">Home</Link>
-            <Link href="/stats"       className="hover:text-foreground transition-colors">Stats</Link>
-            <Link href="/open-source" className="hover:text-foreground transition-colors">Open source</Link>
-            <Link href="/terms"       className="hover:text-foreground transition-colors">Terms</Link>
-            <a href="https://github.com/elias4044/schoolsoftplus" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <Link href="/" className="hover:text-foreground transition-colors">
+              Home
+            </Link>
+            <Link href="/stats" className="hover:text-foreground transition-colors">
+              Stats
+            </Link>
+            <Link href="/open-source" className="hover:text-foreground transition-colors">
+              Open source
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+            <a
+              href="https://github.com/elias4044/schoolsoftplus"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>

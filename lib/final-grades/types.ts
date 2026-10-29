@@ -1,4 +1,4 @@
-export type FinalGradeLetter = "A" | "B" | "C" | "D" | "E" | "F";
+export type FinalGradeLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export interface FinalGradeCell {
   period: string;
@@ -16,7 +16,7 @@ export interface FinalGradeSubject {
 }
 
 export interface FinalGradesDoc {
-  username: string;
+  userId: string;
   subjects: FinalGradeSubject[];
   updatedAt: number;
 }

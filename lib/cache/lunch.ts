@@ -1,5 +1,5 @@
-import { apiFetch } from "@/lib/api-client";
-import { dedupe, readCache, writeCache } from "@/lib/cache";
+import { apiFetch } from '@/lib/api-client';
+import { dedupe, readCache, writeCache } from '@/lib/cache';
 
 /* =========================================================
    Types
@@ -13,7 +13,6 @@ export interface ApiDay {
   dayId: number;
   dishes?: ApiDish[];
 }
-
 
 export function getWeek(offset: number) {
   const now = new Date();
@@ -33,27 +32,24 @@ export function getWeek(offset: number) {
   firstMonday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
   const week = 1 + Math.round((monday.getTime() - firstMonday.getTime()) / (7 * 86_400_000));
 
-  const fmt = (d: Date) => d.toLocaleDateString("en-SE", { month: "short", day: "numeric" });
+  const fmt = (d: Date) => d.toLocaleDateString('en-SE', { month: 'short', day: 'numeric' });
 
   return { monday, week, year, range: `${fmt(monday)} – ${fmt(friday)}` };
 }
 
-
 export const lunchKey = (year: number, week: number) => `lunch:${year}-${week}`;
-
 
 export function fetchLunch(year: number, week: number): Promise<ApiDay[]> {
   const key = lunchKey(year, week);
   return dedupe(key, async () => {
-    const res = await apiFetch<{ success: boolean; data: ApiDay[] }>("/api/lunch", {
+    const res = await apiFetch<{ success: boolean; data: ApiDay[] }>('/api/lunch', {
       params: { week, year },
     });
-    if (!Array.isArray(res?.data)) throw new Error("Invalid lunch response");
+    if (!Array.isArray(res?.data)) throw new Error('Invalid lunch response');
     writeCache(key, res.data);
     return res.data;
   });
 }
-
 
 /**
  * Fetch and cache several weeks, given as offsets from the current week (0 = this week).
@@ -64,7 +60,7 @@ export async function prefetchLunchWeeks(
   { maxAgeMs = 0 }: { maxAgeMs?: number } = {}
 ): Promise<void> {
   await Promise.all(
-    offsets.map(async offset => {
+    offsets.map(async (offset) => {
       const { week, year } = getWeek(offset);
       if (maxAgeMs > 0) {
         const cached = readCache<ApiDay[]>(lunchKey(year, week));

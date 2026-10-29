@@ -15,19 +15,20 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiFetch, ApiError } from '@/lib/api-client';
+
+import { ApiError, apiFetch } from '@/lib/api-client';
 import {
+  computeFinalGradesInsights,
   FINAL_GRADE_LETTERS,
   FINAL_GRADE_POINTS,
-  computeFinalGradesInsights,
   parseFinalGradesPaste,
 } from '@/lib/final-grades/analytics';
 import type { FinalGradeCell, FinalGradeLetter, FinalGradeSubject } from '@/lib/final-grades/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   FinalGradeDistributionChart,
   FinalMeritBarChart,

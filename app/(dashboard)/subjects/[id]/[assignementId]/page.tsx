@@ -1,33 +1,34 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowLeft,
   AlertCircle,
-  ClipboardList,
-  FlaskConical,
-  FileText,
-  CheckSquare,
-  Clock,
-  CheckCircle2,
-  MessageSquare,
+  ArrowLeft,
   BookMarked,
-  Link2,
-  ChevronDown,
   CalendarDays,
-  User,
-  Tag,
+  CheckCircle2,
+  CheckSquare,
+  ChevronDown,
+  ClipboardList,
+  Clock,
+  FileText,
+  FlaskConical,
+  Link2,
+  MessageSquare,
   Share2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { staggerContainer, fadeUp } from "@/lib/animations";
-import { apiFetch } from "@/lib/api-client";
-import ShareConversationPicker from "@/components/ShareConversationPicker";
-import { inferGrade } from "@/lib/grades/inferGrade";
-import { OVERALL_GRADE_STYLE } from "@/lib/grades/constants";
-import type { PartialMoment, AssessedCriteriaTab, AssessedCriteria } from "@/lib/grades/types";
+  Tag,
+  User,
+} from 'lucide-react';
+
+import { fadeUp, staggerContainer } from '@/lib/animations';
+import { apiFetch } from '@/lib/api-client';
+import { OVERALL_GRADE_STYLE } from '@/lib/grades/constants';
+import { inferGrade } from '@/lib/grades/inferGrade';
+import type { AssessedCriteria, AssessedCriteriaTab, PartialMoment } from '@/lib/grades/types';
+import { Badge } from '@/components/ui/badge';
+import ShareConversationPicker from '@/components/ShareConversationPicker';
 
 /* -------------------------------------------------------------------------
    Types
@@ -63,7 +64,7 @@ interface Grading {
 
 interface AssignmentDetailResponse {
   success: boolean;
-  type: "assignment" | "planning";
+  type: 'assignment' | 'planning';
   assignment: AssignmentMeta;
   sections: Record<string, unknown>[];
   connectedPlannings: Record<string, unknown>[];
@@ -75,27 +76,42 @@ interface AssignmentDetailResponse {
    Constants / helpers
 -------------------------------------------------------------------------- */
 const TYPE_ICONS: Record<string, React.ElementType> = {
-  Test:               FlaskConical,
-  Checkpoint:         CheckSquare,
-  Planning:           FileText,
-  "Classroom Activity": ClipboardList,
+  Test: FlaskConical,
+  Checkpoint: CheckSquare,
+  Planning: FileText,
+  'Classroom Activity': ClipboardList,
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  ONGOING:   { bg: "oklch(0.65 0.22 148 / 15%)", color: "oklch(0.65 0.22 148)",  border: "oklch(0.65 0.22 148 / 30%)",  label: "Active"   },
-  UPCOMING: { bg: "oklch(0.65 0.22 278 / 15%)", color: "oklch(0.75 0.15 278)",  border: "oklch(0.65 0.22 278 / 30%)",  label: "Upcoming" },
-  EXPIRED:  { bg: "oklch(1 0 0 / 5%)",          color: "oklch(0.55 0 0)",        border: "oklch(1 0 0 / 10%)",          label: "Expired"  },
+  ONGOING: {
+    bg: 'oklch(0.65 0.22 148 / 15%)',
+    color: 'oklch(0.65 0.22 148)',
+    border: 'oklch(0.65 0.22 148 / 30%)',
+    label: 'Active',
+  },
+  UPCOMING: {
+    bg: 'oklch(0.65 0.22 278 / 15%)',
+    color: 'oklch(0.75 0.15 278)',
+    border: 'oklch(0.65 0.22 278 / 30%)',
+    label: 'Upcoming',
+  },
+  EXPIRED: {
+    bg: 'oklch(1 0 0 / 5%)',
+    color: 'oklch(0.55 0 0)',
+    border: 'oklch(1 0 0 / 10%)',
+    label: 'Expired',
+  },
 };
 
 const SUBMISSION_STYLE: Record<string, { color: string; label: string }> = {
-  SUBMITTED:  { color: "oklch(0.65 0.22 148)", label: "Submitted"  },
-  NO_STATUS:  { color: "oklch(0.55 0 0)",       label: "Not submitted" },
-  LATE:       { color: "oklch(0.65 0.18 40)",   label: "Late"       },
+  SUBMITTED: { color: 'oklch(0.65 0.22 148)', label: 'Submitted' },
+  NO_STATUS: { color: 'oklch(0.55 0 0)', label: 'Not submitted' },
+  LATE: { color: 'oklch(0.65 0.18 40)', label: 'Late' },
 };
 
 const RESULT_STYLE: Record<string, { color: string; label: string }> = {
-  REPORTED:   { color: "oklch(0.65 0.22 148)", label: "Reported"     },
-  NO_STATUS:  { color: "oklch(0.55 0 0)",       label: "Not reported" },
+  REPORTED: { color: 'oklch(0.65 0.22 148)', label: 'Reported' },
+  NO_STATUS: { color: 'oklch(0.55 0 0)', label: 'Not reported' },
 };
 
 function getStatusStyle(status: string) {
@@ -103,10 +119,10 @@ function getStatusStyle(status: string) {
 }
 
 function formatDate(dateStr?: string | null, timeStr?: string | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return '—';
   const d = new Date(dateStr);
-  const date = d.toLocaleDateString("en-SE", { day: "numeric", month: "short", year: "numeric" });
-  if (timeStr && timeStr !== "00:00" && timeStr !== "") return `${date} · ${timeStr}`;
+  const date = d.toLocaleDateString('en-SE', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (timeStr && timeStr !== '00:00' && timeStr !== '') return `${date} · ${timeStr}`;
   return date;
 }
 
@@ -130,22 +146,22 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-white/7 bg-card overflow-hidden">
+    <div className="bg-card overflow-hidden rounded-xl border border-white/7">
       <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/3 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/3"
       >
         <div className="flex items-center gap-2.5">
-          <Icon className="w-4 h-4 text-primary shrink-0" />
+          <Icon className="text-primary h-4 w-4 shrink-0" />
           <span className="text-sm font-semibold">{title}</span>
           {badge != null && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 text-muted-foreground tabular-nums">
+            <span className="text-muted-foreground rounded-full bg-white/8 px-1.5 py-0.5 text-[10px] tabular-nums">
               {badge}
             </span>
           )}
         </div>
         <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <ChevronDown className="text-muted-foreground h-4 w-4" />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -153,10 +169,10 @@ function Section({
           <motion.div
             key="body"
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }}
-            style={{ overflow: "hidden" }}
+            style={{ overflow: 'hidden' }}
           >
             <div className="px-4 pb-4">{children}</div>
           </motion.div>
@@ -177,12 +193,12 @@ function MetaRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
-      <div className="flex items-center gap-1.5 w-32 shrink-0 text-xs text-muted-foreground mt-0.5">
-        <Icon className="w-3 h-3 shrink-0" />
+    <div className="flex items-start gap-3 border-b border-white/5 py-2 last:border-0">
+      <div className="text-muted-foreground mt-0.5 flex w-32 shrink-0 items-center gap-1.5 text-xs">
+        <Icon className="h-3 w-3 shrink-0" />
         {label}
       </div>
-      <div className="flex-1 text-xs text-foreground/90">{children}</div>
+      <div className="text-foreground/90 flex-1 text-xs">{children}</div>
     </div>
   );
 }
@@ -191,9 +207,9 @@ function MetaRow({
 function CommentBlock({ label, text }: { label: string; text: string }) {
   if (!text) return null;
   return (
-    <div className="rounded-lg bg-white/4 border border-white/6 px-3 py-2.5 mb-2">
-      <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wide">{label}</p>
-      <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">{text}</p>
+    <div className="mb-2 rounded-lg border border-white/6 bg-white/4 px-3 py-2.5">
+      <p className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">{label}</p>
+      <p className="text-foreground/80 text-xs leading-relaxed whitespace-pre-line">{text}</p>
     </div>
   );
 }
@@ -201,11 +217,11 @@ function CommentBlock({ label, text }: { label: string; text: string }) {
 /** Skeleton loader */
 function Skeleton() {
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-4">
-      <div className="h-6 w-40 rounded-lg bg-card animate-pulse" />
-      <div className="h-28 rounded-xl bg-card animate-pulse" />
-      <div className="h-48 rounded-xl bg-card animate-pulse" />
-      <div className="h-32 rounded-xl bg-card animate-pulse" />
+    <div className="mx-auto max-w-2xl space-y-4 p-6">
+      <div className="bg-card h-6 w-40 animate-pulse rounded-lg" />
+      <div className="bg-card h-28 animate-pulse rounded-xl" />
+      <div className="bg-card h-48 animate-pulse rounded-xl" />
+      <div className="bg-card h-32 animate-pulse rounded-xl" />
     </div>
   );
 }
@@ -217,7 +233,7 @@ export default function AssignmentDetailPage() {
   const { assignementId: id } = useParams<{ assignementId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const type = searchParams.get("type") ?? "assignment";
+  const type = searchParams.get('type') ?? 'assignment';
 
   const [data, setData] = useState<AssignmentDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -226,7 +242,7 @@ export default function AssignmentDetailPage() {
   useEffect(() => {
     if (!id) return;
     apiFetch<AssignmentDetailResponse>(`/api/assignment/${id}?type=${type}`)
-      .then(d => {
+      .then((d) => {
         if (d?.success) setData(d);
         else setError(true);
       })
@@ -238,11 +254,11 @@ export default function AssignmentDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl p-6">
         <BackButton onClick={() => router.back()} />
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-          <AlertCircle className="w-8 h-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Failed to load assignment data.</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <AlertCircle className="text-muted-foreground h-8 w-8" />
+          <p className="text-muted-foreground text-sm">Failed to load assignment data.</p>
         </div>
       </div>
     );
@@ -259,19 +275,20 @@ export default function AssignmentDetailPage() {
     Boolean(assessment.teacherComment) ||
     Boolean(assessment.studentComment) ||
     assessment.partialMoments.length > 0 ||
-    (assessment.assessedCriteriaTabs as AssessedCriteriaTab[]).some(t => (t.assessedCriteria ?? []).length > 0);
+    (assessment.assessedCriteriaTabs as AssessedCriteriaTab[]).some(
+      (t) => (t.assessedCriteria ?? []).length > 0
+    );
 
   // Filter out non-object entries (e.g. empty arrays) that the API sometimes returns
   const validSelectedCriteria = (grading.selectedCriteria as unknown[]).filter(
-    c => c !== null && typeof c === "object" && !Array.isArray(c) && "level" in (c as object)
+    (c) => c !== null && typeof c === 'object' && !Array.isArray(c) && 'level' in (c as object)
   ) as AssessedCriteria[];
 
-  const hasGrading =
-    grading.availableColumns.length > 0 || validSelectedCriteria.length > 0;
+  const hasGrading = grading.availableColumns.length > 0 || validSelectedCriteria.length > 0;
   const hasConnected = connectedPlannings.length > 0;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl p-6">
       <BackButton onClick={() => router.back()} />
 
       {/* Header card */}
@@ -279,26 +296,25 @@ export default function AssignmentDetailPage() {
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.38 }}
-        className="rounded-xl border border-white/7 bg-card px-5 py-4 mb-4"
+        className="bg-card mb-4 rounded-xl border border-white/7 px-5 py-4"
         style={{ borderLeft: `4px solid ${s.color}` }}
       >
         <div className="flex items-start gap-3">
           <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             style={{ background: s.bg, border: `1px solid ${s.border}` }}
           >
-            <TypeIcon className="w-4.5 h-4.5" style={{ color: s.color }} />
+            <TypeIcon className="h-4.5 w-4.5" style={{ color: s.color }} />
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold tracking-tight leading-snug">{assignment.title}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg leading-snug font-bold tracking-tight">{assignment.title}</h1>
             {assignment.subTitle && (
-              <p className="text-xs text-muted-foreground mt-0.5">{assignment.subTitle}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">{assignment.subTitle}</p>
             )}
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-
-              <span className="text-[10px] text-muted-foreground">{assignment.type}</span>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-[10px]">{assignment.type}</span>
               {assignment.subjectNames && (
-                <span className="text-[10px] text-muted-foreground">{assignment.subjectNames}</span>
+                <span className="text-muted-foreground text-[10px]">{assignment.subjectNames}</span>
               )}
             </div>
           </div>
@@ -306,12 +322,7 @@ export default function AssignmentDetailPage() {
       </motion.div>
 
       {/* Main content */}
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="space-y-3"
-      >
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
         {/* Details */}
         <motion.div variants={fadeUp}>
           <Section title="Details" icon={Tag}>
@@ -330,15 +341,16 @@ export default function AssignmentDetailPage() {
               <span style={{ color: result.color }}>{result.label}</span>
             </MetaRow>
             {assignment.description && (
-              <div className="pt-3 mt-1 border-t border-white/5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Description</p>
+              <div className="mt-1 border-t border-white/5 pt-3">
+                <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
+                  Description
+                </p>
                 <div
-                  className="text-xs text-foreground/80 leading-relaxed [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:break-all [&_p]:mb-1.5 last:[&_p]:mb-0"
+                  className="text-foreground/80 [&_a]:text-primary text-xs leading-relaxed [&_a]:break-all [&_a]:underline [&_a]:underline-offset-2 [&_p]:mb-1.5 last:[&_p]:mb-0"
                   dangerouslySetInnerHTML={{ __html: assignment.description }}
                 />
               </div>
             )}
-
           </Section>
         </motion.div>
 
@@ -360,18 +372,18 @@ export default function AssignmentDetailPage() {
             <Section title="Grading" icon={BookMarked} defaultOpen={false}>
               {grading.availableColumns.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">
+                  <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
                     Available columns
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {(grading.availableColumns as Record<string, unknown>[]).map((col, i) => (
                       <span
                         key={i}
-                        className="text-[10px] px-2 py-1 rounded-md"
+                        className="rounded-md px-2 py-1 text-[10px]"
                         style={{
-                          background: "oklch(0.65 0.22 278 / 12%)",
-                          color: "oklch(0.75 0.15 278)",
-                          border: "1px solid oklch(0.65 0.22 278 / 20%)",
+                          background: 'oklch(0.65 0.22 278 / 12%)',
+                          color: 'oklch(0.75 0.15 278)',
+                          border: '1px solid oklch(0.65 0.22 278 / 20%)',
                         }}
                       >
                         {String(col.name ?? col.label ?? col.id ?? i)}
@@ -382,7 +394,7 @@ export default function AssignmentDetailPage() {
               )}
               {validSelectedCriteria.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">
+                  <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
                     Selected criteria
                   </p>
                   <div className="space-y-1.5">
@@ -399,7 +411,12 @@ export default function AssignmentDetailPage() {
         {/* Sections */}
         {sections.length > 0 && (
           <motion.div variants={fadeUp}>
-            <Section title="Content sections" icon={FileText} defaultOpen={false} badge={sections.length}>
+            <Section
+              title="Content sections"
+              icon={FileText}
+              defaultOpen={false}
+              badge={sections.length}
+            >
               <div className="space-y-2">
                 {sections.map((sec, i) => (
                   <SectionRow key={i} section={sec} />
@@ -412,20 +429,25 @@ export default function AssignmentDetailPage() {
         {/* Connected plannings */}
         {hasConnected && (
           <motion.div variants={fadeUp}>
-            <Section title="Connected plannings" icon={Link2} defaultOpen={false} badge={connectedPlannings.length}>
+            <Section
+              title="Connected plannings"
+              icon={Link2}
+              defaultOpen={false}
+              badge={connectedPlannings.length}
+            >
               <div className="space-y-2">
                 {(connectedPlannings as Record<string, unknown>[]).map((p, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"
+                    className="flex items-center gap-3 border-b border-white/5 py-2 last:border-0"
                   >
-                    <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">
+                    <Link2 className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">
                         {String(p.title ?? p.name ?? `Planning ${i + 1}`)}
                       </p>
                       {Boolean(p.endDate) && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="text-muted-foreground mt-0.5 text-[10px]">
                           {formatDate(String(p.endDate))}
                         </p>
                       )}
@@ -450,19 +472,19 @@ function BackButton({ onClick }: { onClick: () => void }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       onClick={onClick}
-      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5"
+      className="text-muted-foreground hover:text-foreground mb-5 flex items-center gap-1.5 text-sm transition-colors"
     >
-      <ArrowLeft className="w-4 h-4" /> Back
+      <ArrowLeft className="h-4 w-4" /> Back
     </motion.button>
   );
 }
 
 function PartialMomentRow({ moment }: { moment: Record<string, unknown> }) {
   // legacy fallback – primary display is AssessmentCard
-  const label = String(moment.title ?? moment.name ?? "Moment");
-  const value = String(moment.grade ?? moment.value ?? moment.result ?? "");
+  const label = String(moment.title ?? moment.name ?? 'Moment');
+  const value = String(moment.grade ?? moment.value ?? moment.result ?? '');
   return (
-    <div className="flex items-center justify-between py-1.5 text-xs border-b border-white/5 last:border-0">
+    <div className="flex items-center justify-between border-b border-white/5 py-1.5 text-xs last:border-0">
       <span className="text-muted-foreground">{label}</span>
       {value && <span className="font-medium">{value}</span>}
     </div>
@@ -473,27 +495,65 @@ function PartialMomentRow({ moment }: { moment: Record<string, unknown> }) {
    Assessment UI styles
 -------------------------------------------------------------------------- */
 
-const GRADE_LEVEL_STYLE: Record<string, { track: string; fill: string; glow: string; label: string }> = {
-  e: { track: "oklch(0.65 0.22 148 / 12%)", fill: "oklch(0.65 0.22 148)", glow: "oklch(0.65 0.22 148 / 35%)", label: "E" },
-  c: { track: "oklch(0.65 0.18 210 / 12%)", fill: "oklch(0.65 0.18 210)", glow: "oklch(0.65 0.18 210 / 35%)", label: "C" },
-  a: { track: "oklch(0.65 0.22 278 / 12%)", fill: "oklch(0.65 0.22 278)", glow: "oklch(0.65 0.22 278 / 35%)", label: "A" },
+const GRADE_LEVEL_STYLE: Record<
+  string,
+  { track: string; fill: string; glow: string; label: string }
+> = {
+  e: {
+    track: 'oklch(0.65 0.22 148 / 12%)',
+    fill: 'oklch(0.65 0.22 148)',
+    glow: 'oklch(0.65 0.22 148 / 35%)',
+    label: 'E',
+  },
+  c: {
+    track: 'oklch(0.65 0.18 210 / 12%)',
+    fill: 'oklch(0.65 0.18 210)',
+    glow: 'oklch(0.65 0.18 210 / 35%)',
+    label: 'C',
+  },
+  a: {
+    track: 'oklch(0.65 0.22 278 / 12%)',
+    fill: 'oklch(0.65 0.22 278)',
+    glow: 'oklch(0.65 0.22 278 / 35%)',
+    label: 'A',
+  },
 };
 
 // Cycling palette for generic (non–grade-level) partial moments
 const GENERIC_BAR_PALETTE = [
-  { track: "oklch(0.65 0.18 200 / 12%)", fill: "oklch(0.70 0.16 200)", glow: "oklch(0.65 0.18 200 / 30%)" },
-  { track: "oklch(0.65 0.18 260 / 12%)", fill: "oklch(0.70 0.16 260)", glow: "oklch(0.65 0.18 260 / 30%)" },
-  { track: "oklch(0.65 0.18 320 / 12%)", fill: "oklch(0.70 0.16 320)", glow: "oklch(0.65 0.18 320 / 30%)" },
-  { track: "oklch(0.65 0.18 30  / 12%)", fill: "oklch(0.70 0.16 30 )", glow: "oklch(0.65 0.18 30  / 30%)" },
-  { track: "oklch(0.65 0.18 160 / 12%)", fill: "oklch(0.70 0.16 160)", glow: "oklch(0.65 0.18 160 / 30%)" },
+  {
+    track: 'oklch(0.65 0.18 200 / 12%)',
+    fill: 'oklch(0.70 0.16 200)',
+    glow: 'oklch(0.65 0.18 200 / 30%)',
+  },
+  {
+    track: 'oklch(0.65 0.18 260 / 12%)',
+    fill: 'oklch(0.70 0.16 260)',
+    glow: 'oklch(0.65 0.18 260 / 30%)',
+  },
+  {
+    track: 'oklch(0.65 0.18 320 / 12%)',
+    fill: 'oklch(0.70 0.16 320)',
+    glow: 'oklch(0.65 0.18 320 / 30%)',
+  },
+  {
+    track: 'oklch(0.65 0.18 30  / 12%)',
+    fill: 'oklch(0.70 0.16 30 )',
+    glow: 'oklch(0.65 0.18 30  / 30%)',
+  },
+  {
+    track: 'oklch(0.65 0.18 160 / 12%)',
+    fill: 'oklch(0.70 0.16 160)',
+    glow: 'oklch(0.65 0.18 160 / 30%)',
+  },
 ];
 
 const LEVEL_BADGE_STYLE: Record<string, { bg: string; color: string }> = {
-  MEET_A_LEVEL: { bg: "oklch(0.65 0.22 278 / 18%)", color: "oklch(0.80 0.18 278)" },
-  MEET_B_LEVEL: { bg: "oklch(0.65 0.20 245 / 18%)", color: "oklch(0.78 0.17 245)" },
-  MEET_C_LEVEL: { bg: "oklch(0.65 0.18 210 / 18%)", color: "oklch(0.78 0.16 210)" },
-  MEET_D_LEVEL: { bg: "oklch(0.65 0.20 175 / 15%)", color: "oklch(0.75 0.18 175)" },
-  MEET_E_LEVEL: { bg: "oklch(0.65 0.22 148 / 15%)", color: "oklch(0.72 0.18 148)" },
+  MEET_A_LEVEL: { bg: 'oklch(0.65 0.22 278 / 18%)', color: 'oklch(0.80 0.18 278)' },
+  MEET_B_LEVEL: { bg: 'oklch(0.65 0.20 245 / 18%)', color: 'oklch(0.78 0.17 245)' },
+  MEET_C_LEVEL: { bg: 'oklch(0.65 0.18 210 / 18%)', color: 'oklch(0.78 0.16 210)' },
+  MEET_D_LEVEL: { bg: 'oklch(0.65 0.20 175 / 15%)', color: 'oklch(0.75 0.18 175)' },
+  MEET_E_LEVEL: { bg: 'oklch(0.65 0.22 148 / 15%)', color: 'oklch(0.72 0.18 148)' },
 };
 
 /* -------------------------------------------------------------------------
@@ -501,7 +561,7 @@ const LEVEL_BADGE_STYLE: Record<string, { bg: string; color: string }> = {
 -------------------------------------------------------------------------- */
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, "").trim();
+  return html.replace(/<[^>]+>/g, '').trim();
 }
 
 function GradeLevelBar({ moment, index }: { moment: PartialMoment; index: number }) {
@@ -512,7 +572,7 @@ function GradeLevelBar({ moment, index }: { moment: PartialMoment; index: number
 
   const style = isGradeLevelBar
     ? GRADE_LEVEL_STYLE[key]
-    : { ...GENERIC_BAR_PALETTE[index % GENERIC_BAR_PALETTE.length], label: "" };
+    : { ...GENERIC_BAR_PALETTE[index % GENERIC_BAR_PALETTE.length], label: '' };
 
   useEffect(() => {
     const t = setTimeout(() => setWidth(pct), 120 + index * 80);
@@ -528,38 +588,41 @@ function GradeLevelBar({ moment, index }: { moment: PartialMoment; index: number
     >
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-semibold">{moment.name}</span>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <span className="text-[10px] tabular-nums" style={{ color: style.fill }}>
             {moment.points}
             <span className="text-muted-foreground"> / {moment.max}</span>
           </span>
           {isGradeLevelBar ? (
             <span
-              className="text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded"
+              className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold"
               style={{
-                background: pct >= 100 ? `${style.fill}30` : "oklch(1 0 0 / 6%)",
-                color: pct >= 100 ? style.fill : "oklch(0.40 0 0)",
+                background: pct >= 100 ? `${style.fill}30` : 'oklch(1 0 0 / 6%)',
+                color: pct >= 100 ? style.fill : 'oklch(0.40 0 0)',
               }}
             >
-              {"label" in style ? style.label : ""}
+              {'label' in style ? style.label : ''}
             </span>
           ) : (
             <span
               className="text-[10px] font-semibold tabular-nums"
-              style={{ color: pct >= 100 ? style.fill : "oklch(0.50 0 0)" }}
+              style={{ color: pct >= 100 ? style.fill : 'oklch(0.50 0 0)' }}
             >
               {Math.round(pct)}%
             </span>
           )}
         </div>
       </div>
-      <div className="relative h-2 rounded-full overflow-hidden" style={{ background: style.track }}>
+      <div
+        className="relative h-2 overflow-hidden rounded-full"
+        style={{ background: style.track }}
+      >
         <div
           className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
           style={{
             width: `${width}%`,
             background: `linear-gradient(90deg, ${style.fill}99, ${style.fill})`,
-            boxShadow: pct > 0 ? `0 0 8px ${style.glow}` : "none",
+            boxShadow: pct > 0 ? `0 0 8px ${style.glow}` : 'none',
           }}
         />
         <div className="absolute inset-y-0 right-0 w-px bg-white/20" />
@@ -571,11 +634,17 @@ function GradeLevelBar({ moment, index }: { moment: PartialMoment; index: number
 function CriterionRow({ criterion, index }: { criterion: AssessedCriteria; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const assessed = criterion.level;
-  const badgeStyle = LEVEL_BADGE_STYLE[assessed?.levelEnum ?? ""] ?? { bg: "oklch(1 0 0 / 6%)", color: "oklch(0.55 0 0)" };
-  const gradeLabel = assessed?.description?.replace(/^Meets?\s*/i, "").replace(/\s*level$/i, "") || assessed?.levelEnum?.replace("MEET_", "").replace("_LEVEL", "") || "?";
+  const badgeStyle = LEVEL_BADGE_STYLE[assessed?.levelEnum ?? ''] ?? {
+    bg: 'oklch(1 0 0 / 6%)',
+    color: 'oklch(0.55 0 0)',
+  };
+  const gradeLabel =
+    assessed?.description?.replace(/^Meets?\s*/i, '').replace(/\s*level$/i, '') ||
+    assessed?.levelEnum?.replace('MEET_', '').replace('_LEVEL', '') ||
+    '?';
 
-  const assessedStep = criterion.steps?.find(s => s.level?.levelEnum === assessed?.levelEnum);
-  const stepText = assessedStep ? stripHtml(assessedStep.text) : "";
+  const assessedStep = criterion.steps?.find((s) => s.level?.levelEnum === assessed?.levelEnum);
+  const stepText = assessedStep ? stripHtml(assessedStep.text) : '';
   const isLong = stepText.length > 130;
 
   return (
@@ -583,11 +652,11 @@ function CriterionRow({ criterion, index }: { criterion: AssessedCriteria; index
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.04 + index * 0.04 }}
-      className="rounded-lg border border-white/6 bg-white/2 overflow-hidden"
+      className="overflow-hidden rounded-lg border border-white/6 bg-white/2"
     >
       <div className="flex items-start gap-3 px-3 py-2.5">
         <span
-          className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 mt-0.5"
+          className="mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold"
           style={{
             background: badgeStyle.bg,
             color: badgeStyle.color,
@@ -597,25 +666,32 @@ function CriterionRow({ criterion, index }: { criterion: AssessedCriteria; index
           {gradeLabel}
         </span>
         {stepText ? (
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <p
-              className="text-[11px] text-foreground/70 leading-relaxed"
-              style={{ display: expanded || !isLong ? "block" : "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: expanded ? "visible" : "hidden" } as React.CSSProperties}
+              className="text-foreground/70 text-[11px] leading-relaxed"
+              style={
+                {
+                  display: expanded || !isLong ? 'block' : '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: expanded ? 'visible' : 'hidden',
+                } as React.CSSProperties
+              }
             >
               {stepText}
             </p>
             {isLong && (
               <button
-                onClick={() => setExpanded(e => !e)}
-                className="text-[10px] mt-1 transition-colors"
-                style={{ color: "oklch(0.65 0.22 278 / 70%)" }}
+                onClick={() => setExpanded((e) => !e)}
+                className="mt-1 text-[10px] transition-colors"
+                style={{ color: 'oklch(0.65 0.22 278 / 70%)' }}
               >
-                {expanded ? "Show less" : "Show more"}
+                {expanded ? 'Show less' : 'Show more'}
               </button>
             )}
           </div>
         ) : (
-          <span className="text-[11px] text-muted-foreground italic">No description</span>
+          <span className="text-muted-foreground text-[11px] italic">No description</span>
         )}
       </div>
     </motion.div>
@@ -630,7 +706,7 @@ function CriteriaTabSection({ tab, tabIndex }: { tab: AssessedCriteriaTab; tabIn
       transition={{ delay: tabIndex * 0.08 }}
     >
       {tab.content?.name && (
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2.5">
+        <p className="text-muted-foreground mb-2.5 text-[10px] tracking-widest uppercase">
           {tab.content.name}
         </p>
       )}
@@ -647,88 +723,97 @@ function CriteriaTabSection({ tab, tabIndex }: { tab: AssessedCriteriaTab; tabIn
    AssessmentCard — cinematic results section
  */
 
-function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName }: {
+function AssessmentCard({
+  assessment,
+  assignmentId,
+  assignmentTitle,
+  subjectName,
+}: {
   assessment: Assessment;
   assignmentId: number;
   assignmentTitle?: string;
   subjectName?: string;
 }) {
   const moments = (assessment.partialMoments as PartialMoment[]).filter(
-    m => typeof m.points === "number" && typeof m.max === "number"
+    (m) => typeof m.points === 'number' && typeof m.max === 'number'
   );
   const tabs = (assessment.assessedCriteriaTabs as AssessedCriteriaTab[]) ?? [];
 
   const inference = inferGrade(moments, tabs);
-  const gradeStyle = inference ? (OVERALL_GRADE_STYLE[inference.grade] ?? OVERALL_GRADE_STYLE.F) : null;
+  const gradeStyle = inference
+    ? (OVERALL_GRADE_STYLE[inference.grade] ?? OVERALL_GRADE_STYLE.F)
+    : null;
 
   const [showSharePicker, setShowSharePicker] = useState(false);
 
-  const hasReview   = Boolean(assessment.review);
+  const hasReview = Boolean(assessment.review);
   const hasComments = assessment.teacherComment || assessment.studentComment;
-  const hasPoints   = moments.length > 0;
-  const hasCriteria = tabs.some(t => (t.assessedCriteria ?? []).length > 0);
+  const hasPoints = moments.length > 0;
+  const hasCriteria = tabs.some((t) => (t.assessedCriteria ?? []).length > 0);
 
   const totalPoints = moments.reduce((s, m) => s + m.points, 0);
-  const totalMax    = moments.reduce((s, m) => s + m.max, 0);
-  const totalPct    = totalMax > 0 ? Math.round((totalPoints / totalMax) * 100) : null;
+  const totalMax = moments.reduce((s, m) => s + m.max, 0);
+  const totalPct = totalMax > 0 ? Math.round((totalPoints / totalMax) * 100) : null;
 
   // Show hero strip if we have a review text, a grade inference, or a total score to display
   const showHero = hasReview || Boolean(inference) || totalPct !== null;
 
   return (
     <div
-      className="rounded-xl border border-white/7 bg-card overflow-hidden"
+      className="bg-card overflow-hidden rounded-xl border border-white/7"
       style={gradeStyle ? { borderTop: `2px solid ${gradeStyle.border}` } : {}}
     >
       {/* Hero strip */}
       {showHero && (
         <div
-          className="px-5 py-5 flex items-center justify-between gap-4"
+          className="flex items-center justify-between gap-4 px-5 py-5"
           style={{
             background: gradeStyle
               ? `linear-gradient(135deg, ${gradeStyle.glow} 0%, transparent 65%)`
-              : "transparent",
+              : 'transparent',
           }}
         >
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Result</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-muted-foreground mb-1 text-[10px] tracking-widest uppercase">
+              Result
+            </p>
             {hasReview && (
-              <p className="text-xl font-bold tracking-tight wrap-break-word leading-snug">
+              <p className="text-xl leading-snug font-bold tracking-tight wrap-break-word">
                 {assessment.review}
               </p>
             )}
             {totalPct !== null && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {totalPoints} / {totalMax} pts &middot; {totalPct}%
               </p>
             )}
           </div>
 
           {inference && gradeStyle && (
-            <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="flex shrink-0 flex-col items-center gap-1.5">
               <motion.div
                 initial={{ scale: 0.65, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 280, damping: 18, delay: 0.12 }}
-                className="flex items-center justify-center w-16 h-16 rounded-2xl font-black select-none"
+                transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.12 }}
+                className="flex h-16 w-16 items-center justify-center rounded-2xl font-black select-none"
                 style={{
                   background: gradeStyle.bg,
                   color: gradeStyle.color,
                   border: `1.5px solid ${gradeStyle.border}`,
                   boxShadow: `0 4px 28px ${gradeStyle.glow}`,
-                  fontSize: inference.grade.length === 1 ? "2rem" : "0.9rem",
-                  letterSpacing: inference.grade.length === 1 ? "-0.02em" : "0",
-                  textAlign: "center",
-                  padding: "4px",
+                  fontSize: inference.grade.length === 1 ? '2rem' : '0.9rem',
+                  letterSpacing: inference.grade.length === 1 ? '-0.02em' : '0',
+                  textAlign: 'center',
+                  padding: '4px',
                 }}
               >
                 {inference.grade}
               </motion.div>
-              {inference.confidence === "estimated" && (
-                <span className="text-[9px] text-muted-foreground text-center leading-tight max-w-18">
+              {inference.confidence === 'estimated' && (
+                <span className="text-muted-foreground max-w-18 text-center text-[9px] leading-tight">
                   Estimated
                   <br />
-                  {inference.source === "criteria" ? "from criteria" : "from points"}
+                  {inference.source === 'criteria' ? 'from criteria' : 'from points'}
                 </span>
               )}
               <motion.button
@@ -736,7 +821,7 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 onClick={() => setShowSharePicker(true)}
-                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-all hover:scale-105 active:scale-95"
                 style={{
                   background: gradeStyle.bg,
                   color: gradeStyle.color,
@@ -744,7 +829,7 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
                 }}
                 title="Share grade to messages"
               >
-                <Share2 className="w-3 h-3" />
+                <Share2 className="h-3 w-3" />
                 Share
               </motion.button>
             </div>
@@ -757,7 +842,7 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
         {showSharePicker && (
           <ShareConversationPicker
             card={{
-              type: "grade",
+              type: 'grade',
               assignmentId,
               assignmentTitle,
               subjectName,
@@ -770,9 +855,11 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
 
       {/* Point bars */}
       {hasPoints && (
-        <div className="px-5 pb-5 space-y-3.5">
-          {showHero && <div className="h-px bg-white/5 -mx-5 mb-4" />}
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3">Grade points</p>
+        <div className="space-y-3.5 px-5 pb-5">
+          {showHero && <div className="-mx-5 mb-4 h-px bg-white/5" />}
+          <p className="text-muted-foreground mb-3 text-[10px] tracking-widest uppercase">
+            Grade points
+          </p>
           {moments.map((m, i) => (
             <GradeLevelBar key={m.id ?? i} moment={m} index={i} />
           ))}
@@ -782,8 +869,8 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
       {/* Criteria */}
       {hasCriteria && (
         <div className="px-5 pb-5">
-          {(showHero || hasPoints) && <div className="h-px bg-white/5 -mx-5 mb-4" />}
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3">
+          {(showHero || hasPoints) && <div className="-mx-5 mb-4 h-px bg-white/5" />}
+          <p className="text-muted-foreground mb-3 text-[10px] tracking-widest uppercase">
             Assessment criteria
           </p>
           <div className="space-y-5">
@@ -796,22 +883,25 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
 
       {/* Comments */}
       {hasComments && (
-        <div className="px-5 pb-5 space-y-2">
-          <div className="h-px bg-white/5 -mx-5 mb-4" />
+        <div className="space-y-2 px-5 pb-5">
+          <div className="-mx-5 mb-4 h-px bg-white/5" />
           {assessment.teacherComment && (
-            <div className="rounded-lg bg-white/3 border border-white/6 px-4 py-3">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1.5">
+            <div className="rounded-lg border border-white/6 bg-white/3 px-4 py-3">
+              <p className="text-muted-foreground mb-1.5 text-[9px] tracking-widest uppercase">
                 Teacher comment
               </p>
-              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap wrap-break-word" dangerouslySetInnerHTML={{ __html: assessment.teacherComment }} />
+              <p
+                className="text-foreground/80 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: assessment.teacherComment }}
+              />
             </div>
           )}
           {assessment.studentComment && (
-            <div className="rounded-lg bg-white/3 border border-white/6 px-4 py-3">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1.5">
+            <div className="rounded-lg border border-white/6 bg-white/3 px-4 py-3">
+              <p className="text-muted-foreground mb-1.5 text-[9px] tracking-widest uppercase">
                 Your comment
               </p>
-              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap wrap-break-word">
+              <p className="text-foreground/80 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">
                 {assessment.studentComment}
               </p>
             </div>
@@ -823,37 +913,39 @@ function AssessmentCard({ assessment, assignmentId, assignmentTitle, subjectName
 }
 
 function SectionRow({ section }: { section: Record<string, unknown> }) {
-  const type  = String(section.type ?? "");
+  const type = String(section.type ?? '');
   const title = String(section.title ?? section.name ?? type);
-  const desc  = String(section.description ?? section.content ?? "");
+  const desc = String(section.description ?? section.content ?? '');
 
   const SECTION_TYPE_LABELS: Record<string, string> = {
-    CENTRALCONTENT:    "Central content",
-    SUBJECTDESCRIPTION:"Subject description",
-    GRADECRITERIA:     "Grade criteria",
-    RESULTREPORT:      "Result report",
+    CENTRALCONTENT: 'Central content',
+    SUBJECTDESCRIPTION: 'Subject description',
+    GRADECRITERIA: 'Grade criteria',
+    RESULTREPORT: 'Result report',
   };
 
   return (
-    <div className="py-2 border-b border-white/5 last:border-0">
-      <div className="flex items-center gap-2 mb-1">
+    <div className="border-b border-white/5 py-2 last:border-0">
+      <div className="mb-1 flex items-center gap-2">
         <span
-          className="text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide"
+          className="rounded px-1.5 py-0.5 text-[9px] tracking-wide uppercase"
           style={{
-            background: "oklch(0.65 0.22 278 / 10%)",
-            color: "oklch(0.65 0.22 278 / 70%)",
+            background: 'oklch(0.65 0.22 278 / 10%)',
+            color: 'oklch(0.65 0.22 278 / 70%)',
           }}
         >
           {SECTION_TYPE_LABELS[type] ?? type}
         </span>
         {title !== type && <p className="text-xs font-medium">{title}</p>}
       </div>
-      {desc && <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-3">{desc}</p>}
+      {desc && (
+        <p className="text-muted-foreground line-clamp-3 text-[10px] leading-relaxed">{desc}</p>
+      )}
     </div>
   );
 }
 
 /** Standalone icon for Message sections */
 function _MessageSquareIcon() {
-  return <MessageSquare className="w-3.5 h-3.5" />;
+  return <MessageSquare className="h-3.5 w-3.5" />;
 }

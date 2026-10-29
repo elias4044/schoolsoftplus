@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Printer, RotateCcw, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { createPortal } from 'react-dom';
+
 import {
   DAYS,
   DAYS_SHORT,
@@ -17,6 +16,8 @@ import {
   localDateKey,
   type Lesson,
 } from '@/lib/schedule-utils';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type Layout = 'timetable' | 'list';
 type Paper = 'a4' | 'a3' | 'letter';
@@ -448,7 +449,9 @@ function Preview({
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
       const padding = window.matchMedia('(min-width: 768px)').matches ? 40 : 24;
-      setScale(Math.max(0.1, Math.min((r.width - padding) / widthPx, (r.height - padding) / heightPx, 1)));
+      setScale(
+        Math.max(0.1, Math.min((r.width - padding) / widthPx, (r.height - padding) / heightPx, 1))
+      );
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -927,7 +930,7 @@ export function PrintScheduleDialog({
                 )}
               </aside>
 
-              <div className="order-1 flex h-[32dvh] min-h-[190px] max-h-[38dvh] shrink-0 md:order-2 md:h-auto md:max-h-none md:min-h-0 md:flex-1">
+              <div className="order-1 flex h-[32dvh] max-h-[38dvh] min-h-[190px] shrink-0 md:order-2 md:h-auto md:max-h-none md:min-h-0 md:flex-1">
                 <Preview widthPx={mmToPx(w)} heightPx={mmToPx(h - 0.5)}>
                   <PrintSheet s={s} data={data} week={week} rangeLabel={rangeLabel} />
                 </Preview>

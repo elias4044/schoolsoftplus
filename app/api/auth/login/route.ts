@@ -1,13 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import { makePkcePair, makeState, exchangeCodeForToken } from "@/app/api/lib/mobileAuth";
-import { trackLoginEvent } from "@/app/api/lib/statsHelper";
+import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 
-const CLIENT_ID    = "eApp";
+import { exchangeCodeForToken, makePkcePair, makeState } from '@/app/api/lib/mobileAuth';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { trackLoginEvent } from '@/app/api/lib/statsHelper';
+
+const CLIENT_ID = 'eApp';
 // SchoolSoft's eApp client only allows this redirect URI — it must match exactly.
 // For the automated flow we read the code from the JSON response, so the redirect
 // never actually fires; we just need it to pass SchoolSoft's validation.
-const SS_REDIRECT  = "com.schoolsoftplus.app://";
+const SS_REDIRECT = 'com.schoolsoftplus.app://';
 
 /* 
    GET /api/mobile/login
@@ -34,11 +37,11 @@ const SS_REDIRECT  = "com.schoolsoftplus.app://";
        state:    string,   ← store on device; verify against callback state
      }
 */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const school      = searchParams.get("school")       ?? "engelska";
-  const orgid       = searchParams.get("orgid")        ?? "18";
-  const redirectUri = searchParams.get("redirect_uri") ?? SS_REDIRECT;
+  const school = searchParams.get('school') ?? 'engelska';
+  const orgid = searchParams.get('orgid') ?? '18';
+  const redirectUri = searchParams.get('redirect_uri') ?? SS_REDIRECT;
 
   const { verifier, challenge } = makePkcePair();
   const state = makeState();
@@ -54,7 +57,7 @@ export async function GET(req: NextRequest) {
     `&orgid=${encodeURIComponent(orgid)}`;
 
   return NextResponse.json({ success: true, authUrl, verifier, state });
-}
+});
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/mobile/login
@@ -90,24 +93,24 @@ export async function GET(req: NextRequest) {
      4. GET /rest-api/session to confirm username.
      5. Issue signed JWT and return it.
 ───────────────────────────────────────────────────────────── */
-export async function POST(req: NextRequest) {
-  let body: { username?: string; password?: string; school?: string; orgid?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON body." }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as {
+    username?: string;
+    password?: string;
+    school?: string;
+    orgid?: string;
+  };
 
   const { username, password } = body;
   if (!username || !password) {
     return NextResponse.json(
-      { success: false, error: "username and password are required." },
+      { success: false, error: 'username and password are required.' },
       { status: 400 }
     );
   }
 
-  const school = (body.school ?? req.headers.get("x-school") ?? "engelska").trim();
-  const orgid  = (body.orgid  ?? "18").trim();
+  const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
+  const orgid = (body.orgid ?? '18').trim();
 
   /* ── Step 1: Ephemeral PKCE pair ─────────────────────────── */
   const { verifier, challenge } = makePkcePair();
@@ -131,32 +134,35 @@ export async function POST(req: NextRequest) {
   let code: string;
   try {
     const loginRes = await axios.get(passwordLoginUrl, {
-      headers: { Accept: "application/json", "User-Agent": "SchoolSoftPlus-Mobile/1.0" },
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
+      maxRedirects: 0,
+      headers: { Accept: 'application/json', 'User-Agent': 'SchoolSoftPlus-Mobile/1.0' },
       validateStatus: () => true,
     });
 
     if (loginRes.status !== 200) {
-      console.warn(`[mobile/login POST] password login status ${loginRes.status}`, loginRes.data);
+      console.warn(`[mobile/login POST] password login status ${loginRes.status}`);
       return NextResponse.json(
-        { success: false, error: loginRes.data?.userMessage || "Authentication failed." },
+        { success: false, error: loginRes.data?.userMessage || 'Authentication failed.' },
         { status: 401 }
       );
     }
 
     const loginData = loginRes.data as { code?: string; state?: string; redirect_uri?: string };
     if (!loginData?.code) {
-      console.error("[mobile/login POST] no code in response", loginData);
+      console.error('[mobile/login POST] no code in response', loginData);
       return NextResponse.json(
-        { success: false, error: "Authentication failed — no authorization code returned." },
+        { success: false, error: 'Authentication failed — no authorization code returned.' },
         { status: 401 }
       );
     }
 
     code = loginData.code;
   } catch (err) {
-    console.error("[mobile/login POST] password login error:", (err as Error).message);
+    console.error('[mobile/login POST] password login error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, error: "Could not reach SchoolSoft. Try again later." },
+      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
       { status: 502 }
     );
   }
@@ -164,11 +170,11 @@ export async function POST(req: NextRequest) {
   /* ── Step 3: Exchange code + verifier for Bearer token ───── */
   const tokenResult = await exchangeCodeForToken(school, code, verifier);
   if (!tokenResult) {
-    return NextResponse.json({ success: false, error: "Token exchange failed." }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Token exchange failed.' }, { status: 401 });
   }
 
   trackLoginEvent(school);
 
   // Return the SchoolSoft token response directly — the app manages tokens itself.
   return NextResponse.json({ success: true, ...tokenResult });
-}
+});

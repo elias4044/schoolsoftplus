@@ -3,17 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Copy, Leaf, UtensilsCrossed } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 import { fadeUp, staggerContainer } from '@/lib/animations';
 import { useCachedResource } from '@/lib/cache';
-import {
-  fetchLunch,
-  getWeek,
-  lunchKey,
-  prefetchLunchWeeks,
-  type ApiDay,
-} from '@/lib/cache/lunch';
+import { fetchLunch, getWeek, lunchKey, prefetchLunchWeeks, type ApiDay } from '@/lib/cache/lunch';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 // types
 interface Dish {
@@ -55,13 +50,9 @@ export default function LunchPage() {
 
   const { monday, week, year, range } = useMemo(() => getWeek(weekOffset), [weekOffset]);
 
-
-  const {
-    data,
-    refreshing,
-    error,
-    refresh,
-  } = useCachedResource(lunchKey(year, week), () => fetchLunch(year, week));
+  const { data, refreshing, error, refresh } = useCachedResource(lunchKey(year, week), () =>
+    fetchLunch(year, week)
+  );
   const apiDays = useMemo(() => data ?? [], [data]);
   // Nothing to show yet (also covers the frame between switching weeks and reading the cache).
   const loading = data === null && !error;

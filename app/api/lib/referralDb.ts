@@ -1,8 +1,11 @@
-import { db } from "./firebaseAdmin";
-import { randomBytes } from "crypto";
+import { randomBytes } from 'crypto';
+
+import { resolveAccountReference } from './accountRegistry';
+import { db } from './firebaseAdmin';
+import { normalizeUserId } from './identity';
 
 export interface ReferredUserEntry {
-  username: string;
+  userId: string;
   joinedAt: number;
 }
 
@@ -15,92 +18,79 @@ export interface ReferralData {
 }
 
 export interface LeaderboardEntry {
-  username: string;
+  userId: string;
   totalReferrals: number;
   rank: number;
 }
 
-const COL = "referrals_v1";
-const CODES_COL = "referral_codes_v1";
+const COL = 'referrals_v1';
+const CODES_COL = 'referral_codes_v1';
 
 // Unambiguous alphanumeric characters (no 0/O, 1/I/l)
-const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function generateCode(length = 8): string {
   const bytes = randomBytes(length);
   return Array.from(bytes)
     .map((b) => CHARSET[b % CHARSET.length])
-    .join("");
+    .join('');
 }
 
-export async function getOrCreateReferralCode(username: string): Promise<ReferralData> {
-  const lower = username.toLowerCase();
-  const docRef = db.collection(COL).doc(lower);
-  const doc = await docRef.get();
-
-  if (doc.exists) {
-    const d = doc.data()!;
-    return {
-      code: d.code,
-      totalReferrals: d.totalReferrals ?? 0,
-      referredUsers: d.referredUsers ?? [],
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt,
-    };
-  }
-
-  // Generate a collision-free code (up to 10 attempts)
-  let code = "";
+export async function getOrCreateReferralCode(userId: string): Promise<ReferralData> {
+  const ref = db.collection(COL).doc(userId);
   for (let attempt = 0; attempt < 10; attempt++) {
-    const candidate = generateCode();
-    const existing = await db.collection(CODES_COL).doc(candidate).get();
-    if (!existing.exists) {
-      code = candidate;
-      break;
-    }
+    const code = generateCode();
+    const codeRef = db.collection(CODES_COL).doc(code);
+    const result = await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(ref);
+      const reservation = await transaction.get(codeRef);
+      if (existing.exists) return existing.data() as ReferralData;
+      if (reservation.exists) return null;
+      const now = Date.now();
+      const data: ReferralData = {
+        code,
+        totalReferrals: 0,
+        referredUsers: [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      transaction.set(ref, { ...data, userId });
+      transaction.set(codeRef, { userId, createdAt: now });
+      return data;
+    });
+    if (result) return (await getReferralData(userId))!;
   }
-  if (!code) throw new Error("Could not generate unique referral code");
-
-  const now = Date.now();
-  const data: ReferralData = {
-    code,
-    totalReferrals: 0,
-    referredUsers: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  // Write both the referral doc and the reverse-lookup code doc atomically
-  const batch = db.batch();
-  batch.set(docRef, data);
-  batch.set(db.collection(CODES_COL).doc(code), { username: lower, createdAt: now });
-  await batch.commit();
-
-  return data;
+  throw new Error('Could not reserve a referral code');
 }
 
-export async function getReferralData(username: string): Promise<ReferralData | null> {
-  const doc = await db.collection(COL).doc(username.toLowerCase()).get();
+export async function getReferralData(userId: string): Promise<ReferralData | null> {
+  const doc = await db.collection(COL).doc(userId.toLowerCase()).get();
   if (!doc.exists) return null;
   const d = doc.data()!;
   return {
     code: d.code,
     totalReferrals: d.totalReferrals ?? 0,
-    referredUsers: d.referredUsers ?? [],
+    referredUsers: await Promise.all(
+      (d.referredUsers ?? []).map(async (entry: ReferredUserEntry & { username?: string }) => ({
+        userId: await resolveAccountReference(entry.userId ?? entry.username ?? ''),
+        joinedAt: entry.joinedAt,
+      }))
+    ),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
 }
 
 /**
- * Look up the username that owns a given referral code.
+ * Look up the userId that owns a given referral code.
  * Returns null for invalid or non-existent codes.
  */
-export async function getUsernameByCode(code: string): Promise<string | null> {
+export async function getUserIdByCode(code: string): Promise<string | null> {
   if (!code || !/^[A-Z0-9]{6,12}$/.test(code.toUpperCase())) return null;
   const doc = await db.collection(CODES_COL).doc(code.toUpperCase()).get();
   if (!doc.exists) return null;
-  return (doc.data()!.username as string) ?? null;
+  const owner = doc.data()!.userId ?? doc.data()!.username;
+  return typeof owner === 'string' ? resolveAccountReference(owner) : null;
 }
 
 /**
@@ -112,44 +102,58 @@ export async function creditReferral(
   referrerUsername: string,
   newUsername: string
 ): Promise<boolean> {
-  const lower = referrerUsername.toLowerCase();
-  const newLower = newUsername.toLowerCase();
-  const docRef = db.collection(COL).doc(lower);
+  const lower = await resolveAccountReference(referrerUsername);
+  const newLower = await resolveAccountReference(newUsername);
+  return db.runTransaction(async (tx) => {
+    let ownerId = lower;
+    let legacyNames: string[];
+    if (normalizeUserId(lower)) {
+      const aliases = await tx.get(db.collection('account_aliases').where('userId', '==', lower));
+      legacyNames = aliases.docs.map((alias) => alias.id);
+    } else {
+      const alias = await tx.get(db.collection('account_aliases').doc(lower));
+      ownerId = alias.data()?.userId ?? lower;
+      legacyNames = [lower];
+    }
+    if (ownerId === newLower) return false;
+    let doc = await tx.get(db.collection(COL).doc(ownerId));
+    for (const name of legacyNames) {
+      if (doc.exists) break;
+      doc = await tx.get(db.collection(COL).doc(name));
+    }
+    if (!doc.exists) return false;
 
-  try {
-    return await db.runTransaction(async (tx) => {
-      const doc = await tx.get(docRef);
-      if (!doc.exists) return false;
+    const d = doc.data()!;
+    const existing: ReferredUserEntry[] = await Promise.all(
+      (d.referredUsers ?? []).map(async (entry: ReferredUserEntry & { username?: string }) => ({
+        userId: await resolveAccountReference(entry.userId ?? entry.username ?? ''),
+        joinedAt: entry.joinedAt,
+      }))
+    );
 
-      const d = doc.data()!;
-      const existing: ReferredUserEntry[] = d.referredUsers ?? [];
+    // Idempotency guard: never count the same referred user twice
+    if (existing.some((u) => u.userId === newLower)) return false;
 
-      // Idempotency guard: never count the same referred user twice
-      if (existing.some((u) => u.username === newLower)) return false;
-
-      const updated = [...existing, { username: newLower, joinedAt: Date.now() }];
-      tx.update(docRef, {
-        totalReferrals: (d.totalReferrals ?? 0) + 1,
-        referredUsers: updated,
-        updatedAt: Date.now(),
-      });
-      return true;
+    const updated = [...existing, { userId: newLower, joinedAt: Date.now() }];
+    tx.update(doc.ref, {
+      totalReferrals: (d.totalReferrals ?? 0) + 1,
+      referredUsers: updated,
+      updatedAt: Date.now(),
     });
-  } catch {
-    return false;
-  }
+    return true;
+  });
 }
 
 export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   const snap = await db
     .collection(COL)
-    .where("totalReferrals", ">", 0)
-    .orderBy("totalReferrals", "desc")
+    .where('totalReferrals', '>', 0)
+    .orderBy('totalReferrals', 'desc')
     .limit(limit)
     .get();
 
   return snap.docs.map((doc, i) => ({
-    username: doc.id,
+    userId: doc.id,
     totalReferrals: (doc.data().totalReferrals ?? 0) as number,
     rank: i + 1,
   }));

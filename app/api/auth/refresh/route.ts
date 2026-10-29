@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-const CLIENT_ID = "eApp";
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+
+const CLIENT_ID = 'eApp';
 
 /* -------------------------------------------------------------
    POST /api/mobile/refresh
@@ -23,20 +26,18 @@ const CLIENT_ID = "eApp";
        expires:       900
      }
 ------------------------------------------------------------- */
-export async function POST(req: NextRequest) {
-  let body: { refreshToken?: string; school?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: "Invalid JSON body." }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as { refreshToken?: string; school?: string };
 
   const { refreshToken } = body;
   if (!refreshToken) {
-    return NextResponse.json({ success: false, error: "refreshToken is required." }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: 'refreshToken is required.' },
+      { status: 400 }
+    );
   }
 
-  const school = (body.school ?? req.headers.get("x-school") ?? "engelska").trim();
+  const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
 
   const refreshUrl =
     `https://sms.schoolsoft.se/${encodeURIComponent(school)}/rest-api/login/token` +
@@ -46,29 +47,34 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await fetch(refreshUrl, {
-      method: "POST",
-      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(8_000),
+      method: 'POST',
+      headers: { accept: 'application/json' },
     });
 
     const text = await res.text();
 
     if (res.status !== 200) {
-      console.warn(`[mobile/refresh] SchoolSoft returned ${res.status}`, text);
+      console.warn(`[mobile/refresh] SchoolSoft returned ${res.status}`);
       return NextResponse.json(
-        { success: false, error: "Refresh failed. The refresh token may have expired." },
+        { success: false, error: 'Refresh failed. The refresh token may have expired.' },
         { status: 401 }
       );
     }
 
     let data: unknown;
-    try { data = JSON.parse(text); } catch { data = { access_token: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { access_token: text };
+    }
 
     return NextResponse.json({ success: true, ...(data as object) });
   } catch (err) {
-    console.error("[mobile/refresh] error:", (err as Error).message);
+    console.error('[mobile/refresh] error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, error: "Could not reach SchoolSoft. Try again later." },
+      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
       { status: 502 }
     );
   }
-}
+});

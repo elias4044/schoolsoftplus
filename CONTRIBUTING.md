@@ -26,6 +26,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 Before creating a bug report, please check [existing issues](https://github.com/elias4044/schoolsoftplus/issues) to avoid duplicates.
 
 When filing a bug, include:
+
 - **What you expected** to happen
 - **What actually** happened
 - Steps to reproduce

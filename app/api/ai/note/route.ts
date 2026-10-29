@@ -1,23 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import { authUser } from "@/app/api/lib/auth";
-import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
-// ---------------------------------------------------------------------------
+import { enforceRateLimit } from '@/app/api/lib/rateLimit';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { requireSession } from '@/app/api/lib/schoolsoft';
+
 // Valid AI note actions
-// ---------------------------------------------------------------------------
 export type NoteAiAction =
-  | "improve"
-  | "summarize"
-  | "grammar"
-  | "continue"
-  | "title"
-  | "formal"
-  | "casual"
-  | "bullets"
-  | "expand"
-  | "shorten"
-  | "explain";
+  | 'improve'
+  | 'summarize'
+  | 'grammar'
+  | 'continue'
+  | 'title'
+  | 'formal'
+  | 'casual'
+  | 'bullets'
+  | 'expand'
+  | 'shorten'
+  | 'explain';
 
 const ACTION_PROMPTS: Record<NoteAiAction, (content: string, selection?: string) => string> = {
   improve: (content, sel) =>
@@ -71,59 +72,47 @@ const ACTION_PROMPTS: Record<NoteAiAction, (content: string, selection?: string)
 };
 
 // Rate limiting
-const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS_PER_MINUTE = 15;
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/note
 // Body: { action, content, selection?, title? }
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   // Rate limiting
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter((t) => now - t < 60_000);
-  if (timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-    return NextResponse.json(
-      { success: false, message: "Too many requests. Please wait a moment." },
-      { status: 429 }
-    );
-  }
-  rateLimitMap.set(ip, [...timestamps, now]);
-
-  // Auth
   const sess = await requireSession(req);
   if (!sess) {
-    return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
-  }
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
   }
 
+  enforceRateLimit('ai:note:' + sess.userId, 20);
+
   if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ success: false, message: "AI is not configured." }, { status: 503 });
+    return NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
   }
 
   // Parse body
-  let body: { action?: string; content?: string; selection?: string; title?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
-  }
+  const body = (await readRouteBody(req)) as {
+    action?: string;
+    content?: string;
+    selection?: string;
+    title?: string;
+  };
 
-  const { action, content = "", selection, title } = body;
+  const { action, content = '', selection, title } = body;
 
-  if (!action || !(action in ACTION_PROMPTS)) {
+  if (!action || !Object.hasOwn(ACTION_PROMPTS, action)) {
     return NextResponse.json(
-      { success: false, message: `Invalid action. Valid: ${Object.keys(ACTION_PROMPTS).join(", ")}` },
+      {
+        success: false,
+        message: `Invalid action. Valid: ${Object.keys(ACTION_PROMPTS).join(', ')}`,
+      },
       { status: 400 }
     );
   }
 
   if (!content && !selection) {
     return NextResponse.json(
-      { success: false, message: "Note content is empty." },
+      { success: false, message: 'Note content is empty.' },
       { status: 400 }
     );
   }
@@ -133,33 +122,37 @@ export async function POST(req: NextRequest) {
   const prompt = ACTION_PROMPTS[action as NoteAiAction](contextNote, selection);
 
   try {
-    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { timeout: 30_000 },
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (genAI.models as any).generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    const result = await genAI.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction:
-          "You are a precise writing assistant. Follow instructions exactly. " +
-          "Never add preambles, explanations, or meta-commentary. Return only what was asked for.",
+          'You are a precise writing assistant. Follow instructions exactly. ' +
+          'Never add preambles, explanations, or meta-commentary. Return only what was asked for.',
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts: any[] = result.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.find((p) => p.text)?.text?.trim() ?? "";
+    const parts = result.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.find((p) => p.text)?.text?.trim() ?? '';
 
     if (!text) {
-      return NextResponse.json({ success: false, message: "No response from AI." }, { status: 500 });
+      return NextResponse.json(
+        { success: false, message: 'No response from AI.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, result: text, action });
   } catch (err) {
-    console.error("[ai/note] Error:", (err as Error).message);
+    console.error('[ai/note] Error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, message: "AI request failed.", error: (err as Error).message },
+      { success: false, message: 'AI request failed.', error: (err as Error).message },
       { status: 500 }
     );
   }
-}
+});

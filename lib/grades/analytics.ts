@@ -1,5 +1,5 @@
-import type { GradeEntry, GradeSnapshot, GradeTrackerSettings } from "./types";
-import { gradeToNumeric, numericToGrade, GRADE_LETTERS } from "./constants";
+import { GRADE_LETTERS, gradeToNumeric, numericToGrade } from './constants';
+import type { GradeEntry, GradeSnapshot, GradeTrackerSettings } from './types';
 
 export interface GradeAnalytics {
   count: number;
@@ -7,7 +7,7 @@ export interface GradeAnalytics {
   averageGrade: string;
   targetGap: number;
   trendSlope: number;
-  trendLabel: "improving" | "declining" | "stable" | "insufficient";
+  trendLabel: 'improving' | 'declining' | 'stable' | 'insufficient';
   bestEntry: GradeEntry | null;
   worstEntry: GradeEntry | null;
   distribution: Record<string, number>;
@@ -19,18 +19,26 @@ export interface GradeAnalytics {
   movingAvg: number[];
 }
 
-function entryWeight(entry: GradeEntry, index: number, total: number, mode: GradeTrackerSettings["weightMode"]): number {
+function entryWeight(
+  entry: GradeEntry,
+  index: number,
+  total: number,
+  mode: GradeTrackerSettings['weightMode']
+): number {
   if (entry.customWeight != null && entry.customWeight > 0) return entry.customWeight;
-  if (mode === "recent" && total > 1) {
+  if (mode === 'recent' && total > 1) {
     return 0.5 + (index / (total - 1)) * 0.5;
   }
   return 1;
 }
 
-export function getActiveEntries(entries: GradeEntry[], settings: GradeTrackerSettings): GradeEntry[] {
+export function getActiveEntries(
+  entries: GradeEntry[],
+  settings: GradeTrackerSettings
+): GradeEntry[] {
   return entries
-    .filter(e => !e.excluded)
-    .filter(e => settings.includeManual || e.source === "scanned")
+    .filter((e) => !e.excluded)
+    .filter((e) => settings.includeManual || e.source === 'scanned')
     .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
 }
 
@@ -40,7 +48,7 @@ export function computeAnalytics(
 ): GradeAnalytics {
   const active = getActiveEntries(entries, settings);
   const timeline = active
-    .map(e => {
+    .map((e) => {
       const n = gradeToNumeric(e.grade);
       if (n == null) return null;
       const d = new Date(e.endDate);
@@ -60,10 +68,10 @@ export function computeAnalytics(
     return {
       count: 0,
       averageNumeric: 0,
-      averageGrade: "—",
+      averageGrade: '—',
       targetGap: 0,
       trendSlope: 0,
-      trendLabel: "insufficient",
+      trendLabel: 'insufficient',
       bestEntry: null,
       worstEntry: null,
       distribution,
@@ -93,7 +101,7 @@ export function computeAnalytics(
   const targetN = gradeToNumeric(settings.targetGrade) ?? 15;
   const targetGap = averageNumeric - targetN;
 
-  const numerics = timeline.map(t => t.numeric);
+  const numerics = timeline.map((t) => t.numeric);
   const movingAvg: number[] = [];
   for (let i = 0; i < numerics.length; i++) {
     const window = numerics.slice(Math.max(0, i - 2), i + 1);
@@ -114,10 +122,14 @@ export function computeAnalytics(
     trendSlope = den > 0 ? num / den : 0;
   }
 
-  const trendLabel: GradeAnalytics["trendLabel"] =
-    numerics.length < 2 ? "insufficient" :
-    trendSlope > 0.4 ? "improving" :
-    trendSlope < -0.4 ? "declining" : "stable";
+  const trendLabel: GradeAnalytics['trendLabel'] =
+    numerics.length < 2
+      ? 'insufficient'
+      : trendSlope > 0.4
+        ? 'improving'
+        : trendSlope < -0.4
+          ? 'declining'
+          : 'stable';
 
   const mean = numerics.reduce((a, b) => a + b, 0) / numerics.length;
   const volatility =
@@ -139,7 +151,9 @@ export function computeAnalytics(
     else break;
   }
 
-  const ranked = [...active].sort((a, b) => (gradeToNumeric(b.grade) ?? 0) - (gradeToNumeric(a.grade) ?? 0));
+  const ranked = [...active].sort(
+    (a, b) => (gradeToNumeric(b.grade) ?? 0) - (gradeToNumeric(a.grade) ?? 0)
+  );
 
   return {
     count: active.length,
@@ -160,14 +174,17 @@ export function computeAnalytics(
   };
 }
 
-export function createSnapshot(entries: GradeEntry[], settings: GradeTrackerSettings): GradeSnapshot {
+export function createSnapshot(
+  entries: GradeEntry[],
+  settings: GradeTrackerSettings
+): GradeSnapshot {
   const analytics = computeAnalytics(entries, settings);
   const active = getActiveEntries(entries, settings);
   return {
     at: Date.now(),
     averageNumeric: analytics.averageNumeric,
     entryCount: analytics.count,
-    grades: active.map(e => ({ id: e.id, grade: e.grade })),
+    grades: active.map((e) => ({ id: e.id, grade: e.grade })),
   };
 }
 
@@ -182,13 +199,13 @@ export function mergeScannedEntries(
     review: string;
     grade: string;
     estimatedGrade?: string;
-    confidence?: "confirmed" | "estimated";
-    gradeSource?: "points" | "criteria" | "review";
+    confidence?: 'confirmed' | 'estimated';
+    gradeSource?: 'points' | 'criteria' | 'review';
     totalPoints?: string;
     pointsPct?: number;
   }[]
 ): GradeEntry[] {
-  const byId = new Map(existing.map(e => [e.id, e]));
+  const byId = new Map(existing.map((e) => [e.id, e]));
   const now = Date.now();
 
   for (const s of scanned) {
@@ -217,7 +234,7 @@ export function mergeScannedEntries(
         title: s.title,
         type: s.type,
         endDate: s.endDate,
-        source: "scanned",
+        source: 'scanned',
         reported: s.reported,
         review: s.review,
         grade: prev?.grade && prev.userOverride ? prev.grade : s.grade,

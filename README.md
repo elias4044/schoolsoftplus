@@ -45,62 +45,66 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 ## Features
 
 ### Core
-| Feature | Description |
-|---|---|
-| **Dashboard** | Customisable drag-and-drop widget grid — schedule, assignments, lunch, news, notes, countdowns and weather all in one view |
-| **Schedule** | Clean weekly timetable with subject colours and week navigation |
-| **Lunch menu** | Weekly lunch menu fetched and rendered automatically |
-| **News** | School news feed with full article view |
-| **Subjects** | Subject list with teacher info and related assignments, with advanced analytics |
-| **Countdown** | Custom countdown timers to any date — displayed as a dashboard widget |
-| **Notes** | Personal rich-text notes with public shareable links |
-| **Class & Staff** | Browse your class list and staff directory with search, section filters, and CSV export |
-| **Final Grades** | Gain advanced insights on how your grades have been moving over years with tips and more |
+
+| Feature           | Description                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**     | Customisable drag-and-drop widget grid — schedule, assignments, lunch, news, notes, countdowns and weather all in one view |
+| **Schedule**      | Clean weekly timetable with subject colours and week navigation                                                            |
+| **Lunch menu**    | Weekly lunch menu fetched and rendered automatically                                                                       |
+| **News**          | School news feed with full article view                                                                                    |
+| **Subjects**      | Subject list with teacher info and related assignments, with advanced analytics                                            |
+| **Countdown**     | Custom countdown timers to any date — displayed as a dashboard widget                                                      |
+| **Notes**         | Personal rich-text notes with public shareable links                                                                       |
+| **Class & Staff** | Browse your class list and staff directory with search, section filters, and CSV export                                    |
+| **Final Grades**  | Gain advanced insights on how your grades have been moving over years with tips and more                                   |
 
 ### Social & Messaging
-| Feature | Description |
-|---|---|
-| **Messaging** | Real-time encrypted and unencrypted group and direct message chats |
-| **End-to-end encryption** | AES-256-GCM encrypted group chats with per-session password unlock |
-| **Friends system** | Friend requests, friend list, and friend-gated direct messages |
-| **Group invites** | Admins invite users to groups; users accept or decline |
-| **Online status** | Per-user presence: Online (< 3 min), In SchoolSoft+ (3–15 min), Offline (> 15 min) |
-| **GIF support** | Giphy-powered GIF picker in all chats including encrypted ones |
-| **People search** | Search any SchoolSoft+ user, view their profile, add friends |
-| **Referrals** | Invite others to join SchoolSoft+ and join the leaderboard |
+
+| Feature                   | Description                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| **Messaging**             | Real-time encrypted and unencrypted group and direct message chats                 |
+| **End-to-end encryption** | AES-256-GCM encrypted group chats with per-session password unlock                 |
+| **Friends system**        | Friend requests, friend list, and friend-gated direct messages                     |
+| **Group invites**         | Admins invite users to groups; users accept or decline                             |
+| **Online status**         | Per-user presence: Online (< 3 min), In SchoolSoft+ (3–15 min), Offline (> 15 min) |
+| **GIF support**           | Giphy-powered GIF picker in all chats including encrypted ones                     |
+| **People search**         | Search any SchoolSoft+ user, view their profile, add friends                       |
+| **Referrals**             | Invite others to join SchoolSoft+ and join the leaderboard                         |
 
 ### AI & Productivity
-| Feature | Description |
-|---|---|
-| **AI Assistant** | Conversational AI (Google Gemini) with full access to your schedule, assignments, and more |
-| **Shared AI conversations** | Share AI chat threads via public link |
+
+| Feature                     | Description                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| **AI Assistant**            | Conversational AI (Google Gemini) with full access to your schedule, assignments, and more |
+| **Shared AI conversations** | Share AI chat threads via public link                                                      |
 
 ### Platform
-| Feature | Description |
-|---|---|
-| **Live stats** | Public stats page with real-time aggregate usage across all users |
-| **Keyboard shortcuts** | `Alt+1–7`, `Alt+N/M/U/P/,/A/Q` for instant navigation anywhere in the app |
-| **Dark-first design** | Designed in `oklch` colour space for pixel-perfect dark mode |
-| **PWA / installable** | Web app manifest for Add to Home Screen on mobile |
+
+| Feature                | Description                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| **Live stats**         | Public stats page with real-time aggregate usage across all users                     |
+| **Keyboard shortcuts** | `Alt+1–7`, `Alt+N/M/U/P/,/A/Q` for instant navigation anywhere in the app             |
+| **Dark-first design**  | Designed in `oklch` colour space for pixel-perfect dark mode                          |
+| **PWA / installable**  | Web app manifest for Add to Home Screen on mobile                                     |
 | **Private by default** | Credentials forwarded directly to SchoolSoft and immediately discarded — never stored |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | [Next.js 16](https://nextjs.org) (App Router, React 19) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS v4 · oklch colour space |
-| UI components | shadcn/ui · Radix UI primitives |
-| Animation | Framer Motion · GSAP |
-| Database | Firebase Firestore (notes, messages, friends, presence, stats) |
-| Auth | httpOnly session cookies proxied from SchoolSoft + Firebase custom tokens |
-| AI | Google Gemini via `@google/genai` |
-| HTML parsing | Cheerio + iconv-lite (ISO-8859-1 → UTF-8) |
-| Drag and drop | @dnd-kit |
-| Deployment | Vercel |
+| Layer         | Technology                                                                |
+| ------------- | ------------------------------------------------------------------------- |
+| Framework     | [Next.js 16](https://nextjs.org) (App Router, React 19)                   |
+| Language      | TypeScript 5                                                              |
+| Styling       | Tailwind CSS v4 · oklch colour space                                      |
+| UI components | shadcn/ui · Radix UI primitives                                           |
+| Animation     | Framer Motion · GSAP                                                      |
+| Database      | Firebase Firestore (notes, messages, friends, presence, stats)            |
+| Auth          | httpOnly session cookies proxied from SchoolSoft + Firebase custom tokens |
+| AI            | Google Gemini via `@google/genai`                                         |
+| HTML parsing  | Cheerio + iconv-lite (ISO-8859-1 → UTF-8)                                 |
+| Drag and drop | @dnd-kit                                                                  |
+| Deployment    | Vercel                                                                    |
 
 ---
 
@@ -174,7 +178,7 @@ schoolsoftplus/
 │   ├── terms/ # Terms & Privacy
 │   └── login-help/ # Login troubleshooting
 ├── components/
-├── ssp-bruno # For Bruno HTTP client (API testing) 
+├── ssp-bruno # For Bruno HTTP client (API testing)
 └── lib/
     ├── auth-context.tsx         # Auth state (login/logout)
     ├── useSession.ts            # Session hook
@@ -186,7 +190,9 @@ schoolsoftplus/
     ├── firebase.ts              # Firebase client SDK
     └── widgets/                 # Widget registry + layout hook
 ```
+
 ---
+
 ## Contributing
 
 Contributions are what make open source great, any PR is hugely appreciated.

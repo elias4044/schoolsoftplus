@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type UserStatus = "online" | "idle" | "offline";
+export type UserStatus = 'online' | 'idle' | 'offline';
 
 interface PresenceRecord {
   status: UserStatus;
@@ -15,12 +15,12 @@ const HEARTBEAT_MS = 2 * 60 * 1000;
 const PRESENCE_POLL_MS = 60 * 1000;
 
 function computeStatus(record: PresenceRecord | null): UserStatus {
-  if (!record) return "offline";
-  if (record.status === "offline") return "offline";
+  if (!record) return 'offline';
+  if (record.status === 'offline') return 'offline';
   const age = Date.now() - record.lastSeen;
   if (age < ONLINE_MS) return record.status;
-  if (age < IDLE_MS) return "idle";
-  return "offline";
+  if (age < IDLE_MS) return 'idle';
+  return 'offline';
 }
 
 /* -----------------------------------------------------------
@@ -53,7 +53,7 @@ async function fetchForUnion() {
   const timeout = setTimeout(() => manager.abort?.abort(), 10_000);
 
   try {
-    const res = await fetch(`/api/presence?users=${encodeURIComponent(users.join(","))}`, {
+    const res = await fetch(`/api/presence?users=${encodeURIComponent(users.join(','))}`, {
       signal: manager.abort.signal,
     });
     const data = await res.json();
@@ -62,9 +62,9 @@ async function fetchForUnion() {
     const now = Date.now();
     const out: Record<string, PresenceRecord> = {};
     for (const u of users) {
-      const status = (data.presences?.[u] ?? "offline") as UserStatus;
+      const status = (data.presences?.[u] ?? 'offline') as UserStatus;
       const lastSeen =
-        status === "online" ? now : status === "idle" ? now - ONLINE_MS - 1 : now - IDLE_MS - 1;
+        status === 'online' ? now : status === 'idle' ? now - ONLINE_MS - 1 : now - IDLE_MS - 1;
       out[u] = { status, lastSeen };
     }
     return out;
@@ -110,7 +110,7 @@ function recomputeUnion() {
   for (const s of manager.subs.values()) for (const u of s.usernames) manager.union.add(u);
 }
 
-function subscribeToPresence(usernames: string[], cb: Subscriber["cb"]) {
+function subscribeToPresence(usernames: string[], cb: Subscriber['cb']) {
   const id = manager.nextId++;
   manager.subs.set(id, { id, usernames, cb });
   recomputeUnion();
@@ -127,44 +127,47 @@ export function useMyPresence(username: string) {
   const lastSentRef = useRef<{ status: UserStatus; at: number } | null>(null);
   const inFlightRef = useRef(false);
 
-  const sendHeartbeat = useCallback(async (status: UserStatus) => {
-    if (!username || inFlightRef.current) return;
-    const now = Date.now();
-    const lastSent = lastSentRef.current;
-    if (lastSent && lastSent.status === status && now - lastSent.at < HEARTBEAT_MS - 5_000) {
-      return;
-    }
-    lastSentRef.current = { status, at: now };
-    inFlightRef.current = true;
-    try {
-      await fetch("/api/presence", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        keepalive: status === "offline",
-        body: JSON.stringify({ status }),
-        signal: AbortSignal.timeout(10_000),
-      });
-    } catch {
-      /* ignore */
-    } finally {
-      inFlightRef.current = false;
-    }
-  }, [username]);
+  const sendHeartbeat = useCallback(
+    async (status: UserStatus) => {
+      if (!username || inFlightRef.current) return;
+      const now = Date.now();
+      const lastSent = lastSentRef.current;
+      if (lastSent && lastSent.status === status && now - lastSent.at < HEARTBEAT_MS - 5_000) {
+        return;
+      }
+      lastSentRef.current = { status, at: now };
+      inFlightRef.current = true;
+      try {
+        await fetch('/api/presence', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: status === 'offline',
+          body: JSON.stringify({ status }),
+          signal: AbortSignal.timeout(10_000),
+        });
+      } catch {
+        /* ignore */
+      } finally {
+        inFlightRef.current = false;
+      }
+    },
+    [username]
+  );
 
   useEffect(() => {
     if (!username) return;
-    if (!document.hidden) void sendHeartbeat("online");
+    if (!document.hidden) void sendHeartbeat('online');
     intervalRef.current = setInterval(() => {
-      if (!document.hidden) void sendHeartbeat("online");
+      if (!document.hidden) void sendHeartbeat('online');
     }, HEARTBEAT_MS);
-    const onVisibility = () => void sendHeartbeat(document.hidden ? "idle" : "online");
-    document.addEventListener("visibilitychange", onVisibility);
-    const onUnload = () => void sendHeartbeat("offline");
-    window.addEventListener("beforeunload", onUnload);
+    const onVisibility = () => void sendHeartbeat(document.hidden ? 'idle' : 'online');
+    document.addEventListener('visibilitychange', onVisibility);
+    const onUnload = () => void sendHeartbeat('offline');
+    window.addEventListener('beforeunload', onUnload);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("beforeunload", onUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('beforeunload', onUnload);
     };
   }, [username, sendHeartbeat]);
 }
@@ -182,13 +185,13 @@ export function usePresenceMap(usernames: string[]) {
 }
 
 export function statusColor(status: UserStatus): string {
-  if (status === "online") return "#22c55e";
-  if (status === "idle") return "#eab308";
-  return "#6b7280";
+  if (status === 'online') return '#22c55e';
+  if (status === 'idle') return '#eab308';
+  return '#6b7280';
 }
 
 export function statusLabel(status: UserStatus): string {
-  if (status === "online") return "Online";
-  if (status === "idle") return "In SchoolSoft+";
-  return "Offline";
+  if (status === 'online') return 'Online';
+  if (status === 'idle') return 'In SchoolSoft+';
+  return 'Offline';
 }

@@ -5,10 +5,10 @@ info:
 
 http:
   method: GET
-  url: "{{local_url}}/api/news"
+  url: '{{local_url}}/api/news'
   headers:
     - name: Cookie
-      value: "{{ssp_cookie}}"
+      value: '{{ssp_cookie}}'
   auth: inherit
 
 settings:

@@ -4,11 +4,13 @@
  * a full transaction and never block the HTTP response.
  */
 
-import admin from "firebase-admin";
-import { db } from "./firebaseAdmin";
+import admin from 'firebase-admin';
+import { FieldPath } from 'firebase-admin/firestore';
+
+import { db } from './firebaseAdmin';
 
 const inc = admin.firestore.FieldValue.increment;
-const STATS_REF = () => db.collection("stats").doc("loginStats");
+const STATS_REF = () => db.collection('stats').doc('loginStats');
 
 /**
  * Bump a flat numeric counter (e.g. total_ai_messages).
@@ -17,7 +19,7 @@ const STATS_REF = () => db.collection("stats").doc("loginStats");
 export function bumpCounter(field: string, by = 1): void {
   STATS_REF()
     .update({ [field]: inc(by), total_api_calls: inc(1) })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -26,8 +28,8 @@ export function bumpCounter(field: string, by = 1): void {
  */
 export function bumpHistogram(bucket: string, key: string | number): void {
   STATS_REF()
-    .update({ [`${bucket}.${key}`]: inc(1) })
-    .catch(() => {});
+    .update(new FieldPath(bucket, String(key)), inc(1))
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -39,18 +41,18 @@ export function bumpHistogram(bucket: string, key: string | number): void {
  */
 export function trackLoginEvent(school: string): void {
   const now = new Date();
-  const hour = now.getUTCHours();          // 0-23
-  const day  = now.getUTCDay();            // 0 (Sun) – 6 (Sat)
+  const hour = now.getUTCHours(); // 0-23
+  const day = now.getUTCDay(); // 0 (Sun) – 6 (Sat)
   const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
   STATS_REF()
     .update({
       [`login_hours.${hour}`]: inc(1),
-      [`login_days.${day}`]:   inc(1),
-      [`schools.${school}`]:   inc(1),
-      [`peak_dates.${date}`]:  inc(1),
+      [`login_days.${day}`]: inc(1),
+      [`schools.${school}`]: inc(1),
+      [`peak_dates.${date}`]: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -62,46 +64,46 @@ export function trackAiMessage(): void {
   const hour = new Date().getUTCHours();
   STATS_REF()
     .update({
-      total_ai_messages:              inc(1),
-      [`ai_hours.${hour}`]:           inc(1),
-      total_api_calls:                inc(1),
+      total_ai_messages: inc(1),
+      [`ai_hours.${hour}`]: inc(1),
+      total_api_calls: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
  * Track a note creation.
  */
 export function trackNoteCreated(): void {
-  bumpCounter("total_notes_created");
+  bumpCounter('total_notes_created');
 }
 
 /**
  * Track a schedule view.
  */
 export function trackScheduleView(): void {
-  bumpCounter("total_schedule_views");
+  bumpCounter('total_schedule_views');
 }
 
 /**
  * Track an assignments fetch.
  */
 export function trackAssignmentsFetch(): void {
-  bumpCounter("total_assignment_fetches");
+  bumpCounter('total_assignment_fetches');
 }
 
 /**
  * Track a lunch menu fetch.
  */
 export function trackLunchFetch(): void {
-  bumpCounter("total_lunch_fetches");
+  bumpCounter('total_lunch_fetches');
 }
 
 /**
  * Track a news fetch.
  */
 export function trackNewsFetch(): void {
-  bumpCounter("total_news_fetches");
+  bumpCounter('total_news_fetches');
 }
 
 /**
@@ -111,23 +113,23 @@ export function trackMessageSent(): void {
   const hour = new Date().getUTCHours();
   STATS_REF()
     .update({
-      total_messages_sent:        inc(1),
-      [`message_hours.${hour}`]:  inc(1),
-      total_api_calls:            inc(1),
+      total_messages_sent: inc(1),
+      [`message_hours.${hour}`]: inc(1),
+      total_api_calls: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
  * Track a new conversation being created.
  */
 export function trackConversationCreated(): void {
-  bumpCounter("total_conversations_created");
+  bumpCounter('total_conversations_created');
 }
 
 /**
  * Track a reaction being toggled.
  */
 export function trackReactionAdded(): void {
-  bumpCounter("total_reactions_added");
+  bumpCounter('total_reactions_added');
 }

@@ -1,38 +1,38 @@
-import { db } from "./firebaseAdmin";
-import type { FinalGradesDoc, FinalGradeSubject } from "@/lib/final-grades/types";
+import type { FinalGradesDoc, FinalGradeSubject } from '@/lib/final-grades/types';
 
-const COL = "final_grades_v1";
+import { db } from './firebaseAdmin';
 
-function docId(username: string): string {
-  return username.toLowerCase().trim();
+const COL = 'final_grades_v1';
+
+function docId(userId: string): string {
+  return userId.toLowerCase().trim();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function docToFinalGrades(doc: FirebaseFirestore.DocumentSnapshot<any>): FinalGradesDoc {
+function docToFinalGrades(doc: FirebaseFirestore.DocumentSnapshot): FinalGradesDoc {
   const data = doc.data() ?? {};
   return {
-    username: data.username ?? "",
+    userId: data.userId ?? '',
     subjects: Array.isArray(data.subjects) ? data.subjects : [],
-    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : Date.now(),
+    updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : Date.now(),
   };
 }
 
-export async function getFinalGrades(username: string): Promise<FinalGradesDoc | null> {
-  const doc = await db.collection(COL).doc(docId(username)).get();
+export async function getFinalGrades(userId: string): Promise<FinalGradesDoc | null> {
+  const doc = await db.collection(COL).doc(docId(userId)).get();
   if (!doc.exists) return null;
   return docToFinalGrades(doc);
 }
 
 export async function saveFinalGrades(
-  username: string,
+  userId: string,
   subjects: FinalGradeSubject[]
 ): Promise<FinalGradesDoc> {
   const now = Date.now();
   const payload: FinalGradesDoc = {
-    username: docId(username),
+    userId: docId(userId),
     subjects,
     updatedAt: now,
   };
-  await db.collection(COL).doc(docId(username)).set(payload);
+  await db.collection(COL).doc(docId(userId)).set(payload);
   return payload;
 }

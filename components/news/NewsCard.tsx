@@ -1,21 +1,23 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { Paperclip, Clock, CheckCircle2, Circle } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { motion } from 'framer-motion';
+import { CheckCircle2, Circle, Clock, Paperclip } from 'lucide-react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+
 import {
-  type NewsSummary,
-  stripHtml,
   formatNewsDate,
   getAuthorInitials,
   getExpiryStatus,
-} from "./news-types";
+  stripHtml,
+  type NewsSummary,
+} from './news-types';
 
 interface NewsCardProps {
   item: NewsSummary;
   isSelected?: boolean;
-  view?: "list" | "grid";
+  view?: 'list' | 'grid';
   onClick: () => void;
 }
 
@@ -24,93 +26,93 @@ interface NewsCardProps {
 
 // nvm didnt even need it
 // export function extractNumbersDirectlyAfter(text: string, word: string): string | null { // uh text is the full text, word is the string before the searched numbers
-//   const escapedWord = word.replace(/[-\/\\^\$*+?.()|[\]{}]/g, '\\$&'); 
-  
+//   const escapedWord = word.replace(/[-\/\\^\$*+?.()|[\]{}]/g, '\\$&');
+
 //   const regex = new RegExp(`${escapedWord}:?\\s*(\\d+)`);
-  
+
 //   const match = text.match(regex);
 //   return match ? match[1] : null;
 // }
 
-export function NewsCard({ item, isSelected = false, view = "grid", onClick }: NewsCardProps) {
+export function NewsCard({ item, isSelected = false, view = 'grid', onClick }: NewsCardProps) {
   const dateInfo = formatNewsDate(item.creDate || item.toDate);
   const expiryInfo = getExpiryStatus(item.toDate);
   const previewText = stripHtml(item.description);
   const initials = getAuthorInitials(item.author?.name);
 
-  if (view === "list") {
+  if (view === 'list') {
     return (
       <motion.button
         type="button"
         layout
         onClick={onClick}
         whileTap={{ scale: 0.98 }}
-        className={`w-full text-left p-3.5 rounded-xl border transition-all relative overflow-hidden group ${
+        className={`group relative w-full overflow-hidden rounded-xl border p-3.5 text-left transition-all ${
           isSelected
-            ? "bg-surface-2 border-primary/40 shadow-sm"
-            : "bg-surface-1/60 hover:bg-surface-2/70 border-border hover:border-white/15"
+            ? 'bg-surface-2 border-primary/40 shadow-sm'
+            : 'bg-surface-1/60 hover:bg-surface-2/70 border-border hover:border-white/15'
         }`}
       >
         {/* Active left indicator line */}
         {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+          <div className="bg-primary absolute top-0 bottom-0 left-0 w-1 rounded-r-full" />
         )}
 
-        <div className="flex items-start justify-between gap-2 mb-1.5 pl-0.5">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="mb-1.5 flex items-start justify-between gap-2 pl-0.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             {/* Unread indicator dot */}
             {!item.read && (
               <span
-                className="w-2 h-2 rounded-full bg-primary shrink-0 animate-pulse"
+                className="bg-primary h-2 w-2 shrink-0 animate-pulse rounded-full"
                 title="Unread"
               />
             )}
             {item.category && (
-              <span className="text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.5 rounded bg-surface-2 text-muted-foreground border border-border shrink-0">
+              <span className="bg-surface-2 text-muted-foreground border-border shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
                 {item.category}
               </span>
             )}
           </div>
 
           <div
-            className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0"
+            className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]"
             title={dateInfo.full}
           >
-            <Clock className="w-3 h-3" />
+            <Clock className="h-3 w-3" />
             <span>{dateInfo.relative}</span>
           </div>
         </div>
 
         <h3
-          className={`text-xs font-semibold leading-snug line-clamp-2 mb-1.5 pl-0.5 ${
-            isSelected ? "text-foreground" : "text-foreground/90 group-hover:text-foreground"
+          className={`mb-1.5 line-clamp-2 pl-0.5 text-xs leading-snug font-semibold ${
+            isSelected ? 'text-foreground' : 'text-foreground/90 group-hover:text-foreground'
           }`}
         >
           {item.title}
         </h3>
 
         {previewText && (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-2.5 pl-0.5">
+          <p className="text-muted-foreground mb-2.5 line-clamp-2 pl-0.5 text-[11px] leading-relaxed">
             {previewText}
           </p>
         )}
 
         {/* Footer info */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px] text-muted-foreground pl-0.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Avatar className="w-4 h-4 text-[8px] font-bold border border-border">
+        <div className="border-border/40 text-muted-foreground flex items-center justify-between gap-2 border-t pt-1 pl-0.5 text-[11px]">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Avatar className="border-border h-4 w-4 border text-[8px] font-bold">
               {item.author?.id && (
                 <AvatarImage src={`/api/news/pfp?id=${item.author.id}`} alt={item.author.name} />
               )}
             </Avatar>
-            <span className="truncate max-w-30 text-foreground/75">
-              {item.author?.name || "Teacher"}
+            <span className="text-foreground/75 max-w-30 truncate">
+              {item.author?.name || 'Teacher'}
             </span>
           </div>
 
           {item.hasAttachment && (
-            <div className="flex items-center gap-1 text-[10px] font-medium text-primary shrink-0">
-              <Paperclip className="w-3 h-3" />
+            <div className="text-primary flex shrink-0 items-center gap-1 text-[10px] font-medium">
+              <Paperclip className="h-3 w-3" />
               <span>Attachment</span>
             </div>
           )}
@@ -126,26 +128,26 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
-      className={`rounded-2xl border p-5 flex flex-col justify-between cursor-pointer transition-all relative overflow-hidden group ${
+      className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-5 transition-all ${
         isSelected
-          ? "bg-surface-2 border-primary/50 shadow-md"
-          : "bg-surface-1 border-border hover:border-white/20 hover:bg-surface-2/60"
+          ? 'bg-surface-2 border-primary/50 shadow-md'
+          : 'bg-surface-1 border-border hover:bg-surface-2/60 hover:border-white/20'
       }`}
     >
       <div>
         {/* Top badges */}
-        <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {!item.read && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-ping" />
+              <span className="bg-primary text-primary-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                <span className="bg-primary-foreground h-1.5 w-1.5 animate-ping rounded-full" />
                 New
               </span>
             )}
             {item.category && (
               <Badge
                 variant="outline"
-                className="text-[10px] font-medium uppercase tracking-wider bg-surface-2 border-border text-muted-foreground"
+                className="bg-surface-2 border-border text-muted-foreground text-[10px] font-medium tracking-wider uppercase"
               >
                 {item.category}
               </Badge>
@@ -153,51 +155,53 @@ export function NewsCard({ item, isSelected = false, view = "grid", onClick }: N
           </div>
 
           <div
-            className="flex items-center gap-1 text-xs text-muted-foreground"
+            className="text-muted-foreground flex items-center gap-1 text-xs"
             title={dateInfo.full}
           >
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="h-3.5 w-3.5" />
             <span>{dateInfo.relative}</span>
           </div>
         </div>
 
         {/* Title */}
-        <h2 className="text-sm md:text-base font-bold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
+        <h2 className="text-foreground group-hover:text-primary mb-2 text-sm leading-snug font-bold transition-colors md:text-base">
           {item.title}
         </h2>
 
         {/* Snippet */}
         {previewText && (
-          <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed mb-4">
+          <p className="text-muted-foreground mb-4 line-clamp-3 text-xs leading-relaxed">
             {previewText}
           </p>
         )}
       </div>
 
       {/* Card Footer */}
-      <div className="pt-3 border-t border-border/60 flex items-center justify-between gap-2 mt-auto">
-        <div className="flex items-center gap-2 min-w-0">
-          <Avatar className="w-6 h-6 text-[9px] font-bold border border-border">
+      <div className="border-border/60 mt-auto flex items-center justify-between gap-2 border-t pt-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Avatar className="border-border h-6 w-6 border text-[9px] font-bold">
             {item.author?.id && (
               <AvatarImage src={`/api/news/pfp?id=${item.author.id}`} alt={item.author.name} />
             )}
-            <AvatarFallback className="bg-surface-2 text-foreground/80 text-[8px]">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-surface-2 text-foreground/80 text-[8px]">
+              {initials}
+            </AvatarFallback>
           </Avatar>
-          <span className="text-xs text-foreground/80 truncate max-w-[140px]">
-            {item.author?.name || "School Staff"}
+          <span className="text-foreground/80 max-w-[140px] truncate text-xs">
+            {item.author?.name || 'School Staff'}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           {expiryInfo.expiresSoon && (
-            <span className="text-[10px] text-amber-400 font-medium px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+            <span className="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
               {expiryInfo.label}
             </span>
           )}
 
           {item.hasAttachment && (
-            <div className="flex items-center gap-1 text-xs font-medium text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-              <Paperclip className="w-3.5 h-3.5" />
+            <div className="text-primary bg-primary/10 border-primary/20 flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
+              <Paperclip className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Files</span>
             </div>
           )}

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from 'react';
 
-export type NotifType = "success" | "error" | "info" | "warning" | "message";
+export type NotifType = 'success' | 'error' | 'info' | 'warning' | 'message';
 
 export interface AppNotification {
   id: string;
@@ -19,12 +19,16 @@ export interface AppNotification {
 interface NotificationContextValue {
   notifications: AppNotification[];
   unreadCount: number;
-  addNotification: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => string;
+  addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => string;
   dismissNotification: (id: string) => void;
   markAllRead: () => void;
   clearAll: () => void;
   // Shorthands
-  success: (title: string, message?: string, opts?: { duration?: number; action?: AppNotification["action"] }) => void;
+  success: (
+    title: string,
+    message?: string,
+    opts?: { duration?: number; action?: AppNotification['action'] }
+  ) => void;
   error: (title: string, message?: string) => void;
   info: (title: string, message?: string) => void;
   warn: (title: string, message?: string) => void;
@@ -34,7 +38,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 export function useNotificationCenter(): NotificationContextValue {
   const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error("useNotificationCenter must be used inside NotificationProvider");
+  if (!ctx) throw new Error('useNotificationCenter must be used inside NotificationProvider');
   return ctx;
 }
 
@@ -43,12 +47,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const addNotification = useCallback(
-    (n: Omit<AppNotification, "id" | "createdAt" | "read">): string => {
+    (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>): string => {
       const id = crypto.randomUUID();
       const notif: AppNotification = { ...n, id, createdAt: Date.now(), read: false };
       setNotifications((prev) => [notif, ...prev].slice(0, 50));
 
-      const duration = n.duration ?? (n.type === "error" ? 0 : 4000);
+      const duration = n.duration ?? (n.type === 'error' ? 0 : 4000);
       if (duration > 0) {
         const timer = setTimeout(() => {
           setNotifications((prev) => prev.filter((x) => x.id !== id));
@@ -63,7 +67,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const dismissNotification = useCallback((id: string) => {
     const timer = timersRef.current.get(id);
-    if (timer) { clearTimeout(timer); timersRef.current.delete(id); }
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
     setNotifications((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
@@ -78,29 +85,33 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const success = useCallback(
-    (title: string, message?: string, opts?: { duration?: number; action?: AppNotification["action"] }) => {
-      addNotification({ type: "success", title, message, ...opts });
+    (
+      title: string,
+      message?: string,
+      opts?: { duration?: number; action?: AppNotification['action'] }
+    ) => {
+      addNotification({ type: 'success', title, message, ...opts });
     },
     [addNotification]
   );
 
   const error = useCallback(
     (title: string, message?: string) => {
-      addNotification({ type: "error", title, message });
+      addNotification({ type: 'error', title, message });
     },
     [addNotification]
   );
 
   const info = useCallback(
     (title: string, message?: string) => {
-      addNotification({ type: "info", title, message });
+      addNotification({ type: 'info', title, message });
     },
     [addNotification]
   );
 
   const warn = useCallback(
     (title: string, message?: string) => {
-      addNotification({ type: "warning", title, message, duration: 5000 });
+      addNotification({ type: 'warning', title, message, duration: 5000 });
     },
     [addNotification]
   );

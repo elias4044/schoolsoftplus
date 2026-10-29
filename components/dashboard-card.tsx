@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { fadeUp } from "@/lib/animations";
-import { cn } from "@/lib/utils";
-import { type LucideIcon } from "lucide-react";
+import { motion } from 'framer-motion';
+import { type LucideIcon } from 'lucide-react';
+
+import { fadeUp } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 /* -- DashboardCard ---------------------------------------- */
 interface DashboardCardProps {
@@ -26,18 +27,15 @@ export function DashboardCard({
   return (
     <motion.div
       variants={fadeUp}
-      className={cn(
-        "relative rounded-xl overflow-hidden card-base",
-        className
-      )}
+      className={cn('card-base relative overflow-hidden rounded-xl', className)}
     >
       {/* Accent top bar */}
       {accent && (
         <div
-          className="absolute top-0 inset-x-0 h-px"
+          className="absolute inset-x-0 top-0 h-px"
           style={{
             background:
-              "linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 70%, transparent), transparent)",
+              'linear-gradient(90deg, transparent, color-mix(in oklch, var(--brand) 70%, transparent), transparent)',
           }}
         />
       )}
@@ -48,17 +46,15 @@ export function DashboardCard({
           <div className="flex items-center gap-2">
             {Icon && (
               <div
-                className="flex items-center justify-center w-6 h-6 rounded-md"
-                style={{ background: "color-mix(in oklch, var(--brand) 15%, transparent)" }}
+                className="flex h-6 w-6 items-center justify-center rounded-md"
+                style={{ background: 'color-mix(in oklch, var(--brand) 15%, transparent)' }}
               >
-                <Icon className="w-3.5 h-3.5 text-primary" />
+                <Icon className="text-primary h-3.5 w-3.5" />
               </div>
             )}
-            {title && (
-              <h2 className="text-sm font-semibold text-foreground/90">{title}</h2>
-            )}
+            {title && <h2 className="text-foreground/90 text-sm font-semibold">{title}</h2>}
           </div>
-          {action && <div className="text-xs text-muted-foreground">{action}</div>}
+          {action && <div className="text-muted-foreground text-xs">{action}</div>}
         </div>
       )}
 
@@ -80,22 +76,20 @@ export function StatCard({ label, value, icon: Icon, trend, className }: StatCar
   return (
     <motion.div
       variants={fadeUp}
-      className={cn("relative rounded-xl p-4 overflow-hidden card-base", className)}
+      className={cn('card-base relative overflow-hidden rounded-xl p-4', className)}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-muted-foreground mb-1">{label}</p>
-          <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>
-          {trend && (
-            <p className="text-xs text-muted-foreground mt-1">{trend}</p>
-          )}
+          <p className="text-muted-foreground mb-1 text-xs">{label}</p>
+          <p className="text-foreground text-2xl font-bold tabular-nums">{value}</p>
+          {trend && <p className="text-muted-foreground mt-1 text-xs">{trend}</p>}
         </div>
         <div
-          className="flex items-center justify-center w-9 h-9 rounded-xl"
-          style={{ background: "oklch(0.65 0.22 278 / 12%)" }}
+          className="flex h-9 w-9 items-center justify-center rounded-xl"
+          style={{ background: 'oklch(0.65 0.22 278 / 12%)' }}
         >
-          <Icon className="w-4.5 h-4.5 text-primary" />
+          <Icon className="text-primary h-4.5 w-4.5" />
         </div>
       </div>
     </motion.div>

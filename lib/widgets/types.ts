@@ -2,14 +2,7 @@
 export type WidgetSize = '1x1' | '2x1' | '4x1' | '1x2' | '2x2' | '4x2';
 
 export type WidgetId =
-  | 'homework'
-  | 'schedule'
-  | 'notes'
-  | 'lunch'
-  | 'news'
-  | 'weather'
-  | 'countdown'
-  | 'messages';
+  'homework' | 'schedule' | 'notes' | 'lunch' | 'news' | 'weather' | 'countdown' | 'messages';
 
 export interface WidgetInstance {
   instanceId: string;

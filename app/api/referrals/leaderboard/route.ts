@@ -1,27 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getLeaderboard } from "@/app/api/lib/referralDb";
-import { getProfile } from "@/app/api/lib/profileDb";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getProfile } from '@/app/api/lib/profileDb';
+import { getLeaderboard } from '@/app/api/lib/referralDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 
 /**
  * GET /api/referrals/leaderboard
  * Public endpoint — returns the top referrers with display names.
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 50);
+  const limit = Number(searchParams.get('limit') ?? '20');
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+    return NextResponse.json({ error: 'limit must be between 1 and 50.' }, { status: 400 });
 
   try {
     const entries = await getLeaderboard(limit);
 
     const enriched = await Promise.all(
       entries.map(async (entry) => {
-        const profile = await getProfile(entry.username).catch(() => null);
+        const profile = await getProfile(entry.userId).catch(() => null);
         return {
           rank: entry.rank,
-          username: entry.username,
-          displayName: profile?.displayName || entry.username,
-          pfpUrl: profile?.pfpUrl || "",
-          schoolName: profile?.schoolName || "",
+          username: entry.userId,
+          userId: entry.userId,
+          displayName: profile?.displayName || entry.userId,
+          pfpUrl: profile?.pfpUrl || '',
+          schoolName: profile?.schoolName || '',
           totalReferrals: entry.totalReferrals,
         };
       })
@@ -29,10 +34,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: enriched });
   } catch (err) {
-    console.error("[referrals/leaderboard] error:", err);
+    console.error('[referrals/leaderboard] error:', err);
     return NextResponse.json(
-      { success: false, error: "Failed to load leaderboard." },
+      { success: false, error: 'Failed to load leaderboard.' },
       { status: 500 }
     );
   }
-}
+});

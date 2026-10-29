@@ -1,52 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import * as cheerio from "cheerio";
-import { authUser } from "@/app/api/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
+import * as cheerio from 'cheerio';
+
+import { enforceRateLimit } from '@/app/api/lib/rateLimit';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  requireSession, getSessionCookies,
-} from "@/app/api/lib/schoolsoft";
-import { trackAiMessage } from "@/app/api/lib/statsHelper";
+  requireSession,
+} from '@/app/api/lib/schoolsoft';
+import { trackAiMessage } from '@/app/api/lib/statsHelper';
 
-// Rate limiting
-const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS_PER_MINUTE = 12;
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/insight
 // Body: { systemPrompt, fetchAssignments?, fetchSchedule?, fetchLunch?, fetchNews?, week?, year? }
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   // Rate limiting
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter((t) => now - t < 60_000);
-  if (timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-    return NextResponse.json(
-      { success: false, message: "Too many requests. Please wait a moment." },
-      { status: 429 }
-    );
-  }
-  rateLimitMap.set(ip, [...timestamps, now]);
-
-  // Auth
   const sess = await requireSession(req);
   if (!sess) {
-    return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
   }
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, message: "Not authenticated." }, { status: 401 });
-  }
+  enforceRateLimit('ai:insight:' + sess.userId, 12);
+
   if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ success: false, message: "AI is not configured." }, { status: 503 });
+    return NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
   }
 
   const { cookieString: cookies, school } = sess;
   const schoolApi = createSchoolsoftClient(school);
 
   // Parse body
-  let body: {
+  const body = (await readRouteBody(req)) as {
     systemPrompt?: string;
     fetchAssignments?: boolean;
     fetchSchedule?: boolean;
@@ -55,14 +42,9 @@ export async function POST(req: NextRequest) {
     week?: string;
     year?: string;
   };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
-  }
 
   if (!body.systemPrompt) {
-    return NextResponse.json({ success: false, message: "Missing systemPrompt." }, { status: 400 });
+    return NextResponse.json({ success: false, message: 'Missing systemPrompt.' }, { status: 400 });
   }
 
   // ---------------------------------------------------------------------------
@@ -77,30 +59,30 @@ export async function POST(req: NextRequest) {
       schoolApi
         .get(`/rest-api/student/ps/assignments/start-page?week=${body.week}&year=${body.year}`, {
           headers: { Cookie: cookies },
-          responseType: "json",
+          responseType: 'json',
         })
         .then((r) => {
           dataChunks.push(`ASSIGNMENTS DATA:\n${JSON.stringify(r.data, null, 2)}`);
         })
         .catch(() => {
-          dataChunks.push("ASSIGNMENTS DATA: unavailable");
+          dataChunks.push('ASSIGNMENTS DATA: unavailable');
         })
     );
   }
 
   if (body.fetchSchedule) {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     fetches.push(
       schoolApi
         .get(`/rest-api/student/schedule?startDate=${today}&endDate=${today}`, {
           headers: { Cookie: cookies },
-          responseType: "json",
+          responseType: 'json',
         })
         .then((r) => {
           dataChunks.push(`SCHEDULE DATA:\n${JSON.stringify(r.data, null, 2)}`);
         })
         .catch(() => {
-          dataChunks.push("SCHEDULE DATA: unavailable");
+          dataChunks.push('SCHEDULE DATA: unavailable');
         })
     );
   }
@@ -110,13 +92,13 @@ export async function POST(req: NextRequest) {
       schoolApi
         .get(`/rest-api/lunchmenu/week/${body.week}`, {
           headers: { Cookie: cookies },
-          responseType: "json",
+          responseType: 'json',
         })
         .then((r) => {
           dataChunks.push(`LUNCH MENU DATA:\n${JSON.stringify(r.data, null, 2)}`);
         })
         .catch(() => {
-          dataChunks.push("LUNCH MENU DATA: unavailable");
+          dataChunks.push('LUNCH MENU DATA: unavailable');
         })
     );
   }
@@ -124,20 +106,20 @@ export async function POST(req: NextRequest) {
   if (body.fetchNews) {
     fetches.push(
       schoolApi
-        .get("/jsp/student/right_student_startpage.jsp", {
+        .get('/jsp/student/right_student_startpage.jsp', {
           headers: { Cookie: cookies },
-          responseType: "arraybuffer",
+          responseType: 'arraybuffer',
         })
         .then((r) => {
           const html = decodeHtmlResponse(r.data as Buffer);
           const $ = cheerio.load(html);
-          const articles = $("#news_con_content table tr")
+          const articles = $('#news_con_content table tr')
             .map((_, el) => {
-              const a = $(el).find("a.toplist-item");
+              const a = $(el).find('a.toplist-item');
               if (!a.length) return null;
               return {
-                title: a.find(".heading_bold").text().trim(),
-                preview: a.find("div").last().text().trim() || null,
+                title: a.find('.heading_bold').text().trim(),
+                preview: a.find('div').last().text().trim() || null,
               };
             })
             .get()
@@ -145,7 +127,7 @@ export async function POST(req: NextRequest) {
           dataChunks.push(`NEWS DATA:\n${JSON.stringify(articles, null, 2)}`);
         })
         .catch(() => {
-          dataChunks.push("NEWS DATA: unavailable");
+          dataChunks.push('NEWS DATA: unavailable');
         })
     );
   }
@@ -156,34 +138,35 @@ export async function POST(req: NextRequest) {
   // Build prompt and call AI
   // ---------------------------------------------------------------------------
   const userMessage = dataChunks.length
-    ? `Here is the relevant school data:\n\n${dataChunks.join("\n\n")}`
-    : "No additional data was fetched. Please provide a general helpful response based on the system instruction.";
+    ? `Here is the relevant school data:\n\n${dataChunks.join('\n\n')}`
+    : 'No additional data was fetched. Please provide a general helpful response based on the system instruction.';
 
   try {
-    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { timeout: 30_000 },
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (genAI.models as any).generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: [{ role: "user", parts: [{ text: userMessage }] }],
+    const result = await genAI.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       config: {
         systemInstruction:
           body.systemPrompt +
-          " Be concise. Use markdown bullet points where appropriate. Do not include preambles.",
+          ' Be concise. Use markdown bullet points where appropriate. Do not include preambles.',
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts: any[] = result.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.find((p) => p.text)?.text?.trim() ?? "No response received.";
+    const parts = result.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.find((p) => p.text)?.text?.trim() ?? 'No response received.';
 
     trackAiMessage();
     return NextResponse.json({ success: true, data: text });
   } catch (err) {
-    console.error("[ai/insight] Error:", (err as Error).message);
+    console.error('[ai/insight] Error:', (err as Error).message);
     return NextResponse.json(
-      { success: false, message: "AI request failed.", error: (err as Error).message },
+      { success: false, message: 'AI request failed.', error: (err as Error).message },
       { status: 500 }
     );
   }
-}
+});

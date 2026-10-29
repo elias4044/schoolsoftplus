@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 interface Session {
   app: boolean;
@@ -33,6 +33,7 @@ interface Session {
   // Injected by our /api/session route
   school: string;
   username: string;
+  userId: string;
 }
 
 interface UseSessionResult {
@@ -50,16 +51,16 @@ export function useSession(): UseSessionResult {
     async function fetchSession() {
       try {
         setLoading(true);
-        const res = await fetch("/api/session");
+        const res = await fetch('/api/session');
         const data = await res.json();
 
         if (data.success) {
           setSession(data.session);
         } else {
-          setError(data.error || "Failed to fetch session.");
+          setError(data.error || 'Failed to fetch session.');
         }
       } catch (err) {
-        setError("An error occurred while fetching session.");
+        setError('An error occurred while fetching session.');
       } finally {
         setLoading(false);
       }

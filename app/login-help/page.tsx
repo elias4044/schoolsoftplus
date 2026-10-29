@@ -1,9 +1,8 @@
+'use client';
 
-"use client";
-
-import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import Link from "next/link";
+import { useRef } from 'react';
+import Link from 'next/link';
+import { motion, useInView } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,19 +12,19 @@ import {
   Mail,
   Settings2,
   ShieldCheck,
-} from "lucide-react";
+} from 'lucide-react';
 
 function Reveal({
   children,
   delay = 0,
-  className = "",
+  className = '',
 }: {
   children: React.ReactNode;
   delay?: number;
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-6% 0px" });
+  const inView = useInView(ref, { once: true, margin: '-6% 0px' });
 
   return (
     <motion.div
@@ -44,25 +43,25 @@ function Reveal({
   );
 }
 
-const muted = "oklch(0.58 0 0)";
-const accent = "oklch(0.72 0.16 263)";
+const muted = 'oklch(0.58 0 0)';
+const accent = 'oklch(0.72 0.16 263)';
 
 export default function LoginHelpPage() {
   return (
     <main
       className="relative min-h-screen overflow-x-hidden"
       style={{
-        background: "oklch(0.09 0 0)",
-        color: "oklch(0.85 0 0)",
+        background: 'oklch(0.09 0 0)',
+        color: 'oklch(0.85 0 0)',
       }}
     >
       {/* Navigation */}
       <header
-        className="fixed top-0 inset-x-0 z-50 h-14 flex items-center justify-between px-5 sm:px-6"
+        className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between px-5 sm:px-6"
         style={{
-          background: "oklch(0.09 0 0 / 85%)",
-          backdropFilter: "blur(20px)",
-          borderBottom: "1px solid oklch(1 0 0 / 5%)",
+          background: 'oklch(0.09 0 0 / 85%)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid oklch(1 0 0 / 5%)',
         }}
       >
         <Link
@@ -70,12 +69,12 @@ export default function LoginHelpPage() {
           className="flex items-center gap-2 text-sm transition-colors hover:text-white"
           style={{ color: muted }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Back to login
         </Link>
 
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <HelpCircle className="w-4 h-4" style={{ color: accent }} />
+          <HelpCircle className="h-4 w-4" style={{ color: accent }} />
           Login help
         </div>
 
@@ -88,8 +87,7 @@ export default function LoginHelpPage() {
         style={{
           width: 560,
           height: 320,
-          background:
-            "radial-gradient(ellipse, oklch(0.62 0.16 263 / 10%) 0%, transparent 70%)",
+          background: 'radial-gradient(ellipse, oklch(0.62 0.16 263 / 10%) 0%, transparent 70%)',
         }}
       />
 
@@ -101,21 +99,14 @@ export default function LoginHelpPage() {
           transition={{ duration: 0.6 }}
           className="relative mx-auto max-w-xl"
         >
-
-
           <h1 className="mb-5 text-4xl font-black tracking-tight sm:text-5xl">
             Having trouble logging in?
           </h1>
 
-          <p
-            className="mx-auto max-w-md text-base leading-relaxed"
-            style={{ color: muted }}
-          >
-            You just need to make sure{" "}
-            <span className="font-semibold text-white">
-              Access from app
-            </span>{" "}
-            is enabled in your SchoolSoft account.
+          <p className="mx-auto max-w-md text-base leading-relaxed" style={{ color: muted }}>
+            You just need to make sure{' '}
+            <span className="font-semibold text-white">Access from app</span> is enabled in your
+            SchoolSoft account.
           </p>
         </motion.div>
       </section>
@@ -126,17 +117,16 @@ export default function LoginHelpPage() {
           <section
             className="rounded-2xl p-5 sm:p-7"
             style={{
-              background: "oklch(0.12 0 0)",
-              border: "1px solid oklch(1 0 0 / 8%)",
+              background: 'oklch(0.12 0 0)',
+              border: '1px solid oklch(1 0 0 / 8%)',
             }}
           >
-
             <div className="space-y-6">
               <div className="flex gap-4">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
                   style={{
-                    background: "oklch(0.62 0.16 263 / 15%)",
+                    background: 'oklch(0.62 0.16 263 / 15%)',
                     color: accent,
                   }}
                 >
@@ -144,15 +134,9 @@ export default function LoginHelpPage() {
                 </div>
 
                 <div className="min-w-0 flex-1 pt-1">
-                  <p className="mb-1 text-sm font-semibold text-white">
-                    Open SchoolSoft
-                  </p>
-                  <p
-                    className="mb-3 text-sm leading-relaxed"
-                    style={{ color: muted }}
-                  >
-                    Sign in to your normal SchoolSoft account, not
-                    SchoolSoft+.
+                  <p className="mb-1 text-sm font-semibold text-white">Open SchoolSoft</p>
+                  <p className="mb-3 text-sm leading-relaxed" style={{ color: muted }}>
+                    Sign in to your normal SchoolSoft account, not SchoolSoft+.
                   </p>
 
                   <a
@@ -161,9 +145,9 @@ export default function LoginHelpPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-80"
                     style={{
-                      background: "oklch(0.62 0.16 263 / 14%)",
-                      border: "1px solid oklch(0.62 0.16 263 / 25%)",
-                      color: "oklch(0.8 0.14 263)",
+                      background: 'oklch(0.62 0.16 263 / 14%)',
+                      border: '1px solid oklch(0.62 0.16 263 / 25%)',
+                      color: 'oklch(0.8 0.14 263)',
                     }}
                   >
                     Open SchoolSoft
@@ -172,13 +156,13 @@ export default function LoginHelpPage() {
                 </div>
               </div>
 
-              <div className="ml-4 h-5 w-px" style={{ background: "oklch(1 0 0 / 9%)" }} />
+              <div className="ml-4 h-5 w-px" style={{ background: 'oklch(1 0 0 / 9%)' }} />
 
               <div className="flex gap-4">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
                   style={{
-                    background: "oklch(0.62 0.16 263 / 15%)",
+                    background: 'oklch(0.62 0.16 263 / 15%)',
                     color: accent,
                   }}
                 >
@@ -189,43 +173,33 @@ export default function LoginHelpPage() {
                   <p className="mb-1 text-sm font-semibold text-white">
                     Find your profile settings
                   </p>
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: muted }}
-                  >
-                    Open your profile and look for the setting named{" "}
-                    <strong className="text-white">Access from app</strong>{" "}
-                    or{" "}
+                  <p className="text-sm leading-relaxed" style={{ color: muted }}>
+                    Open your profile and look for the setting named{' '}
+                    <strong className="text-white">Access from app</strong> or{' '}
                     <strong className="text-white">Åtkomst från app</strong>.
                   </p>
                 </div>
               </div>
 
-              <div className="ml-4 h-5 w-px" style={{ background: "oklch(1 0 0 / 9%)" }} />
+              <div className="ml-4 h-5 w-px" style={{ background: 'oklch(1 0 0 / 9%)' }} />
 
               <div className="flex gap-4">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
                   style={{
-                    background: "oklch(0.72 0.18 148 / 12%)",
-                    color: "oklch(0.72 0.18 148)",
+                    background: 'oklch(0.72 0.18 148 / 12%)',
+                    color: 'oklch(0.72 0.18 148)',
                   }}
                 >
                   3
                 </div>
 
                 <div className="min-w-0 flex-1 pt-1">
-                  <p className="mb-2 text-sm font-semibold text-white">
-                    Turn it on
-                  </p>
+                  <p className="mb-2 text-sm font-semibold text-white">Turn it on</p>
 
-                  <p
-                    className="mb-3 text-sm leading-relaxed"
-                    style={{ color: muted }}
-                  >
-                    Make sure the{" "}
-                    <strong className="text-white">Access from app</strong>{" "}
-                    toggle is enabled.
+                  <p className="mb-3 text-sm leading-relaxed" style={{ color: muted }}>
+                    Make sure the <strong className="text-white">Access from app</strong> toggle is
+                    enabled.
                   </p>
                 </div>
               </div>
@@ -238,33 +212,27 @@ export default function LoginHelpPage() {
           <section
             className="rounded-2xl p-5 sm:p-6"
             style={{
-              background: "oklch(0.12 0 0)",
-              border: "1px solid oklch(0.72 0.18 148 / 20%)",
+              background: 'oklch(0.12 0 0)',
+              border: '1px solid oklch(0.72 0.18 148 / 20%)',
             }}
           >
             <div className="flex items-start gap-3">
               <CheckCircle2
                 className="mt-0.5 h-5 w-5 shrink-0"
-                style={{ color: "oklch(0.72 0.18 148)" }}
+                style={{ color: 'oklch(0.72 0.18 148)' }}
               />
 
               <div>
-                <h2 className="mb-1 text-sm font-bold text-white">
-                  That&apos;s it!
-                </h2>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: muted }}
-                >
-                  Head back to SchoolSoft+ and try logging in again.
-                  If the setting was already enabled, or you still
-                  can&apos;t log in, get in touch and we&apos;ll help you out.
+                <h2 className="mb-1 text-sm font-bold text-white">That&apos;s it!</h2>
+                <p className="text-sm leading-relaxed" style={{ color: muted }}>
+                  Head back to SchoolSoft+ and try logging in again. If the setting was already
+                  enabled, or you still can&apos;t log in, get in touch and we&apos;ll help you out.
                 </p>
 
                 <Link
                   href="/login"
                   className="mt-4 inline-flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-75"
-                  style={{ color: "oklch(0.72 0.18 148)" }}
+                  style={{ color: 'oklch(0.72 0.18 148)' }}
                 >
                   Back to login
                   <ArrowRight className="h-4 w-4" />
@@ -279,38 +247,33 @@ export default function LoginHelpPage() {
           <section
             className="rounded-2xl p-5 sm:p-6"
             style={{
-              background: "oklch(0.12 0 0)",
-              border: "1px solid oklch(1 0 0 / 7%)",
+              background: 'oklch(0.12 0 0)',
+              border: '1px solid oklch(1 0 0 / 7%)',
             }}
           >
             <div className="mb-3 flex items-center gap-3">
               <div
                 className="flex h-9 w-9 items-center justify-center rounded-xl"
                 style={{
-                  background: "oklch(0.62 0.16 263 / 12%)",
+                  background: 'oklch(0.62 0.16 263 / 12%)',
                   color: accent,
                 }}
               >
                 <Mail className="h-4 w-4" />
               </div>
 
-              <h2 className="text-sm font-bold text-white">
-                Still having trouble?
-              </h2>
+              <h2 className="text-sm font-bold text-white">Still having trouble?</h2>
             </div>
 
-            <p
-              className="mb-4 text-sm leading-relaxed"
-              style={{ color: muted }}
-            >
-              If you have enabled the setting and login still fails,
-              send us the error message you see and we&apos;ll look into it.
+            <p className="mb-4 text-sm leading-relaxed" style={{ color: muted }}>
+              If you have enabled the setting and login still fails, send us the error message you
+              see and we&apos;ll look into it.
             </p>
 
             <a
               href="mailto:hello@elias4044.com"
               className="inline-flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-75"
-              style={{ color: "oklch(0.78 0.14 263)" }}
+              style={{ color: 'oklch(0.78 0.14 263)' }}
             >
               <Mail className="h-4 w-4" />
               hello@elias4044.com
@@ -323,7 +286,7 @@ export default function LoginHelpPage() {
         <Reveal delay={0.15}>
           <footer
             className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 pt-4 text-xs"
-            style={{ color: "oklch(0.45 0 0)" }}
+            style={{ color: 'oklch(0.45 0 0)' }}
           >
             <Link href="/" className="flex items-center gap-1 transition-colors hover:text-white">
               <ArrowLeft className="h-3 w-3" />

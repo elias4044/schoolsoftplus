@@ -1,6 +1,5 @@
-import { apiFetch } from "@/lib/api-client";
-import { dedupe, readCache, writeCache } from "@/lib/cache";
-
+import { apiFetch } from '@/lib/api-client';
+import { dedupe, readCache, writeCache } from '@/lib/cache';
 
 export interface Teacher {
   firstName: string;
@@ -53,10 +52,9 @@ export interface CompletedRow {
   read: boolean;
 }
 
-export const SUBJECTS_KEY = "subjects:list";
-export const COMPLETED_KEY = "subjects:completed";
+export const SUBJECTS_KEY = 'subjects:list';
+export const COMPLETED_KEY = 'subjects:completed';
 export const subjectDetailKey = (id: string | number) => `subjects:detail:${id}`;
-
 
 export function daysUntil(dateStr: string): number | null {
   const d = new Date(dateStr);
@@ -69,14 +67,16 @@ export function daysUntil(dateStr: string): number | null {
 
 export function buildInsight(assignments: DetailAssignment[]): Insight {
   const open = assignments
-    .filter(a => a.entityType === "ASSIGNMENT" && (a.status === "ONGOING" || a.status === "UPCOMING"))
+    .filter(
+      (a) => a.entityType === 'ASSIGNMENT' && (a.status === 'ONGOING' || a.status === 'UPCOMING')
+    )
     .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
 
   return {
     ok: true,
     active: open.length,
-    overdue: open.filter(a => (daysUntil(a.endDate) ?? 0) < 0).length,
-    upcoming: open.slice(0, 2).map(a => ({
+    overdue: open.filter((a) => (daysUntil(a.endDate) ?? 0) < 0).length,
+    upcoming: open.slice(0, 2).map((a) => ({
       id: a.id,
       title: a.title,
       type: a.type,
@@ -87,11 +87,10 @@ export function buildInsight(assignments: DetailAssignment[]): Insight {
   };
 }
 
-
 export function fetchSubjects(): Promise<Subject[]> {
   return dedupe(SUBJECTS_KEY, async () => {
-    const d = await apiFetch<{ success: boolean; subjects: Subject[] }>("/api/subjects");
-    if (!d?.success || !Array.isArray(d.subjects)) throw new Error("Invalid subjects response");
+    const d = await apiFetch<{ success: boolean; subjects: Subject[] }>('/api/subjects');
+    if (!d?.success || !Array.isArray(d.subjects)) throw new Error('Invalid subjects response');
     writeCache(SUBJECTS_KEY, d.subjects);
     return d.subjects;
   });
@@ -100,8 +99,10 @@ export function fetchSubjects(): Promise<Subject[]> {
 export function fetchSubjectAssignments(id: string | number): Promise<DetailAssignment[]> {
   const key = subjectDetailKey(id);
   return dedupe(key, async () => {
-    const d = await apiFetch<{ success: boolean; assignments: DetailAssignment[] }>(`/api/subjects/${id}`);
-    if (!d?.success || !Array.isArray(d.assignments)) throw new Error("Invalid subject response");
+    const d = await apiFetch<{ success: boolean; assignments: DetailAssignment[] }>(
+      `/api/subjects/${id}`
+    );
+    if (!d?.success || !Array.isArray(d.assignments)) throw new Error('Invalid subject response');
     writeCache(key, d.assignments);
     return d.assignments;
   });
@@ -109,8 +110,10 @@ export function fetchSubjectAssignments(id: string | number): Promise<DetailAssi
 
 export function fetchCompleted(): Promise<CompletedRow[]> {
   return dedupe(COMPLETED_KEY, async () => {
-    const d = await apiFetch<{ success: boolean; rows: CompletedRow[] }>("/api/subjects/results_all");
-    if (!d?.success || !Array.isArray(d.rows)) throw new Error("Invalid completed response");
+    const d = await apiFetch<{ success: boolean; rows: CompletedRow[] }>(
+      '/api/subjects/results_all'
+    );
+    if (!d?.success || !Array.isArray(d.rows)) throw new Error('Invalid completed response');
     writeCache(COMPLETED_KEY, d.rows);
     return d.rows;
   });
@@ -120,7 +123,6 @@ export function readCachedInsight(id: string | number): Insight | undefined {
   const c = readCache<DetailAssignment[]>(subjectDetailKey(id));
   return c ? buildInsight(c.data) : undefined;
 }
-
 
 /** Subjects tab: the subject list plus every subject's assignments (3 requests at a time). */
 export async function prefetchSubjectsPage(concurrency = 3): Promise<void> {

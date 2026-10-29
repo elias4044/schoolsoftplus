@@ -1,50 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession, getSessionCookies } from "@/app/api/lib/schoolsoft";
-import { authUserWithUsername } from "@/app/api/lib/auth";
-import { getLayout, saveLayout } from "@/app/api/lib/layoutDb";
-import { WIDGET_REGISTRY } from "@/lib/widgets/registry";
-import type { DashboardLayout, WidgetInstance } from "@/lib/widgets/types";
+import { NextRequest, NextResponse } from 'next/server';
 
-async function authenticate(req: NextRequest): Promise<string | null> {
-  const sess = await requireSession(req);
-  if (!sess) return null;
-  const username = sess.username.toLowerCase().trim();
-  if (!username) return null;
-  if (!(await authUserWithUsername(sess.cookieString, username, sess.school))) return null;
-  return username;
-}
+import type { DashboardLayout } from '@/lib/widgets/types';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
+import { getLayout, saveLayout } from '@/app/api/lib/layoutDb';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { InputError, isObject, nonEmptyText, withValidation } from '@/app/api/lib/routeValidation';
 
-/** Strips any widget instances whose widgetId no longer exists in the registry */
-function sanitize(layout: DashboardLayout): DashboardLayout {
-  const valid: WidgetInstance[] = layout.widgets.filter(
-    (w) => w.instanceId && w.widgetId && WIDGET_REGISTRY[w.widgetId]
-  );
-  return { ...layout, widgets: valid };
-}
+const widgetIds = [
+  'homework',
+  'schedule',
+  'notes',
+  'lunch',
+  'news',
+  'weather',
+  'countdown',
+  'messages',
+];
+const sizes = ['1x1', '2x1', '4x1', '1x2', '2x2', '4x2'];
 
-/** GET /api/layout — fetch the saved dashboard layout */
-export async function GET(req: NextRequest) {
-  const username = await authenticate(req);
-  if (!username) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const GET = withValidation(async function GET(req: NextRequest) {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return NextResponse.json({ success: true, layout: await getLayout(userId) });
+});
 
-  const layout = await getLayout(username);
-  return NextResponse.json({ success: true, layout }); // null layout → use default on client
-}
-
-/** PUT /api/layout — save/overwrite the dashboard layout */
-export async function PUT(req: NextRequest) {
-  const username = await authenticate(req);
-  if (!username) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  let body: { layout?: DashboardLayout };
-  try { body = await req.json(); } catch { body = {}; }
-
-  if (!body.layout || !Array.isArray(body.layout.widgets)) {
-    return NextResponse.json({ error: "Invalid layout payload." }, { status: 400 });
-  }
-
-  const clean = sanitize(body.layout);
-  await saveLayout(username, clean);
-
+export const PUT = withValidation(async function PUT(req: NextRequest) {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { layout } = await readRouteBody(req);
+  if (
+    !isObject(layout) ||
+    !Number.isSafeInteger(layout.version) ||
+    Number(layout.version) < 1 ||
+    !Array.isArray(layout.widgets) ||
+    layout.widgets.length > 30
+  )
+    throw new InputError('Invalid layout');
+  const widgets = layout.widgets.map((widget) => {
+    if (
+      !isObject(widget) ||
+      !nonEmptyText(100)(widget.instanceId) ||
+      !widgetIds.includes(String(widget.widgetId)) ||
+      !sizes.includes(String(widget.size))
+    )
+      throw new InputError('Invalid widget');
+    return { instanceId: widget.instanceId, widgetId: widget.widgetId, size: widget.size };
+  });
+  if (new Set(widgets.map((widget) => widget.instanceId)).size !== widgets.length)
+    throw new InputError('Duplicate widget instance');
+  const clean = { version: layout.version, widgets } as DashboardLayout;
+  await saveLayout(userId, clean);
   return NextResponse.json({ success: true, layout: clean });
-}
+});

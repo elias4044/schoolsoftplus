@@ -1,8 +1,10 @@
-import { NextRequest } from "next/server";
-import axios from "axios";
-import { fetchSchoolsoftSession } from "./mobileAuth";
+import { NextRequest } from 'next/server';
+import axios from 'axios';
 
-const DEFAULT_USER_AGENT = "Schoolsoft+/1.0 (https://ssp.elias4044.com; +)";
+import { assertSchool, normalizeUserId } from './identity';
+import { InputError } from './validation';
+
+const DEFAULT_USER_AGENT = 'Schoolsoft+/1.0 (https://ssp.elias4044.com; +)';
 
 /**
  * Creates a configured Axios instance that targets a specific school's
@@ -14,13 +16,17 @@ const DEFAULT_USER_AGENT = "Schoolsoft+/1.0 (https://ssp.elias4044.com; +)";
  *   // baseURL → https://sms.schoolsoft.se/engelska
  */
 export function createSchoolsoftClient(school: string) {
-  const baseURL = `https://sms.schoolsoft.se/${school}`;
+  const baseURL = `https://sms.schoolsoft.se/${assertSchool(school)}`;
   return axios.create({
     baseURL,
+    allowAbsoluteUrls: false,
+    timeout: 8_000,
+    maxRedirects: 0,
+    maxContentLength: 20_000_000,
     headers: {
-      "User-Agent": DEFAULT_USER_AGENT,
+      'User-Agent': DEFAULT_USER_AGENT,
       Referer: `${baseURL}/`,
-      Origin: "https://sms.schoolsoft.se",
+      Origin: 'https://sms.schoolsoft.se',
     },
   });
 }
@@ -31,13 +37,9 @@ export function createSchoolsoftClient(school: string) {
  */
 export function getSchool(req: NextRequest | Headers): string {
   if (req instanceof NextRequest) {
-    return (
-      req.headers.get("x-school") ??
-      req.cookies.get("ssp_school")?.value ??
-      "engelska"
-    );
+    return req.headers.get('x-school') ?? req.cookies.get('ssp_school')?.value ?? 'engelska';
   }
-  return req.get("x-school") ?? "engelska";
+  return req.get('x-school') ?? 'engelska';
 }
 
 /**
@@ -54,14 +56,14 @@ export function getSessionCookies(req: NextRequest): {
   orgid: string;
   token: string;
 } | null {
-  const jsessionid = req.cookies.get("ssp_jsessionid")?.value; // raw value, e.g. "F92FC4EC..."
-  const hash = req.cookies.get("ssp_hash")?.value; // raw value, e.g. "d85914fa..."
-  const usertype = req.cookies.get("ssp_usertype")?.value; // raw value, e.g. "1"
-  const school = req.cookies.get("ssp_school")?.value ?? "engelska";
-  const username = (req.cookies.get("ssp_username")?.value ?? "").toLowerCase();
-  const userid = req.cookies.get("ssp_userid")?.value ?? "";
-  const orgid = req.cookies.get("ssp_ss_orgid")?.value ?? "";
-  const token = req.cookies.get("ssp_ss_token")?.value ?? "";
+  const jsessionid = req.cookies.get('ssp_jsessionid')?.value; // raw value, e.g. "F92FC4EC..."
+  const hash = req.cookies.get('ssp_hash')?.value; // raw value, e.g. "d85914fa..."
+  const usertype = req.cookies.get('ssp_usertype')?.value; // raw value, e.g. "1"
+  const school = req.cookies.get('ssp_school')?.value ?? 'engelska';
+  const username = (req.cookies.get('ssp_username')?.value ?? '').toLowerCase();
+  const userid = req.cookies.get('ssp_userid')?.value ?? '';
+  const orgid = req.cookies.get('ssp_ss_orgid')?.value ?? '';
+  const token = req.cookies.get('ssp_ss_token')?.value ?? '';
 
   if (!jsessionid) return null;
 
@@ -72,7 +74,7 @@ export function getSessionCookies(req: NextRequest): {
     usertype ? `usertype=${usertype}` : null,
   ]
     .filter(Boolean)
-    .join("; ");
+    .join('; ');
 
   return { cookieString, school, username, userid, orgid, token };
 }
@@ -80,31 +82,13 @@ export function getSessionCookies(req: NextRequest): {
 /** Decodes SchoolSoft's ISO-8859-1 HTML responses into a UTF-8 string. */
 export function decodeHtmlResponse(buffer: Buffer | ArrayBuffer): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iconv = require("iconv-lite") as typeof import("iconv-lite");
+  const iconv = require('iconv-lite') as typeof import('iconv-lite');
   const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
-  return iconv.decode(buf, "ISO-8859-1");
+  return iconv.decode(buf, 'ISO-8859-1');
 }
 
-/**
- * AuthV2-aware session resolver.
- *
- * Resolves a valid SchoolSoft session for both classic (JSESSIONID) and
- * AuthV2 (Bearer token) logins:
- *
- * 1. If a JSESSIONID cookie exists → return it immediately (no extra
- *    network call — the caller is responsible for calling authUser if they
- *    need to verify liveness).
- * 2. If the JSESSIONID is missing **and** the user has AuthV2 tokens →
- *    trade the stored Bearer token for a fresh JSESSIONID via SchoolSoft's
- *    eva-apps endpoint.  If the Bearer token itself is expired the refresh
- *    token is used first.
- * 3. Returns null when no valid session can be established.
- *
- * NOTE: When a refreshed session is returned, `cookieUpdates` will be
- * non-null.  Callers that can write response cookies should apply them so
- * subsequent requests don't need to repeat the exchange.
- */
-export async function requireSession(req: NextRequest): Promise<{
+// Resolves session cookies; requireSession verifies the returned account.
+async function resolveSession(req: NextRequest): Promise<{
   cookieString: string;
   school: string;
   username: string;
@@ -130,46 +114,6 @@ export async function requireSession(req: NextRequest): Promise<{
   /* ── Fast path: classic JSESSIONID ─────────────────────── */
   const sess = getSessionCookies(req);
   if (sess) {
-    /* If username cookie was empty, fetch it from SchoolSoft now */
-    if (!sess.username) {
-      try {
-        const api = createSchoolsoftClient(sess.school);
-        const { data, status } = await api.get("/rest-api/session", {
-          timeout: 5_000,
-          signal: AbortSignal.timeout(5_000),
-          headers: { Cookie: sess.cookieString },
-          responseType: "json",
-          validateStatus: () => true,
-        });
-        if (status === 200 && data?.user?.userName) {
-          const resolvedUsername = (data.user.userName as string).toLowerCase();
-          const resolvedOrgId = String(data.organization.id);
-          const resolvedUserId = String(data.user.id);
-
-          return {
-            ...sess,
-            username: resolvedUsername,
-
-            user: {
-              orgId: resolvedOrgId,
-              userId: resolvedUserId,
-            },
-
-            cookieUpdates: {
-              jsessionid: req.cookies.get("ssp_jsessionid")?.value ?? "",
-              hash: req.cookies.get("ssp_hash")?.value ?? "",
-              usertype: req.cookies.get("ssp_usertype")?.value ?? "1",
-
-              username: resolvedUsername,
-              userid: resolvedUserId,
-              orgid: resolvedOrgId,
-            },
-          };
-        }
-      } catch {
-        /* keep empty username rather than failing */
-      }
-    }
     return {
       ...sess,
       user: { orgId: sess.orgid, userId: sess.userid },
@@ -178,20 +122,20 @@ export async function requireSession(req: NextRequest): Promise<{
   }
 
   /* ── Slow path: AuthV2 Bearer → fresh JSESSIONID ──────── */
-  const authType = req.cookies.get("ssp_auth_type")?.value;
-  if (authType !== "authv2") return null;
+  const authType = req.cookies.get('ssp_auth_type')?.value;
+  if (authType !== 'authv2') return null;
 
-  const ssToken = req.cookies.get("ssp_ss_token")?.value;
-  const refreshToken = req.cookies.get("ssp_ss_refresh_token")?.value;
-  const school = req.cookies.get("ssp_school")?.value ?? "engelska";
-  const orgid = req.cookies.get("ssp_ss_orgid")?.value ?? "18";
-  const username = (req.cookies.get("ssp_username")?.value ?? "").toLowerCase();
-  const userId = req.cookies.get("ssp_userid")?.value ?? "";
+  const ssToken = req.cookies.get('ssp_ss_token')?.value;
+  const refreshToken = req.cookies.get('ssp_ss_refresh_token')?.value;
+  const school = req.cookies.get('ssp_school')?.value ?? 'engelska';
+  const orgid = req.cookies.get('ssp_ss_orgid')?.value ?? '18';
+  const username = (req.cookies.get('ssp_username')?.value ?? '').toLowerCase();
+  const userId = req.cookies.get('ssp_userid')?.value ?? '';
 
   if (!ssToken && !refreshToken) return null;
 
-  const CLIENT_ID = "eApp";
-  let activeToken = ssToken ?? "";
+  const CLIENT_ID = 'eApp';
+  let activeToken = ssToken ?? '';
   let newRefresh: string | undefined;
   let expiresAt: number | undefined;
   let refreshedAccessToken = false;
@@ -205,16 +149,16 @@ export async function requireSession(req: NextRequest): Promise<{
         `&grantType=refresh_token` +
         `&refreshToken=${encodeURIComponent(refreshToken)}`;
       const r = await fetch(refreshUrl, {
-        method: "POST",
+        method: 'POST',
         signal: AbortSignal.timeout(5_000),
-        headers: { accept: "application/json" },
+        headers: { accept: 'application/json' },
       });
       if (r.status === 200) {
         const d = (await r.json()) as Record<string, unknown>;
         if (d.access_token) {
           activeToken = d.access_token as string;
           newRefresh = d.refresh_token as string | undefined;
-          const ei = typeof d.expires === "number" ? d.expires : 900;
+          const ei = typeof d.expires === 'number' ? d.expires : 900;
           expiresAt = Math.floor(Date.now() / 1000) + ei;
           refreshedAccessToken = true;
         }
@@ -230,49 +174,47 @@ export async function requireSession(req: NextRequest): Promise<{
   const redirectUrl = `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`;
   const sessionUrl = `https://sms.schoolsoft.se/${encodeURIComponent(school)}/eva-apps/auth/login/student`;
 
-  let jsessionid = "";
-  let hash = "";
-  let usertype = "1";
+  let jsessionid = '';
+  let hash = '';
+  let usertype = '1';
 
   try {
     const sessionRes = await axios.get(sessionUrl, {
       timeout: 5_000,
       signal: AbortSignal.timeout(5_000),
       headers: {
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "User-Agent": "nyEva",
-        "X-Requested-With": "com.schoolsoft.eapp.android",
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': 'nyEva',
+        'X-Requested-With': 'com.schoolsoft.eapp.android',
         token: activeToken,
         orgid,
         redirecturl: redirectUrl,
-        language: "sw",
-        theme: "dark",
-        useros: "android",
+        language: 'sw',
+        theme: 'dark',
+        useros: 'android',
       },
       maxRedirects: 0,
       validateStatus: () => true,
     });
 
-    const setCookie = sessionRes.headers["set-cookie"];
+    const setCookie = sessionRes.headers['set-cookie'];
     const rawCookies: string[] = Array.isArray(setCookie)
       ? setCookie
       : setCookie
         ? [setCookie]
         : [];
-    const extractVal = (raw: string) =>
-      raw.split(";")[0].split("=").slice(1).join("=");
+    const extractVal = (raw: string) => raw.split(';')[0].split('=').slice(1).join('=');
     const cookieMap: Record<string, string> = {};
     for (const c of rawCookies) {
-      const name = c.split("=")[0].trim();
+      const name = c.split('=')[0].trim();
       if (name) cookieMap[name] = extractVal(c);
     }
 
-    jsessionid = cookieMap["JSESSIONID"] ?? "";
-    hash = cookieMap["hash"] ?? "";
-    usertype = cookieMap["usertype"] ?? "1";
+    jsessionid = cookieMap['JSESSIONID'] ?? '';
+    hash = cookieMap['hash'] ?? '';
+    usertype = cookieMap['usertype'] ?? '1';
   } catch (err) {
-    console.error("[requireSession] eva-apps error:", (err as Error).message);
+    console.error('[requireSession] eva-apps error:', (err as Error).message);
     return null;
   }
 
@@ -284,14 +226,9 @@ export async function requireSession(req: NextRequest): Promise<{
     usertype ? `usertype=${usertype}` : null,
   ]
     .filter(Boolean)
-    .join("; ");
+    .join('; ');
 
-  /* If username cookie was empty, resolve it via the Bearer token */
-  let resolvedUsername = username;
-  if (!resolvedUsername) {
-    const ssInfo = await fetchSchoolsoftSession(school, activeToken);
-    if (ssInfo?.username) resolvedUsername = ssInfo.username;
-  }
+  const resolvedUsername = username;
 
   return {
     cookieString,
@@ -323,7 +260,7 @@ export async function requireSession(req: NextRequest): Promise<{
  * NextResponse.  Safe to call with a null `cookieUpdates` (no-op).
  */
 export function applySessionCookieUpdates(
-  res: import("next/server").NextResponse,
+  res: import('next/server').NextResponse,
   cookieUpdates: {
     jsessionid: string;
     hash: string;
@@ -336,27 +273,28 @@ export function applySessionCookieUpdates(
     ssToken?: string;
     refreshToken?: string;
     expiresAt?: number;
-  } | null,
+  } | null
 ) {
   if (!cookieUpdates) return;
   const base = {
     httpOnly: true,
-    sameSite: "lax" as const,
-    path: "/",
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
     maxAge: 60 * 60 * 24 * 7,
   };
-  res.cookies.set("ssp_jsessionid", cookieUpdates.jsessionid, base);
-  res.cookies.set("ssp_hash", cookieUpdates.hash, base);
-  res.cookies.set("ssp_usertype", cookieUpdates.usertype, base);
+  res.cookies.set('ssp_jsessionid', cookieUpdates.jsessionid, base);
+  res.cookies.set('ssp_hash', cookieUpdates.hash, base);
+  res.cookies.set('ssp_usertype', cookieUpdates.usertype, base);
   if (cookieUpdates.username) {
-    res.cookies.set("ssp_username", cookieUpdates.username, {
+    res.cookies.set('ssp_username', cookieUpdates.username, {
       ...base,
       httpOnly: false,
       maxAge: 60 * 60 * 24 * 30,
     });
   }
   if (cookieUpdates.userid) {
-    res.cookies.set("ssp_userid", cookieUpdates.userid, {
+    res.cookies.set('ssp_userid', cookieUpdates.userid, {
       ...base,
       httpOnly: false,
       maxAge: 60 * 60 * 24 * 30,
@@ -364,27 +302,114 @@ export function applySessionCookieUpdates(
   }
 
   if (cookieUpdates.orgid) {
-    res.cookies.set("ssp_ss_orgid", cookieUpdates.orgid, {
+    res.cookies.set('ssp_ss_orgid', cookieUpdates.orgid, {
       ...base,
       httpOnly: false,
       maxAge: 60 * 60 * 24 * 30,
     });
   }
   if (cookieUpdates.ssToken) {
-    res.cookies.set("ssp_ss_token", cookieUpdates.ssToken, {
+    res.cookies.set('ssp_ss_token', cookieUpdates.ssToken, {
       ...base,
       maxAge: 60 * 60 * 24 * 30,
     });
-    res.cookies.set(
-      "ssp_ss_token_expires",
-      String(cookieUpdates.expiresAt ?? 0),
-      { ...base, httpOnly: false, maxAge: 60 * 60 * 24 * 30 },
-    );
+    res.cookies.set('ssp_ss_token_expires', String(cookieUpdates.expiresAt ?? 0), {
+      ...base,
+      httpOnly: false,
+      maxAge: 60 * 60 * 24 * 30,
+    });
   }
   if (cookieUpdates.refreshToken) {
-    res.cookies.set("ssp_ss_refresh_token", cookieUpdates.refreshToken, {
+    res.cookies.set('ssp_ss_refresh_token', cookieUpdates.refreshToken, {
       ...base,
       maxAge: 60 * 60 * 24 * 30,
     });
   }
+}
+
+export interface VerifiedSessionData {
+  user: { id: number; userName: string; firstName?: string; lastName?: string; email?: string };
+  organization?: { id: number; name?: string };
+  userType?: { id: number; name?: string };
+  [key: string]: unknown;
+}
+
+type ResolvedSession = NonNullable<Awaited<ReturnType<typeof resolveSession>>>;
+export type VerifiedSession = ResolvedSession & {
+  userId: string;
+  sessionData: VerifiedSessionData;
+};
+const requestSessions = new WeakMap<NextRequest, Promise<VerifiedSession | null>>();
+
+async function verifySession(req: NextRequest): Promise<VerifiedSession | null> {
+  assertSchool(req.cookies.get('ssp_school')?.value ?? 'engelska');
+  const session = await resolveSession(req);
+  if (!session) return null;
+  let response;
+  try {
+    response = await createSchoolsoftClient(session.school).get('/rest-api/session', {
+      headers: { Cookie: session.cookieString },
+      responseType: 'json',
+      validateStatus: () => true,
+    });
+  } catch {
+    throw new InputError('SchoolSoft is temporarily unavailable', 503);
+  }
+  if (response.status === 401 || response.status === 403) {
+    if (req.cookies.get('ssp_jsessionid') && req.cookies.get('ssp_auth_type')?.value === 'authv2') {
+      const headers = new Headers(req.headers);
+      headers.set(
+        'cookie',
+        (headers.get('cookie') ?? '')
+          .split(';')
+          .filter((part) => !part.trim().startsWith('ssp_jsessionid='))
+          .join(';')
+      );
+      return verifySession(new NextRequest(req.url, { headers }));
+    }
+    return null;
+  }
+  if (response.status !== 200) throw new InputError('SchoolSoft is temporarily unavailable', 503);
+  const sessionData = response.data as VerifiedSessionData;
+  const userId = normalizeUserId(sessionData?.user?.id);
+  if (!userId || typeof sessionData.user.userName !== 'string' || !sessionData.user.userName.trim())
+    return null;
+  const { ensureAccountMigration } = await import('./accountMigration');
+  await ensureAccountMigration({
+    userId,
+    username: sessionData.user.userName.toLowerCase().trim(),
+    school: session.school,
+  });
+  if (session.cookieUpdates?.refreshToken) {
+    const { syncPasskeyRefreshToken } = await import('@/app/api/auth/v2/lib');
+    await syncPasskeyRefreshToken(userId, session.school, session.cookieUpdates.refreshToken);
+  }
+  return {
+    ...session,
+    userId,
+    username: sessionData.user.userName.toLowerCase().trim(),
+    user: { userId, orgId: sessionData.organization?.id ?? session.user?.orgId ?? '' },
+    sessionData,
+    cookieUpdates: session.cookieUpdates
+      ? {
+          ...session.cookieUpdates,
+          username: sessionData.user.userName.toLowerCase().trim(),
+          userid: userId,
+          orgid: String(sessionData.organization?.id ?? session.user?.orgId ?? ''),
+        }
+      : null,
+  };
+}
+
+export function requireSession(req: NextRequest): Promise<VerifiedSession | null> {
+  let result = requestSessions.get(req);
+  if (!result) {
+    result = verifySession(req);
+    requestSessions.set(req, result);
+  }
+  return result;
+}
+
+export function getRequestSession(request: Request): Promise<VerifiedSession | null> | undefined {
+  return requestSessions.get(request as NextRequest);
 }

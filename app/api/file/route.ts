@@ -1,115 +1,54 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-// Get files/images from SchoolSoft. Useful for "news".
 import { NextRequest, NextResponse } from 'next/server';
-import { createSchoolsoftClient, requireSession } from '../lib/schoolsoft';
-import { handleApiError } from '../lib/apiError';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get('type'); // Not needed, does nothing at the moment (might change in the future)
-  const id = searchParams.get('id');
-  const responseType = searchParams.get('responseType'); // URL or direct file - "url" for URL, otherwise defaults to direct file.
+import { assertDocumentId, InputError, withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
-  if (!id) {
-    return NextResponse.json(
-      {
-        error: "Missing 'id' search parameter",
-      },
-      { status: 400 }
-    );
-  }
+export const runtime = 'nodejs';
 
-  const sess = await requireSession(req);
+export const GET = withValidation(async function GET(req: NextRequest) {
+  const id = req.nextUrl.searchParams.get('id');
+  assertDocumentId(id);
+  const session = await requireSession(req);
+  if (!session) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
+  if (!session.token) return NextResponse.json({ error: 'AuthV2 is required.' }, { status: 401 });
 
-  if (!sess) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
-
-  if (!sess.token) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          'This route requires AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2). The legacy route is available at /api/news/legacy',
-      },
-      { status: 401 }
-    );
-  }
-
-  const api = createSchoolsoftClient(sess.school);
-
-  try {
-    let fileType = 'attachment';
-    //if (type?.toLowerCase() === "image") fileType = "image";
-
-    const res = await api.get(`/eva/api/v1/resource/${fileType}/${id}`, {
-      headers: {
-        Authorization: `Bearer ${sess.token}`,
-      },
-      maxRedirects: 0,
-      validateStatus: () => true, // temp for testing
-      //validateStatus: (status) => status === 303 || status === 404,
-    });
-
-    const headers = res.headers;
-    if (res.status !== 303) {
-      if (res.status === 404) {
-        return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
-      } else {
-        throw new Error('Did not recognise SchoolSoft response: ' + JSON.stringify(res.data));
-      }
+  const resource = await createSchoolsoftClient(session.school).get(
+    `/eva/api/v1/resource/attachment/${encodeURIComponent(id)}`,
+    {
+      headers: { Authorization: `Bearer ${session.token}` },
+      validateStatus: () => true,
     }
-
-    if (!headers.location) {
-      throw new Error('No location was provided by SchoolSoft');
-    }
-
-    if (responseType === 'url') {
-      return NextResponse.json({
-        url: headers.location,
-      });
-    }
-
-    let totalAttempts = 0;
-    const getFile = async () => {
-      if (totalAttempts > 5) {
-        return null;
-      }
-      totalAttempts++;
-      const fileRes = await api.get(headers.location, {
-        responseType: 'stream',
-        headers: {
-          Authorization: `Bearer ${sess.token}`, // included if SchoolSoft still checks it; harmless if not needed (better safe than sorry)
-        },
-        validateStatus: () => true,
-      });
-
-      if (fileRes.status !== 200) {
-        return getFile();
-      }
-
-      return fileRes;
-    };
-
-    const fileRes = await getFile();
-    if (!fileRes) {
-      return NextResponse.json({ error: 'Upstream fetch failed' }, { status: 502 });
-    }
-
-    const contentType =
-      typeof fileRes.headers['content-type'] === 'string'
-        ? fileRes.headers['content-type']
-        : 'application/octet-stream';
-
-    return new NextResponse(fileRes.data, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'no-store',
-      },
-    });
-  } catch (err) {
-    return handleApiError(err, 'file');
+  );
+  if (resource.status === 404)
+    return NextResponse.json({ error: 'Resource not found.' }, { status: 404 });
+  if (resource.status !== 303 || typeof resource.headers.location !== 'string')
+    throw new InputError('Invalid file response from SchoolSoft', 502);
+  const location = new URL(resource.headers.location, 'https://sms.schoolsoft.se');
+  if (location.protocol !== 'https:' || location.username || location.password) {
+    throw new InputError('Invalid file destination', 502);
   }
-}
+  if (req.nextUrl.searchParams.get('responseType') === 'url')
+    return NextResponse.json({ url: location.href });
+
+  // Only the same SchoolSoft origin can receive its bearer token.
+  const download = await fetch(location.href, {
+    signal: AbortSignal.timeout(10_000),
+    redirect: 'error',
+    headers:
+      location.origin === 'https://sms.schoolsoft.se' &&
+      location.pathname.startsWith(`/${session.school}/`)
+        ? { Authorization: `Bearer ${session.token}` }
+        : {},
+  });
+  if (!download.ok || !download.body) throw new InputError('File download failed', 502);
+  const contentType = download.headers.get('content-type') ?? 'application/octet-stream';
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "sandbox; default-src 'none'",
+  };
+  if (!/^image\/(jpeg|png|gif|webp|avif|bmp)(?:;|$)/i.test(contentType))
+    headers['Content-Disposition'] = 'attachment';
+  return new NextResponse(download.body, { headers });
+});

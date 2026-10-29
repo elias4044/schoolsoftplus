@@ -1,5 +1,6 @@
-import { ReactNode, useEffect } from "react";
-import { useAuthContext } from "@/lib/auth-context";
+import { ReactNode, useEffect } from 'react';
+
+import { useAuthContext } from '@/lib/auth-context';
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { theme } = useAuthContext();

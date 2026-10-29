@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useCallback, useRef, useState } from "react";
-import { useSession } from "./useSession";
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+
+import { useSession } from './useSession';
 
 interface UnreadContextValue {
   loading: boolean;
@@ -25,7 +26,7 @@ interface UnreadProviderProps {
 
 export function UnreadProvider({ children }: UnreadProviderProps) {
   const { session } = useSession();
-  const username = session?.username ?? "";
+  const username = session?.userId ?? '';
 
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [optimisticReadAt, setOptimisticReadAt] = useState<Record<string, number>>({});
@@ -37,22 +38,27 @@ export function UnreadProvider({ children }: UnreadProviderProps) {
     ? (optimisticReadAt[currentConversationId] ?? 0) === 0
     : false;
 
-  const markRead = useCallback((conversationId: string) => {
-    if (!username) return;
+  const markRead = useCallback(
+    (conversationId: string) => {
+      if (!username) return;
 
-    // Don't re-mark if we already did within the last 5 seconds
-    const now = Date.now();
-    if ((lastMarkedRef.current[conversationId] ?? 0) > now - 5000) return;
-    lastMarkedRef.current[conversationId] = now;
+      // Don't re-mark if we already did within the last 5 seconds
+      const now = Date.now();
+      if ((lastMarkedRef.current[conversationId] ?? 0) > now - 5000) return;
+      lastMarkedRef.current[conversationId] = now;
 
-    setOptimisticReadAt(prev => ({ ...prev, [conversationId]: now }));
+      setOptimisticReadAt((prev) => ({ ...prev, [conversationId]: now }));
 
-    fetch(`/api/conversations/${conversationId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "mark_read" }),
-    }).catch(() => { /* ignore during auth transitions */ });
-  }, [username]);
+      fetch(`/api/conversations/${conversationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_read' }),
+      }).catch(() => {
+        /* ignore during auth transitions */
+      });
+    },
+    [username]
+  );
 
   const setCurrentConversation = useCallback((conversationId: string | null) => {
     setCurrentConversationId(conversationId);
@@ -61,13 +67,15 @@ export function UnreadProvider({ children }: UnreadProviderProps) {
   }, []);
 
   return (
-    <UnreadContext.Provider value={{
-      loading: false,
-      currentConversationId,
-      isUnread,
-      markRead,
-      setCurrentConversation,
-    }}>
+    <UnreadContext.Provider
+      value={{
+        loading: false,
+        currentConversationId,
+        isUnread,
+        markRead,
+        setCurrentConversation,
+      }}
+    >
       {children}
     </UnreadContext.Provider>
   );

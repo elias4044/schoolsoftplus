@@ -1,39 +1,36 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Menu, Bot, Search } from "lucide-react";
-import { Sidebar } from "@/components/sidebar";
-import { AiChatPanel } from "@/components/ai-chat-panel";
-import { CommandPalette, triggerCommandPalette } from "@/components/command-palette";
-import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { UnreadProvider } from "@/lib/unread-context";
-import { NotificationProvider } from "@/lib/notification-context";
-import { CallProvider } from "@/lib/call-context";
-import { NotificationBell, NotificationToasts } from "@/components/NotificationCenter";
-import { Comfortaa } from "next/font/google";
-import { CinematicTransition } from "@/components/CinematicTransition";
+import { useEffect, useState } from 'react';
+import { Comfortaa } from 'next/font/google';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Bot, Menu, Search } from 'lucide-react';
 
+import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { CallProvider } from '@/lib/call-context';
+import { NotificationProvider } from '@/lib/notification-context';
+import { UnreadProvider } from '@/lib/unread-context';
+import { AiChatPanel } from '@/components/ai-chat-panel';
+import { CinematicTransition } from '@/components/CinematicTransition';
+import { CommandPalette, triggerCommandPalette } from '@/components/command-palette';
+import { NotificationBell, NotificationToasts } from '@/components/NotificationCenter';
+import { Sidebar } from '@/components/sidebar';
 
-
-const comfortaa = Comfortaa({ subsets: ["latin"] });
+const comfortaa = Comfortaa({ subsets: ['latin'] });
 
 /* Improved loading screen */
 function LoadingScreen() {
   return (
-    <div className="flex h-screen items-center justify-center bg-background">
+    <div className="bg-background flex h-screen items-center justify-center">
       <motion.div
         className="flex flex-col items-center gap-5"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-
-
         {/* Brand name */}
         <motion.p
-          className={"text-xl font-bold tracking-tight text-gradient " + comfortaa.className}
+          className={'text-gradient text-xl font-bold tracking-tight ' + comfortaa.className}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -43,16 +40,16 @@ function LoadingScreen() {
 
         {/* Loading dots */}
         <div className="flex items-center gap-1.5">
-          {[0, 1, 2].map(i => (
+          {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-primary"
+              className="bg-primary h-1.5 w-1.5 rounded-full"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
               transition={{
                 duration: 1.1,
                 repeat: Infinity,
                 delay: i * 0.18,
-                ease: "easeInOut",
+                ease: 'easeInOut',
               }}
             />
           ))}
@@ -63,47 +60,40 @@ function LoadingScreen() {
 }
 
 /* Mobile top header */
-function MobileHeader({
-  onMenuOpen,
-  onAiOpen,
-}: {
-  onMenuOpen: () => void;
-  onAiOpen: () => void;
-}) {
+function MobileHeader({ onMenuOpen, onAiOpen }: { onMenuOpen: () => void; onAiOpen: () => void }) {
   return (
     <header
-      className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 h-14 border-b border-sidebar-border"
-      style={{ background: "var(--sidebar)" }}
+      className="border-sidebar-border fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden"
+      style={{ background: 'var(--sidebar)' }}
     >
       <button
         onClick={onMenuOpen}
-        className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+        className="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
         aria-label="Open menu"
       >
-        <Menu className="w-5 h-5" />
+        <Menu className="h-5 w-5" />
       </button>
 
-      <span className={"text-sm font-bold tracking-tight text-gradient " + comfortaa.className}>
+      <span className={'text-gradient text-sm font-bold tracking-tight ' + comfortaa.className}>
         Schoolsoft+
       </span>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => triggerCommandPalette()}
-          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors active:scale-95"
+          className="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent flex h-9 w-9 items-center justify-center rounded-lg transition-colors active:scale-95"
           aria-label="Open command palette"
         >
-          <Search className="w-5 h-5" />
+          <Search className="h-5 w-5" />
         </button>
-
 
         <NotificationBell />
         <button
           onClick={onAiOpen}
-          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-primary hover:bg-brand-dim transition-colors"
+          className="text-muted-foreground hover:text-primary hover:bg-brand-dim flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
           aria-label="Open AI Assistant"
         >
-          <Bot className="w-5 h-5" />
+          <Bot className="h-5 w-5" />
         </button>
       </div>
     </header>
@@ -119,7 +109,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -128,12 +118,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="bg-background flex h-screen overflow-hidden">
       {/* Mobile top bar */}
-      <MobileHeader
-        onMenuOpen={() => setSidebarOpen(true)}
-        onAiOpen={() => setAiOpen(true)}
-      />
+      <MobileHeader onMenuOpen={() => setSidebarOpen(true)} onAiOpen={() => setAiOpen(true)} />
 
       {/* Sidebar (desktop fixed, mobile drawer) */}
       <Sidebar
@@ -150,9 +137,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       </div> */}
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
-        {children}
-      </main>
+      <main className="flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0">{children}</main>
 
       {/* Global floating layers */}
       <NotificationToasts />

@@ -1,41 +1,44 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Clock,
+  AlertCircle,
+  BookOpen,
   Calendar,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  Circle,
+  Clock,
+  Copy,
+  Download,
+  Eye,
+  Paperclip,
+  Printer,
+  School,
+  Share2,
+  Sparkles,
   User,
   Users,
-  Paperclip,
-  Share2,
-  CheckCircle2,
-  Circle,
-  Copy,
-  Check,
-  Printer,
-  ChevronLeft,
-  AlertCircle,
-  Sparkles,
-  BookOpen,
-  Eye,
-  Download,
-  School,
 } from 'lucide-react';
+
+import { apiFetch } from '@/lib/api-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { apiFetch } from '@/lib/api-client';
+
 import {
-  type NewsDetail,
-  type NewsSummary,
   formatNewsDate,
   getAuthorInitials,
   getExpiryStatus,
   getReadingTime,
+  type NewsDetail,
+  type NewsSummary,
 } from './news-types';
 import { NewsAttachmentCard } from './NewsAttachmentCard';
 import { NewsImageLightbox } from './NewsImageLightbox';
+
 // import { extractNumbersDirectlyAfter } from "./NewsCard"; // not needed
 
 interface NewsDetailReaderProps {

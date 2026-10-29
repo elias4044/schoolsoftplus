@@ -1,24 +1,29 @@
-// app/api/firebase/route.ts
-export const runtime = "nodejs";
+import { withValidation } from '@/app/api/lib/routeValidation';
 
-import { db } from "../../lib/firebaseAdmin";
+import { db } from '../../lib/firebaseAdmin';
+
+// app/api/firebase/route.ts
+export const runtime = 'nodejs';
 
 // This route reads a simple status document from Firestore instead of
 // querying the Google Cloud Monitoring API. The document is expected at
 // `service_status/firestore` and can contain fields like `operational`,
 // `today`, `month`, `limits`, `exceeded` and an optional `errorCode`.
 
-export async function GET() {
+export const GET = withValidation(async function GET() {
   try {
-    const ref = db.doc("service_status/firestore");
+    const ref = db.doc('service_status/firestore');
     const snap = await ref.get();
 
     if (!snap.exists) {
-      return new Response(JSON.stringify({
-        operational: false,
-        error: "NOT_FOUND",
-        message: "Service status document not found.",
-      }), { status: 503, headers: { "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          operational: false,
+          error: 'NOT_FOUND',
+          message: 'Service status document not found.',
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = snap.data() || {};
@@ -31,19 +36,40 @@ export async function GET() {
     const exceeded = Array.isArray(data.exceeded) ? data.exceeded : [];
 
     // If Firestore has recorded a RESOURCE_EXHAUSTED event, surface it.
-    if (data.errorCode === "RESOURCE_EXHAUSTED" || data.error === "RESOURCE_EXHAUSTED") {
-      return Response.json({ operational: false, errorCode: "RESOURCE_EXHAUSTED", today, month, limits, exceeded });
+    if (data.errorCode === 'RESOURCE_EXHAUSTED' || data.error === 'RESOURCE_EXHAUSTED') {
+      return Response.json({
+        operational: false,
+        errorCode: 'RESOURCE_EXHAUSTED',
+        today,
+        month,
+        limits,
+        exceeded,
+      });
     }
 
     if (!operational) {
-      return Response.json({ operational: false, error: data.error ?? "SERVICE_DOWN", today, month, limits, exceeded });
+      return Response.json({
+        operational: false,
+        error: data.error ?? 'SERVICE_DOWN',
+        today,
+        month,
+        limits,
+        exceeded,
+      });
     }
 
     return Response.json({ operational: true, today, month, limits, exceeded });
-  } catch (err: any) {
+  } catch {
     // Network / read failures should be treated as service down so the
     // frontend can show an outage message.
-    const code = err?.code || "FAILED_TO_FETCH";
-    return new Response(JSON.stringify({ operational: false, error: code, message: String(err?.message ?? err) }), { status: 503, headers: { "Content-Type": "application/json" } });
+    const code = 'FAILED_TO_FETCH';
+    return new Response(
+      JSON.stringify({
+        operational: false,
+        error: code,
+        message: 'Service status is unavailable.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-}
+});

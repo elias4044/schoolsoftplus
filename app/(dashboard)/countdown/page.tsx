@@ -1,24 +1,25 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Plus,
-  Trash2,
-  Pencil,
-  Pin,
-  PinOff,
   Archive,
   ArchiveRestore,
-  Timer,
   Check,
-  X,
   ChevronDown,
   Loader2,
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Timer,
+  Trash2,
+  X,
 } from 'lucide-react';
+
 import { apiFetch } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';

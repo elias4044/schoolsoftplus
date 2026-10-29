@@ -36,15 +36,15 @@ export interface AssessedCriteriaTab {
 
 export interface GradeInference {
   grade: string;
-  confidence: "confirmed" | "estimated";
-  source: "points" | "criteria";
+  confidence: 'confirmed' | 'estimated';
+  source: 'points' | 'criteria';
 }
 
-export type GradeLetter = "A" | "B" | "C" | "D" | "E" | "F";
+export type GradeLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export interface GradeTrackerSettings {
   targetGrade: GradeLetter;
-  weightMode: "equal" | "recent";
+  weightMode: 'equal' | 'recent';
   showEstimated: boolean;
   includeManual: boolean;
 }
@@ -55,13 +55,13 @@ export interface GradeEntry {
   title: string;
   type: string;
   endDate: string;
-  source: "scanned" | "manual";
+  source: 'scanned' | 'manual';
   reported: boolean;
   review?: string;
   grade: string;
   estimatedGrade?: string;
-  confidence?: "confirmed" | "estimated";
-  gradeSource?: "points" | "criteria" | "review" | "manual";
+  confidence?: 'confirmed' | 'estimated';
+  gradeSource?: 'points' | 'criteria' | 'review' | 'manual';
   totalPoints?: string;
   pointsPct?: number;
   excluded: boolean;
@@ -80,7 +80,7 @@ export interface GradeSnapshot {
 }
 
 export interface GradeTrackerDoc {
-  username: string;
+  userId: string;
   subjectId: number;
   subjectName: string;
   subjectColor?: string;
@@ -98,8 +98,8 @@ export interface ScannedGradeResult {
   reported: boolean;
   review: string;
   estimatedGrade?: string;
-  confidence?: "confirmed" | "estimated";
-  gradeSource?: "points" | "criteria" | "review";
+  confidence?: 'confirmed' | 'estimated';
+  gradeSource?: 'points' | 'criteria' | 'review';
   grade: string;
   totalPoints?: string;
   pointsPct?: number;
