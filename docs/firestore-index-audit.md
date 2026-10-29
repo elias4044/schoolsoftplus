@@ -1,6 +1,4 @@
-# Firestore query index inventory
-
-Source audit of application frontend, API routes, database helpers, and migration scripts. All composite definitions live in `firestore.indexes.json`. No live project/index deployment was inspected.
+# Firestore query 
 
 | Collection | Fields / modes | Query source |
 | --- | --- | --- |
