@@ -159,6 +159,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ---
 
+## Backend documentation
+
+The [backend reference](docs/README.md) explains all routes, authentication flows, data models, realtime signaling, configuration, and failure behavior. The [route index](docs/backend/routes/README.md) covers every exported HTTP operation with examples and source-derived contracts. These Markdown files also load in the Developer Portal after publication to this repository's main branch.
+
 ## Project Structure
 
 ```
