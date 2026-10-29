@@ -165,33 +165,41 @@ export async function fetchSchoolsoftSession(
     responseType: 'json' as const,
   };
   try {
-    let response = await axios.get(sessionUrl, {
+    // The REST session endpoint authenticates with browser cookies, not the OAuth token.
+    const exchange = await axios.get(
+      `https://sms.schoolsoft.se/${school}/eva-apps/auth/login/student`,
+      {
+        ...options,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          token: accessToken,
+          orgid: orgId,
+          'User-Agent': 'nyEva',
+          'X-Requested-With': 'com.schoolsoft.eapp.android',
+          redirecturl: `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`,
+          language: 'sw',
+          theme: 'dark',
+          useros: 'android',
+        },
+      }
+    );
+    const setCookie = exchange.headers['set-cookie'];
+    const cookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
+    const cookiePairs = cookies.map((value: string) => value.split(';')[0].trim());
+    if (!cookiePairs.some((pair: string) => /^JSESSIONID=.+$/.test(pair))) return null;
+    const response = await axios.get(sessionUrl, {
       ...options,
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Cookie: cookiePairs.join('; '), Accept: 'application/json' },
     });
-    if (response.status !== 200 || !normalizeUserId(response.data?.user?.id)) {
-      const exchange = await axios.get(
-        `https://sms.schoolsoft.se/${school}/eva-apps/auth/login/student`,
-        {
-          ...options,
-          headers: {
-            token: accessToken,
-            orgid: orgId,
-            'User-Agent': 'nyEva',
-            'X-Requested-With': 'com.schoolsoft.eapp.android',
-            redirecturl: `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`,
-          },
-        }
-      );
-      const cookies = exchange.headers['set-cookie'];
-      if (!Array.isArray(cookies)) return null;
-      const cookie = cookies.map((value) => value.split(';')[0]).join('; ');
-      if (!cookie.includes('JSESSIONID=')) return null;
-      response = await axios.get(sessionUrl, { ...options, headers: { Cookie: cookie } });
-    }
     const data = response.data;
     const userId = normalizeUserId(data?.user?.id);
-    if (response.status !== 200 || !userId || typeof data.user.userName !== 'string') return null;
+    if (
+      response.status !== 200 ||
+      !userId ||
+      typeof data.user.userName !== 'string' ||
+      !data.user.userName.trim()
+    )
+      return null;
     return {
       username: data.user.userName.toLowerCase().trim(),
       firstName: data.user.firstName ?? '',
