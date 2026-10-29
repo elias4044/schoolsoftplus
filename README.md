@@ -37,7 +37,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 ## Screenshots
 
 <img src="public/preview_dashboard.png" alt="SchoolSoft+ dashboard">
-<img src="public/preview_grades.png">
+<img src="public/preview_news.png">
 <img src="public/preview_profile.png">
 
 ---
