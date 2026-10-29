@@ -8,6 +8,8 @@ import {
   saveCredential,
   upsertPasskeyUser,
 } from '@/app/api/lib/passkeyDb';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { requireSession } from '@/app/api/lib/schoolsoft';
 import { encrypt } from '@/app/api/lib/serverCrypto';
 
@@ -29,7 +31,7 @@ function getRpConfig() {
  * SchoolSoft refresh token so future passkey logins can exchange it
  * for a fresh session.
  */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -57,15 +59,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { response: RegistrationResponseJSON; deviceName?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 });
-  }
+  const body = (await readRouteBody(req)) as {
+    response: RegistrationResponseJSON;
+    deviceName?: string;
+  };
 
   const challengeDoc = await consumeChallenge(challengeId);
-  if (!challengeDoc) {
+  if (
+    !challengeDoc ||
+    challengeDoc.type !== 'registration' ||
+    challengeDoc.userHandle !== makeUserHandle(sess.userId, school)
+  ) {
     return NextResponse.json(
       { success: false, error: 'Registration challenge expired or not found. Please try again.' },
       { status: 400 }
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { rpID, origin } = getRpConfig();
-  const userHandle = makeUserHandle(username, school);
+  const userHandle = makeUserHandle(sess.userId, school);
 
   let verification;
   try {
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
     school,
     orgId,
     username: username.toLowerCase(),
+    userId: sess.userId,
   });
 
   // Save the credential
@@ -137,7 +142,7 @@ export async function POST(req: NextRequest) {
   // Clear the challenge cookie
   res.cookies.set('ssp_pk_challenge_id', '', { maxAge: 0, path: '/' });
   return res;
-}
+});
 
 function sanitizeDeviceName(name: unknown): string {
   if (typeof name !== 'string') return '';

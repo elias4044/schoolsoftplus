@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-import { db } from '@/app/api/lib/firebaseAdmin';
+import { recordLogin } from '@/app/api/lib/loginStats';
 import { exchangeCodeForToken, fetchSchoolsoftSession } from '@/app/api/lib/mobileAuth';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
 /**
@@ -21,7 +22,7 @@ import { trackLoginEvent } from '@/app/api/lib/statsHelper';
  *  6. Track the login event in Firestore (same as the regular login).
  *  7. Redirect to /dashboard.
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -66,7 +67,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (!state || pkce.state !== state) {
+  if (
+    !pkce ||
+    typeof pkce.verifier !== 'string' ||
+    typeof pkce.state !== 'string' ||
+    typeof pkce.school !== 'string' ||
+    !/^[a-zA-Z0-9_-]{1,100}$/.test(pkce.school) ||
+    !state ||
+    pkce.state !== state
+  ) {
     return NextResponse.redirect(
       new URL(
         '/login?authv2_error=' + encodeURIComponent('State mismatch. Please try again.'),
@@ -102,9 +111,19 @@ export async function GET(req: NextRequest) {
   }
 
   /*  Fetch canonical session info (username, userId, etc.)  */
-  const sessionInfo = await fetchSchoolsoftSession(school, ssToken);
-  const username = (sessionInfo?.username ?? '').toLowerCase();
+  const sessionInfo = await fetchSchoolsoftSession(school, ssToken, pkce.orgid ?? '18');
+  if (!sessionInfo)
+    return NextResponse.redirect(
+      new URL('/login?authv2_error=Account%20verification%20failed', req.url)
+    );
+  const username = sessionInfo.username.toLowerCase();
   const userId = sessionInfo?.userId?.toString() ?? '';
+  const { ensureAccountMigration } = await import('@/app/api/lib/accountMigration');
+  await ensureAccountMigration({ userId, username, school });
+  if (refreshToken) {
+    const { syncPasskeyRefreshToken } = await import('@/app/api/auth/v2/lib');
+    await syncPasskeyRefreshToken(userId, school, refreshToken);
+  }
   const orgid = pkce.orgid ?? '18';
 
   /*  Translate the Bearer token → SchoolSoft JSESSIONID  */
@@ -121,6 +140,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const sessionRes = await axios.get(sessionUrl, {
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'nyEva',
@@ -161,71 +182,10 @@ export async function GET(req: NextRequest) {
   }
 
   /*  Track login in Firestore  */
-  const time = new Date().toLocaleString('sv-SE', {
-    timeZone: 'Europe/Stockholm',
-  });
-
-  try {
-    const statsRef = db.collection('stats').doc('loginStats');
-    await db.runTransaction(async (tx) => {
-      const doc = await tx.get(statsRef);
-
-      type UserEntry = {
-        username: string;
-        first_login: string;
-        last_login: string;
-        login_count: number;
-        auth_method: string;
-        data: { goals: unknown[]; notes: unknown[] };
-      };
-      type StatsData = {
-        total_logins: number;
-        total_successful_logins: number;
-        total_api_calls: number;
-        unique_logins: number;
-        failed_logins: number;
-        users: UserEntry[];
-      };
-
-      const base: StatsData = {
-        total_logins: 0,
-        total_successful_logins: 0,
-        total_api_calls: 0,
-        unique_logins: 0,
-        failed_logins: 0,
-        users: [],
-      };
-
-      const data: StatsData = doc.exists ? { ...base, ...(doc.data() as StatsData) } : base;
-      data.total_logins += 1;
-      data.total_api_calls += 1;
-      data.total_successful_logins += 1;
-
-      if (username) {
-        const idx = data.users.findIndex((u) => u.username === username);
-        if (idx === -1) {
-          data.unique_logins += 1;
-          data.users.push({
-            username,
-            first_login: time,
-            last_login: time,
-            login_count: 1,
-            auth_method: 'authv2',
-            data: { goals: [], notes: [] },
-          });
-        } else {
-          data.users[idx].last_login = time;
-          data.users[idx].login_count += 1;
-          data.users[idx].auth_method = 'authv2';
-          data.users[idx].data ??= { goals: [], notes: [] };
-        }
-      }
-
-      doc.exists ? tx.update(statsRef, data) : tx.set(statsRef, data);
-    });
-  } catch (err) {
-    console.error('[auth/v2/callback] Firestore error:', (err as Error).message);
-    // Non-fatal — don't block the user from logging in.
+  if (userId) {
+    await recordLogin(userId, school, 'authv2').catch(() =>
+      console.error('[login] Statistics update failed')
+    );
   }
 
   trackLoginEvent(school);
@@ -238,6 +198,7 @@ export async function GET(req: NextRequest) {
   // Clear the ephemeral PKCE cookie
   res.cookies.set('ssp_v2_pkce', '', {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
@@ -245,6 +206,7 @@ export async function GET(req: NextRequest) {
 
   const sessionCookieOpts = {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
     maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -299,4 +261,4 @@ export async function GET(req: NextRequest) {
   });
 
   return res;
-}
+});

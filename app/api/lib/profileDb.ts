@@ -1,9 +1,13 @@
+import { resolveAccountReference } from './accountRegistry';
 import { db } from './firebaseAdmin';
+import { assertUserId } from './identity';
 
 const COL = 'profiles_v1';
 
 export interface UserProfile {
-  username: string; // key — SchoolSoft userName
+  username: string;
+  loginUsername: string;
+  userId: string;
   displayName: string; // custom display name (editable)
   bio: string;
   pronouns: string;
@@ -32,11 +36,12 @@ export interface UserProfile {
   updatedAt: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function docToProfile(doc: FirebaseFirestore.DocumentSnapshot<any>): UserProfile {
+function docToProfile(doc: FirebaseFirestore.DocumentSnapshot): UserProfile {
   const d = doc.data()!;
   return {
     username: doc.id,
+    userId: doc.id,
+    loginUsername: d.loginUsername ?? d.username ?? doc.id,
     displayName: d.displayName ?? '',
     bio: d.bio ?? '',
     pronouns: d.pronouns ?? '',
@@ -62,13 +67,16 @@ function docToProfile(doc: FirebaseFirestore.DocumentSnapshot<any>): UserProfile
   };
 }
 
-export async function getProfile(username: string): Promise<UserProfile | null> {
-  const doc = await db.collection(COL).doc(username.toLowerCase()).get();
+export async function getProfile(userId: string): Promise<UserProfile | null> {
+  userId = await resolveAccountReference(userId);
+  const doc = await db.collection(COL).doc(userId).get();
   if (!doc.exists) return null;
   return docToProfile(doc);
 }
 
 export interface ProfileUpdate {
+  loginUsername?: string;
+  school?: string;
   displayName?: string;
   bio?: string;
   pronouns?: string;
@@ -92,13 +100,16 @@ export interface ProfileUpdate {
   userType?: string;
 }
 
-export async function upsertProfile(username: string, update: ProfileUpdate): Promise<UserProfile> {
-  const ref = db.collection(COL).doc(username.toLowerCase());
-  const existing = await ref.get();
-  const payload: Record<string, unknown> = { ...update, updatedAt: Date.now() };
-  // Set joinedAt only on first creation
-  if (!existing.exists) payload.joinedAt = Date.now();
-  await ref.set(payload, { merge: true });
+export async function upsertProfile(userId: string, update: ProfileUpdate): Promise<UserProfile> {
+  assertUserId(userId);
+  const ref = db.collection(COL).doc(userId);
+  await db.runTransaction(async (transaction) => {
+    const existing = await transaction.get(ref);
+    const payload: Record<string, unknown> = { ...update, userId, updatedAt: Date.now() };
+    // Set joinedAt only on first creation
+    if (!existing.exists) payload.joinedAt = Date.now();
+    transaction.set(ref, payload, { merge: true });
+  });
   const doc = await ref.get();
   return docToProfile(doc);
 }

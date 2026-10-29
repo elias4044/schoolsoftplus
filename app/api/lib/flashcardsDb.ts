@@ -1,10 +1,12 @@
+import { resolveAccountReference } from './accountRegistry';
 import { db } from './firebaseAdmin';
+import { normalizeUserId } from './identity';
 
 export type DeckColor = 'violet' | 'rose' | 'amber' | 'emerald' | 'sky' | 'slate';
 
 export interface FlashDeck {
   id: string;
-  username: string;
+  userId: string;
   title: string;
   description: string;
   color: DeckColor;
@@ -20,7 +22,7 @@ export interface FlashDeck {
 export interface FlashCard {
   id: string;
   deckId: string;
-  username: string;
+  userId: string;
   front: string;
   back: string;
   hint: string;
@@ -35,8 +37,8 @@ export interface FlashCard {
   updatedAt: number;
 }
 
-export type FlashDeckPublic = Omit<FlashDeck, 'username'>;
-export type FlashCardPublic = Omit<FlashCard, 'username'>;
+export type FlashDeckPublic = Omit<FlashDeck, 'userId'>;
+export type FlashCardPublic = Omit<FlashCard, 'userId'>;
 
 const DECK_COL = 'flashcard_decks_v1';
 const CARD_COL = 'flashcard_cards_v1';
@@ -45,7 +47,7 @@ function docToDeck(doc: FirebaseFirestore.DocumentSnapshot): FlashDeck {
   const data = doc.data()!;
   return {
     id: doc.id,
-    username: data.username ?? '',
+    userId: data.userId ?? data.username ?? '',
     title: data.title ?? 'Untitled',
     description: data.description ?? '',
     color: data.color ?? 'violet',
@@ -64,7 +66,7 @@ function docToCard(doc: FirebaseFirestore.DocumentSnapshot): FlashCard {
   return {
     id: doc.id,
     deckId: data.deckId ?? '',
-    username: data.username ?? '',
+    userId: data.userId ?? '',
     front: data.front ?? '',
     back: data.back ?? '',
     hint: data.hint ?? '',
@@ -79,21 +81,21 @@ function docToCard(doc: FirebaseFirestore.DocumentSnapshot): FlashCard {
   };
 }
 
-export async function getDecksByUser(username: string): Promise<FlashDeck[]> {
-  const snap = await db.collection(DECK_COL).where('username', '==', username).get();
+export async function getDecksByUser(userId: string): Promise<FlashDeck[]> {
+  const snap = await db.collection(DECK_COL).where('userId', '==', userId).get();
   return snap.docs.map(docToDeck).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function getDeckById(id: string, username: string): Promise<FlashDeck | null> {
+export async function getDeckById(id: string, userId: string): Promise<FlashDeck | null> {
   const doc = await db.collection(DECK_COL).doc(id).get();
   if (!doc.exists) return null;
   const deck = docToDeck(doc);
-  if (deck.username !== username) return null;
+  if (deck.userId !== userId) return null;
   return deck;
 }
 
 export async function createDeck(
-  username: string,
+  userId: string,
   data: Pick<
     FlashDeck,
     'title' | 'description' | 'color' | 'emoji' | 'subjectId' | 'subjectName' | 'tags'
@@ -101,14 +103,14 @@ export async function createDeck(
 ): Promise<FlashDeck> {
   const now = Date.now();
   const ref = db.collection(DECK_COL).doc();
-  const payload = { username, ...data, cardCount: 0, createdAt: now, updatedAt: now };
+  const payload = { userId, ...data, cardCount: 0, createdAt: now, updatedAt: now };
   await ref.set(payload);
   return { id: ref.id, ...payload };
 }
 
 export async function updateDeck(
   id: string,
-  username: string,
+  userId: string,
   updates: Partial<
     Pick<
       FlashDeck,
@@ -121,7 +123,7 @@ export async function updateDeck(
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToDeck(doc);
-    if (existing.username !== username) return null;
+    if (existing.userId !== userId) return null;
     if (
       Object.entries(updates).every(
         ([key, value]) => JSON.stringify(existing[key as keyof FlashDeck]) === JSON.stringify(value)
@@ -134,17 +136,17 @@ export async function updateDeck(
   });
 }
 
-export async function deleteDeck(id: string, username: string): Promise<boolean> {
+export async function deleteDeck(id: string, userId: string): Promise<boolean> {
   const ref = db.collection(DECK_COL).doc(id);
   const cardsQuery = db
     .collection(CARD_COL)
     .where('deckId', '==', id)
-    .where('username', '==', username)
+    .where('userId', '==', userId)
     .limit(400);
   while (true) {
     const result = await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(ref);
-      if (!doc.exists || docToDeck(doc).username !== username) return 'missing';
+      if (!doc.exists || docToDeck(doc).userId !== userId) return 'missing';
       const cards = await transaction.get(cardsQuery);
       for (const card of cards.docs) transaction.delete(card.ref);
       if (cards.size < 400) {
@@ -162,28 +164,28 @@ export async function deleteDeck(id: string, username: string): Promise<boolean>
   }
 }
 
-export async function getCardsByDeck(deckId: string, username: string): Promise<FlashCard[]> {
+export async function getCardsByDeck(deckId: string, userId: string): Promise<FlashCard[]> {
   const snap = await db
     .collection(CARD_COL)
     .where('deckId', '==', deckId)
-    .where('username', '==', username)
+    .where(normalizeUserId(userId) ? 'userId' : 'username', '==', userId)
     .get();
   return snap.docs.map(docToCard).sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export async function createCard(
   deckId: string,
-  username: string,
+  userId: string,
   data: Pick<FlashCard, 'front' | 'back' | 'hint' | 'tags'>
 ): Promise<FlashCard | null> {
-  const cards = await bulkCreateCards(deckId, username, [data]);
+  const cards = await bulkCreateCards(deckId, userId, [data]);
   return cards?.[0] ?? null;
 }
 
 export async function updateCard(
   id: string,
   deckId: string,
-  username: string,
+  userId: string,
   updates: Partial<
     Pick<
       FlashCard,
@@ -204,9 +206,9 @@ export async function updateCard(
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     const deck = await transaction.get(deckRef);
-    if (!doc.exists || !deck.exists || docToDeck(deck).username !== username) return null;
+    if (!doc.exists || !deck.exists || docToDeck(deck).userId !== userId) return null;
     const existing = docToCard(doc);
-    if (existing.username !== username || existing.deckId !== deckId) return null;
+    if (existing.userId !== userId || existing.deckId !== deckId) return null;
     if (
       Object.entries(updates).every(
         ([key, value]) => JSON.stringify(existing[key as keyof FlashCard]) === JSON.stringify(value)
@@ -219,7 +221,7 @@ export async function updateCard(
   });
 }
 
-export async function deleteCard(id: string, deckId: string, username: string): Promise<boolean> {
+export async function deleteCard(id: string, deckId: string, userId: string): Promise<boolean> {
   const ref = db.collection(CARD_COL).doc(id);
   const deckRef = db.collection(DECK_COL).doc(deckId);
   return db.runTransaction(async (transaction) => {
@@ -228,8 +230,7 @@ export async function deleteCard(id: string, deckId: string, username: string): 
     if (!doc.exists || !deckDoc.exists) return false;
     const card = docToCard(doc);
     const deck = docToDeck(deckDoc);
-    if (card.username !== username || card.deckId !== deckId || deck.username !== username)
-      return false;
+    if (card.userId !== userId || card.deckId !== deckId || deck.userId !== userId) return false;
     transaction.delete(ref);
     transaction.update(deckRef, {
       cardCount: Math.max(0, deck.cardCount - 1),
@@ -247,17 +248,16 @@ export async function getDeckByIdAny(id: string): Promise<FlashDeck | null> {
 
 export async function canImportDeck(
   deck: FlashDeck,
-  username: string,
+  userId: string,
   messageId?: string
 ): Promise<boolean> {
-  if (deck.username === username) return true;
+  if (deck.userId === userId) return true;
   if (!messageId) return false;
 
   const message = (await db.collection('messages_v1').doc(messageId).get()).data();
   if (
     !message ||
     message.deletedAt != null ||
-    message.senderUsername !== deck.username ||
     message.shareCard?.type !== 'flashdeck' ||
     message.shareCard.deckId !== deck.id ||
     typeof message.conversationId !== 'string' ||
@@ -269,12 +269,17 @@ export async function canImportDeck(
   const conversation = (
     await db.collection('conversations_v1').doc(message.conversationId).get()
   ).data();
-  return Array.isArray(conversation?.participants) && conversation.participants.includes(username);
+  const sender = message.senderUserId ?? message.senderUsername;
+  if (typeof sender !== 'string' || (await resolveAccountReference(sender)) !== deck.userId)
+    return false;
+  return (
+    Array.isArray(conversation?.participantIds) && conversation.participantIds.includes(userId)
+  );
 }
 
 export async function bulkCreateCards(
   deckId: string,
-  username: string,
+  userId: string,
   cards: Pick<FlashCard, 'front' | 'back' | 'hint' | 'tags'>[]
 ): Promise<FlashCard[] | null> {
   if (cards.length === 0) return [];
@@ -287,7 +292,7 @@ export async function bulkCreateCards(
       ref: db.collection(CARD_COL).doc(),
       data: {
         deckId,
-        username,
+        userId,
         ...card,
         repetitions: 0,
         easeFactor: 2.5,
@@ -302,7 +307,7 @@ export async function bulkCreateCards(
       const doc = await transaction.get(deckRef);
       if (!doc.exists) return false;
       const deck = docToDeck(doc);
-      if (deck.username !== username) return false;
+      if (deck.userId !== userId) return false;
       for (const card of chunk) transaction.set(card.ref, card.data);
       transaction.update(deckRef, { cardCount: deck.cardCount + chunk.length, updatedAt: now });
       return true;

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
 import { getProfile } from '@/app/api/lib/profileDb';
 import { getOrCreateReferralCode } from '@/app/api/lib/referralDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { applySessionCookieUpdates, requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
@@ -10,25 +10,23 @@ import { applySessionCookieUpdates, requireSession } from '@/app/api/lib/schools
  * Returns the authenticated user's referral code and stats.
  * Creates a code automatically if one doesn't exist yet.
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, error: 'Session expired.' }, { status: 401 });
-  }
 
   try {
-    const data = await getOrCreateReferralCode(sess.username);
+    const data = await getOrCreateReferralCode(sess.userId);
 
     // Enrich referred users with their display names
     const enriched = await Promise.all(
       data.referredUsers.map(async (entry) => {
-        const profile = await getProfile(entry.username).catch(() => null);
+        const profile = await getProfile(entry.userId).catch(() => null);
         return {
-          username: entry.username,
-          displayName: profile?.displayName || entry.username,
+          username: entry.userId,
+          userId: entry.userId,
+          displayName: profile?.displayName || entry.userId,
           pfpUrl: profile?.pfpUrl || '',
           joinedAt: entry.joinedAt,
         };
@@ -51,4 +49,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

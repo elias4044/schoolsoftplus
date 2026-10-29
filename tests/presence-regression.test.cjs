@@ -36,14 +36,21 @@ function loadDbModule(path, initial) {
     module: loadedModule,
     exports: loadedModule.exports,
     Date,
-    require: (name) => (name === './firebaseAdmin' ? { db } : require(name)),
+    require: (name) =>
+      name === './firebaseAdmin'
+        ? { db }
+        : name === './validation'
+          ? { InputError: class InputError extends Error {} }
+          : name === '@/lib/accountReferences' || name === './accountRegistry'
+            ? {}
+            : require(name),
   });
   return { api: loadedModule.exports, writes };
 }
 
 test('dotted usernames are literal keys and repeated read receipts do not write', async () => {
   const { api, writes } = loadDbModule('app/api/lib/messagingDb.ts', {
-    participants: ['first.last'],
+    participantIds: ['first.last'],
     lastAt: Date.now() - 1000,
     lastReadAt: { first: { last: 1 } },
   });
@@ -54,7 +61,7 @@ test('dotted usernames are literal keys and repeated read receipts do not write'
 
 test('read receipt cannot write for a nonparticipant', async () => {
   const { api, writes } = loadDbModule('app/api/lib/messagingDb.ts', {
-    participants: [],
+    participantIds: [],
     lastAt: Date.now(),
     lastReadAt: {},
   });

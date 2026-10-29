@@ -5,6 +5,8 @@ import {
   fetchSchoolsoftSession,
   signMobileToken,
 } from '@/app/api/lib/mobileAuth';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
 /* 
@@ -39,13 +41,13 @@ import { trackLoginEvent } from '@/app/api/lib/statsHelper';
        expiresIn: 2592000   ← 30 days in seconds
      }
 */
-export async function POST(req: NextRequest) {
-  let body: { code?: string; verifier?: string; school?: string; orgid?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as {
+    code?: string;
+    verifier?: string;
+    school?: string;
+    orgid?: string;
+  };
 
   const { code, verifier } = body;
   if (!code || !verifier) {
@@ -81,8 +83,10 @@ export async function POST(req: NextRequest) {
   }
 
   /* ── Confirm session / get canonical username ───────────── */
-  const sessionInfo = await fetchSchoolsoftSession(school, ssToken);
-  const username = sessionInfo?.username ?? 'unknown';
+  const sessionInfo = await fetchSchoolsoftSession(school, ssToken, body.orgid ?? '18');
+  if (!sessionInfo)
+    return NextResponse.json({ error: 'Account verification failed.' }, { status: 401 });
+  const username = sessionInfo.username;
 
   /* ── Issue signed JWT ────────────────────────────────────── */
   const token = signMobileToken({
@@ -101,4 +105,4 @@ export async function POST(req: NextRequest) {
     tokenType: 'Bearer',
     expiresIn: 30 * 24 * 60 * 60,
   });
-}
+});

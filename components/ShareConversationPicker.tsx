@@ -205,7 +205,7 @@ function FlashDeckPreview({ card }: { card: Extract<ShareCardRef, { type: 'flash
 /* -- Main -------------------------------------------------- */
 export default function ShareConversationPicker({ card, onClose }: Props) {
   const { session } = useSession();
-  const username = session?.username ?? '';
+  const username = session?.userId ?? '';
   const { conversations, loading: convosLoading } = useConversations(username);
 
   const [filter, setFilter] = useState('');
@@ -229,7 +229,7 @@ export default function ShareConversationPicker({ card, onClose }: Props) {
 
   const partnerName = (c: (typeof conversations)[0]) => {
     if (c.type === 'group') return c.groupName ?? 'Group';
-    const other = c.participants.find((p) => p !== username) ?? '';
+    const other = c.participantIds.find((p) => p !== username) ?? '';
     return c.participantNames[other] || other;
   };
 
@@ -419,8 +419,8 @@ export default function ShareConversationPicker({ card, onClose }: Props) {
                       ) : (
                         <p className="text-muted-foreground mt-0.5 text-[10px]">
                           {convo.type === 'group'
-                            ? `${convo.participants.length} members`
-                            : (convo.participants.find((p) => p !== username) ?? '')}
+                            ? `${convo.participantIds.length} members`
+                            : (convo.participantIds.find((p) => p !== username) ?? '')}
                         </p>
                       )}
                     </div>

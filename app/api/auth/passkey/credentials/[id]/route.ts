@@ -7,6 +7,7 @@ import {
   getCredential,
   makeUserHandle,
 } from '@/app/api/lib/passkeyDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
@@ -15,7 +16,10 @@ import { requireSession } from '@/app/api/lib/schoolsoft';
  * Deletes a single passkey credential. If it was the last credential for
  * this user, the passkey_users parent document is also removed.
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withValidation(async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -26,7 +30,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ success: false, error: 'Missing credential ID.' }, { status: 400 });
   }
 
-  const userHandle = makeUserHandle(sess.username, sess.school);
+  const userHandle = makeUserHandle(sess.userId, sess.school);
 
   // Verify the credential belongs to this user before deleting
   const existing = await getCredential(userHandle, credentialId);
@@ -43,4 +47,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   return NextResponse.json({ success: true });
-}
+});

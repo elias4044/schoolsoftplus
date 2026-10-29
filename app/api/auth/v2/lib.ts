@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
-import { db } from '@/app/api/lib/firebaseAdmin';
 import { fetchSchoolsoftSession } from '@/app/api/lib/mobileAuth';
 import { getPasskeyUser, makeUserHandle, updatePasskeyToken } from '@/app/api/lib/passkeyDb';
 import { encrypt } from '@/app/api/lib/serverCrypto';
@@ -22,6 +21,7 @@ export interface AuthV2SessionData {
   school: string;
   orgid: string;
   username: string;
+  userId: string;
   ssToken: string;
   refreshToken: string;
   ssTokenExpiresAt: number;
@@ -70,13 +70,13 @@ export async function refreshAuthV2Session({
 
   try {
     const refreshRes = await fetch(refreshUrl, {
+      signal: AbortSignal.timeout(8_000),
       method: 'POST',
       headers: { accept: 'application/json' },
     });
 
     if (refreshRes.status !== 200) {
-      const text = await refreshRes.text().catch(() => '');
-      console.warn(`[auth/v2] refresh failed (${refreshRes.status}):`, text);
+      console.warn(`[auth/v2] refresh failed (${refreshRes.status}):`);
       throw new AuthV2Error('Refresh token expired. Please log in again.', 401);
     }
 
@@ -95,8 +95,9 @@ export async function refreshAuthV2Session({
     throw new AuthV2Error('Could not reach SchoolSoft. Try again later.', 502);
   }
 
-  const sessionInfo = await fetchSchoolsoftSession(normalizedSchool, ssToken);
-  const canonicalUsername = sessionInfo?.username ?? '';
+  const sessionInfo = await fetchSchoolsoftSession(normalizedSchool, ssToken, orgid);
+  if (!sessionInfo) throw new AuthV2Error('Could not verify the refreshed account.', 401);
+  const canonicalUsername = sessionInfo.username;
   const userId = sessionInfo?.userId?.toString() ?? '';
 
   const redirectUrl = `https://sms.schoolsoft.se/${normalizedSchool}/react/#/student/subjectrooms`;
@@ -108,6 +109,8 @@ export async function refreshAuthV2Session({
 
   try {
     const sessionRes = await axios.get(sessionUrl, {
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'nyEva',
@@ -155,6 +158,7 @@ export async function refreshAuthV2Session({
     school: normalizedSchool,
     orgid,
     username: canonicalUsername,
+    userId,
     ssToken,
     refreshToken: nextRefreshToken,
     ssTokenExpiresAt: Math.floor(Date.now() / 1000) + expiresIn,
@@ -167,6 +171,7 @@ export async function refreshAuthV2Session({
 export function applyAuthV2Cookies(res: NextResponse, session: AuthV2SessionData) {
   const cookieOpts = {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
@@ -180,6 +185,7 @@ export function applyAuthV2Cookies(res: NextResponse, session: AuthV2SessionData
 
   res.cookies.set('ssp_school', session.school, { ...cookieOpts, httpOnly: false });
   res.cookies.set('ssp_username', session.username, { ...cookieOpts, httpOnly: false });
+  res.cookies.set('ssp_userid', session.userId, cookieOpts);
   res.cookies.set('ssp_ss_token', session.ssToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 });
   res.cookies.set('ssp_ss_token_expires', String(session.ssTokenExpiresAt), {
     ...cookieOpts,
@@ -203,13 +209,13 @@ export function applyAuthV2Cookies(res: NextResponse, session: AuthV2SessionData
 }
 
 export async function syncPasskeyRefreshToken(
-  username: string,
+  userId: string,
   school: string,
   refreshToken: string
 ) {
-  if (!username || !school || !refreshToken) return;
+  if (!userId || !school || !refreshToken) return;
 
-  const userHandle = makeUserHandle(username, school);
+  const userHandle = makeUserHandle(userId, school);
 
   try {
     const record = await getPasskeyUser(userHandle);
@@ -219,69 +225,4 @@ export async function syncPasskeyRefreshToken(
   } catch (error) {
     console.error('[auth/v2] passkey token sync error:', (error as Error).message);
   }
-}
-
-export async function recordAuthV2Login(username: string) {
-  const normalizedUsername = username.trim().toLowerCase();
-  if (!normalizedUsername) return;
-
-  const time = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' });
-  const statsRef = db.collection('stats').doc('loginStats');
-
-  await db.runTransaction(async (tx) => {
-    const doc = await tx.get(statsRef);
-
-    type UserEntry = {
-      username: string;
-      first_login: string;
-      last_login: string;
-      login_count: number;
-      auth_method: string;
-      data: { goals: unknown[]; notes: unknown[] };
-    };
-
-    type StatsData = {
-      total_logins: number;
-      total_successful_logins: number;
-      total_api_calls: number;
-      unique_logins: number;
-      failed_logins: number;
-      users: UserEntry[];
-    };
-
-    const base: StatsData = {
-      total_logins: 0,
-      total_successful_logins: 0,
-      total_api_calls: 0,
-      unique_logins: 0,
-      failed_logins: 0,
-      users: [],
-    };
-
-    const data: StatsData = doc.exists ? { ...base, ...(doc.data() as StatsData) } : base;
-    data.total_logins += 1;
-    data.total_api_calls += 1;
-    data.total_successful_logins += 1;
-
-    const existingIndex = data.users.findIndex((user) => user.username === normalizedUsername);
-
-    if (existingIndex === -1) {
-      data.unique_logins += 1;
-      data.users.push({
-        username: normalizedUsername,
-        first_login: time,
-        last_login: time,
-        login_count: 1,
-        auth_method: 'authv2',
-        data: { goals: [], notes: [] },
-      });
-    } else {
-      data.users[existingIndex].last_login = time;
-      data.users[existingIndex].login_count += 1;
-      data.users[existingIndex].auth_method = 'authv2';
-      data.users[existingIndex].data ??= { goals: [], notes: [] };
-    }
-
-    doc.exists ? tx.update(statsRef, data) : tx.set(statsRef, data);
-  });
 }

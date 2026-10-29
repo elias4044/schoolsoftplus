@@ -6,7 +6,7 @@ export type NoteStatus = 'draft' | 'published' | 'archived';
 
 export interface Note {
   id: string;
-  username: string;
+  userId: string;
   title: string;
   content: string; // markdown
   status: NoteStatus;
@@ -15,7 +15,7 @@ export interface Note {
   updatedAt: number;
 }
 
-export type NotePublic = Omit<Note, 'username' | 'shareToken'>;
+export type NotePublic = Omit<Note, 'userId' | 'shareToken'>;
 
 const COL = 'notes_v2';
 
@@ -23,7 +23,7 @@ function docToNote(doc: FirebaseFirestore.DocumentSnapshot): Note {
   const data = doc.data()!;
   return {
     id: doc.id,
-    username: data.username ?? '',
+    userId: data.userId ?? '',
     title: data.title ?? 'Untitled',
     content: data.content ?? '',
     status: data.status ?? 'draft',
@@ -33,16 +33,16 @@ function docToNote(doc: FirebaseFirestore.DocumentSnapshot): Note {
   };
 }
 
-export async function getNotesByUser(username: string): Promise<Note[]> {
-  const snap = await db.collection(COL).where('username', '==', username).get();
+export async function getNotesByUser(userId: string): Promise<Note[]> {
+  const snap = await db.collection(COL).where('userId', '==', userId).get();
   return snap.docs.map(docToNote).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function getNoteById(id: string, username: string): Promise<Note | null> {
+export async function getNoteById(id: string, userId: string): Promise<Note | null> {
   const doc = await db.collection(COL).doc(id).get();
   if (!doc.exists) return null;
   const note = docToNote(doc);
-  if (note.username !== username) return null;
+  if (note.userId !== userId) return null;
   return note;
 }
 
@@ -53,7 +53,7 @@ export async function getNoteByShareToken(token: string): Promise<Note | null> {
 }
 
 export async function createNote(
-  username: string,
+  userId: string,
   title: string,
   content: string,
   status: NoteStatus = 'draft'
@@ -61,7 +61,7 @@ export async function createNote(
   const now = Date.now();
   const ref = db.collection(COL).doc();
   const data = {
-    username,
+    userId,
     title,
     content,
     status,
@@ -75,7 +75,7 @@ export async function createNote(
 
 export async function updateNote(
   id: string,
-  username: string,
+  userId: string,
   updates: Partial<Pick<Note, 'title' | 'content' | 'status'>>
 ): Promise<Note | null> {
   const ref = db.collection(COL).doc(id);
@@ -83,7 +83,7 @@ export async function updateNote(
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToNote(doc);
-    if (existing.username !== username) return null;
+    if (existing.userId !== userId) return null;
     if (Object.entries(updates).every(([key, value]) => existing[key as keyof Note] === value))
       return existing;
     const patch = { ...updates, updatedAt: Date.now() };
@@ -92,35 +92,35 @@ export async function updateNote(
   });
 }
 
-export async function deleteNote(id: string, username: string): Promise<boolean> {
+export async function deleteNote(id: string, userId: string): Promise<boolean> {
   const ref = db.collection(COL).doc(id);
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
-    if (docToNote(doc).username !== username) return false;
+    if (docToNote(doc).userId !== userId) return false;
     transaction.delete(ref);
     return true;
   });
 }
 
-export async function generateShareToken(id: string, username: string): Promise<string | null> {
+export async function generateShareToken(id: string, userId: string): Promise<string | null> {
   const ref = db.collection(COL).doc(id);
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
-    if (docToNote(doc).username !== username) return null;
+    if (docToNote(doc).userId !== userId) return null;
     const token = crypto.randomBytes(20).toString('hex');
     transaction.update(ref, { shareToken: token });
     return token;
   });
 }
 
-export async function revokeShareToken(id: string, username: string): Promise<boolean> {
+export async function revokeShareToken(id: string, userId: string): Promise<boolean> {
   const ref = db.collection(COL).doc(id);
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
-    if (docToNote(doc).username !== username) return false;
+    if (docToNote(doc).userId !== userId) return false;
     if (docToNote(doc).shareToken !== null) transaction.update(ref, { shareToken: null });
     return true;
   });

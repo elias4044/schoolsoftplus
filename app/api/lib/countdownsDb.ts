@@ -8,7 +8,7 @@ export type CountdownTheme = 'violet' | 'rose' | 'amber' | 'emerald' | 'sky' | '
 
 export interface Countdown {
   id: string;
-  username: string;
+  userId: string;
   title: string;
   description: string;
   targetDate: number; // unix ms
@@ -21,7 +21,7 @@ export interface Countdown {
   updatedAt: number;
 }
 
-export type CountdownPublic = Omit<Countdown, 'username'>;
+export type CountdownPublic = Omit<Countdown, 'userId'>;
 
 const COL = 'countdowns_v1';
 
@@ -29,7 +29,7 @@ function docToCountdown(doc: FirebaseFirestore.DocumentSnapshot): Countdown {
   const data = doc.data()!;
   return {
     id: doc.id,
-    username: data.username ?? '',
+    userId: data.userId ?? '',
     title: data.title ?? 'Untitled',
     description: data.description ?? '',
     targetDate: typeof data.targetDate === 'number' ? data.targetDate : Date.now(),
@@ -43,27 +43,27 @@ function docToCountdown(doc: FirebaseFirestore.DocumentSnapshot): Countdown {
   };
 }
 
-export async function getCountdownsByUser(username: string): Promise<Countdown[]> {
-  const snap = await db.collection(COL).where('username', '==', username).get();
+export async function getCountdownsByUser(userId: string): Promise<Countdown[]> {
+  const snap = await db.collection(COL).where('userId', '==', userId).get();
   return snap.docs.map(docToCountdown).sort((a, b) => a.targetDate - b.targetDate);
 }
 
-export async function getCountdownById(id: string, username: string): Promise<Countdown | null> {
+export async function getCountdownById(id: string, userId: string): Promise<Countdown | null> {
   const doc = await db.collection(COL).doc(id).get();
   if (!doc.exists) return null;
   const c = docToCountdown(doc);
-  if (c.username !== username) return null;
+  if (c.userId !== userId) return null;
   return c;
 }
 
 export async function createCountdown(
-  username: string,
-  fields: Omit<Countdown, 'id' | 'username' | 'createdAt' | 'updatedAt'>
+  userId: string,
+  fields: Omit<Countdown, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Countdown> {
   const now = Date.now();
   const id = crypto.randomUUID();
   const data = {
-    username,
+    userId,
     ...fields,
     createdAt: now,
     updatedAt: now,
@@ -74,15 +74,15 @@ export async function createCountdown(
 
 export async function updateCountdown(
   id: string,
-  username: string,
-  patch: Partial<Omit<Countdown, 'id' | 'username' | 'createdAt'>>
+  userId: string,
+  patch: Partial<Omit<Countdown, 'id' | 'userId' | 'createdAt'>>
 ): Promise<Countdown | null> {
   const ref = db.collection(COL).doc(id);
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToCountdown(doc);
-    if (existing.username !== username) return null;
+    if (existing.userId !== userId) return null;
 
     if (Object.entries(patch).every(([key, value]) => existing[key as keyof Countdown] === value))
       return existing;
@@ -92,12 +92,12 @@ export async function updateCountdown(
   });
 }
 
-export async function deleteCountdown(id: string, username: string): Promise<boolean> {
+export async function deleteCountdown(id: string, userId: string): Promise<boolean> {
   const ref = db.collection(COL).doc(id);
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
-    if (docToCountdown(doc).username !== username) return false;
+    if (docToCountdown(doc).userId !== userId) return false;
     transaction.delete(ref);
     return true;
   });

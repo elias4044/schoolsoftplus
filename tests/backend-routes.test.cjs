@@ -27,6 +27,8 @@ function createLoader(stubs = {}) {
         module: loaded,
         exports: loaded.exports,
         Buffer,
+        URL,
+        Headers,
         Date,
         Request,
         Response,
@@ -58,7 +60,7 @@ function createStore(initial = {}, { failCommit, retry = false } = {}) {
     exists: data.has(ref.path),
     data: () => structuredClone(data.get(ref.path)),
   });
-  function collection(name, filters = [], max = Infinity) {
+  function collection(name, filters = [], max = Infinity, after = '') {
     return {
       doc(id = `generated-${++nextId}`) {
         const ref = {
@@ -66,21 +68,32 @@ function createStore(initial = {}, { failCommit, retry = false } = {}) {
           path: `${name}/${id}`,
           get: async () => snapshot(ref),
           set: async (value) => data.set(ref.path, structuredClone(value)),
+          collection: (child) => collection(`${name}/${id}/${child}`),
+          delete: async () => data.delete(ref.path),
         };
         return ref;
       },
       where: (field, operator, value) => {
-        assert.equal(operator, '==');
-        return collection(name, [...filters, [field, value]], max);
+        assert.ok(['==', 'array-contains'].includes(operator));
+        return collection(name, [...filters, [field, value, operator]], max, after);
       },
-      limit: (limit) => collection(name, filters, limit),
+      orderBy: () => collection(name, filters, max, after),
+      startAfter: (cursor) => collection(name, filters, max, cursor.ref.path),
+      limit: (limit) => collection(name, filters, limit, after),
       async get() {
         const docs = [...data.entries()]
           .filter(
             ([key, value]) =>
               key.startsWith(`${name}/`) &&
-              filters.every(([field, expected]) => value[field] === expected)
+              !key.slice(name.length + 1).includes('/') &&
+              key > after &&
+              filters.every(([field, expected, operator]) =>
+                operator === 'array-contains'
+                  ? value[field]?.includes(expected)
+                  : value[field] === expected
+              )
           )
+          .sort(([a], [b]) => a.localeCompare(b))
           .slice(0, max)
           .map(([key]) => snapshot(collection(name).doc(key.slice(name.length + 1))));
         return { docs, size: docs.length, empty: docs.length === 0 };
@@ -121,6 +134,159 @@ function createStore(initial = {}, { failCommit, retry = false } = {}) {
   return { data, commits, load };
 }
 
+test('returning accounts migrate independently while shared IDs, messages, and offline peers survive', async () => {
+  const first = { username: 'first.last', userId: '123456', school: 'engelska' };
+  const second = { username: 'second.last', userId: '654321', school: 'engelska' };
+  const oldHandle = Buffer.from('first.last@engelska').toString('base64url');
+  const newHandle = Buffer.from('123456@engelska').toString('base64url');
+  const { data, load, commits } = createStore(
+    {
+      'notes_v2/mine': { username: first.username, content: 'unchanged' },
+      'notes_v2/theirs': { username: second.username, content: 'private' },
+      'profiles_v1/first.last': { displayName: 'First' },
+      'profiles_v1/second.last': { displayName: 'Second' },
+      'dashboard_layouts/first.last': { widgets: ['notes'] },
+      'grade_tracker_v1/first.last_10': {
+        username: first.username,
+        subjectId: 10,
+        assessments: [1],
+      },
+      'conversations_v1/encryption-salt': {
+        type: 'dm',
+        participants: [first.username, second.username],
+        participantNames: { 'first.last': 'First', 'second.last': 'Second' },
+        lastReadAt: { first: { last: 20 }, 'first.last': 30 },
+        lastSenderUsername: first.username,
+      },
+      'messages_v1/old': {
+        conversationId: 'encryption-salt',
+        senderUsername: first.username,
+        content: 'ciphertext',
+        reactions: { like: [first.username, second.username] },
+      },
+      'friendships_v1/random-legacy-id': {
+        userA: first.username,
+        userB: second.username,
+        requestedBy: first.username,
+        status: 'accepted',
+      },
+      'group_invites_v1/legacy-invite': {
+        invitedUsername: first.username,
+        invitedBy: second.username,
+      },
+      'referrals_v1/first.last': {
+        code: 'ABCDEFGH',
+        referredUsers: [{ username: second.username, joinedAt: 1 }],
+      },
+      'referral_codes_v1/ABCDEFGH': { username: first.username },
+      [`passkey_users/${oldHandle}`]: {
+        username: first.username,
+        school: first.school,
+        encryptedRefreshToken: 'secret',
+      },
+      [`passkey_users/${oldHandle}/credentials/device`]: { publicKey: 'keep', signCount: 3 },
+      'stats/loginStats': {
+        total_logins: 5,
+        users: [
+          { username: first.username, login_count: 3, data: { notes: ['legacy'] } },
+          { username: second.username, login_count: 2 },
+        ],
+      },
+    },
+    { retry: true }
+  );
+  const migration = load('app/api/lib/accountMigration.ts');
+  await Promise.all([
+    migration.ensureAccountMigration(first),
+    migration.ensureAccountMigration(first),
+  ]);
+  assert.equal(data.get('notes_v2/mine').userId, first.userId);
+  assert.equal(data.get('notes_v2/mine').username, undefined);
+  assert.equal(data.get('notes_v2/theirs').username, second.username);
+  assert.equal(data.get('profiles_v1/123456').loginUsername, first.username);
+  assert.equal(data.has('profiles_v1/first.last'), false);
+  assert.equal(data.get('grade_tracker_v1/123456_10').assessments[0], 1);
+  assert.equal(
+    data.get('conversations_v1/encryption-salt').participantIds.join(','),
+    '123456,second.last'
+  );
+  assert.equal(data.get('conversations_v1/encryption-salt').lastReadAt['123456'], 30);
+  assert.equal(data.get('messages_v1/old').content, 'ciphertext');
+  assert.equal(data.get(`passkey_users/${newHandle}/credentials/device`).publicKey, 'keep');
+  assert.equal(data.get('passkey_credential_index/device').userHandle, newHandle);
+  assert.equal(data.has(`passkey_users/${oldHandle}`), false);
+  assert.equal(data.get('stats/loginStats').users.length, 1);
+  assert.equal(data.get('legacy_user_data/123456').entries[0].data.notes[0], 'legacy');
+  assert.equal(data.get('login_users/123456').loginCount, 3);
+  const before = commits.reduce((total, writes) => total + writes.length, 0);
+  await migration.ensureAccountMigration(first);
+  assert.equal(
+    commits.reduce((total, writes) => total + writes.length, 0),
+    before
+  );
+
+  await migration.ensureAccountMigration(second);
+  const conversation = data.get('conversations_v1/encryption-salt');
+  assert.equal(conversation.participantIds.join(','), '123456,654321');
+  const { normalizeMessageIdentity } = load('lib/accountReferences.ts');
+  const message = normalizeMessageIdentity(
+    data.get('messages_v1/old'),
+    conversation.participantAliases
+  );
+  assert.equal(message.senderUserId, '123456');
+  assert.equal(message.reactions.like.join(','), '123456,654321');
+  const friendship = await load('app/api/lib/friendsDb.ts').getFriendship('123456', '654321');
+  assert.equal(friendship.id, 'random-legacy-id');
+  assert.equal(data.get('group_invites_v1/legacy-invite').invitedById, '654321');
+  assert.equal(await load('app/api/lib/referralDb.ts').creditReferral('123456', '654321'), false);
+  assert.equal(data.get('stats/loginStats').total_logins, 5);
+});
+
+test('lazy migration resumes after failure, preserves newer records, and rejects conflicting claims', async () => {
+  const identity = { username: 'first.last', userId: '123456', school: 'engelska' };
+  const { data, load } = createStore(
+    {
+      'profiles_v1/first.last': { displayName: 'Old', bio: 'legacy bio' },
+      'profiles_v1/123456': { displayName: 'New' },
+      'notes_v2/mine': { username: identity.username, content: 'keep' },
+    },
+    { failCommit: 3 }
+  );
+  const { ensureAccountMigration } = load('app/api/lib/accountMigration.ts');
+  await assert.rejects(ensureAccountMigration(identity), /Injected commit failure/);
+  assert.equal(data.get('account_aliases/first.last').migrationVersion, undefined);
+  await ensureAccountMigration(identity);
+  assert.equal(data.get('profiles_v1/123456').displayName, 'New');
+  assert.equal(data.get('profiles_v1/123456').bio, 'legacy bio');
+  assert.equal(
+    [...data.keys()].some((key) => key.startsWith('account_migration_conflicts/')),
+    true
+  );
+  await assert.rejects(ensureAccountMigration({ ...identity, userId: '654321' }), /already linked/);
+  assert.equal(data.has('profiles_v1/654321'), false);
+});
+
+test('lazy migration pages owner records while deleting matches and changing their query fields', async () => {
+  const initial = Object.fromEntries(
+    Array.from({ length: 205 }, (_, index) => [
+      `notes_v2/note-${String(index).padStart(3, '0')}`,
+      { username: 'first.last', content: String(index) },
+    ])
+  );
+  const { data, load } = createStore(initial);
+  await load('app/api/lib/accountMigration.ts').ensureAccountMigration({
+    username: 'first.last',
+    userId: '123456',
+    school: 'engelska',
+  });
+  assert.equal(
+    [...data.entries()].filter(
+      ([key, value]) => key.startsWith('notes_v2/') && value.userId === '123456'
+    ).length,
+    205
+  );
+});
+
 const routePaths = [
   'notes',
   'notes/[id]',
@@ -153,7 +319,7 @@ function loadRoute(route, authenticated = true, overrides = {}) {
   );
   return createLoader({
     '@/app/api/lib/authenticatedUser': {
-      getAuthenticatedUsername: async () => (authenticated ? 'first.last' : null),
+      getAuthenticatedUserId: async () => (authenticated ? 'first.last' : null),
     },
     '@/app/api/lib/notesDb': database,
     '@/app/api/lib/flashcardsDb': database,
@@ -240,7 +406,7 @@ test('public notes only expose explicitly allowed fields and reject invalid toke
           status: 'draft',
           createdAt: 1,
           updatedAt: 2,
-          username: 'private',
+          userId: 'private',
           shareToken: 'secret',
           futurePrivateField: 'secret',
         };
@@ -263,9 +429,9 @@ test('public notes only expose explicitly allowed fields and reject invalid toke
 const deckPath = 'flashcard_decks_v1/deck';
 const cardPath = 'flashcard_cards_v1/card';
 const initialCards = () => ({
-  [deckPath]: { username: 'first.last', cardCount: 1 },
-  'flashcard_decks_v1/other': { username: 'first.last', cardCount: 5 },
-  [cardPath]: { username: 'first.last', deckId: 'deck', front: 'Question', back: 'Answer' },
+  [deckPath]: { userId: 'first.last', cardCount: 1 },
+  'flashcard_decks_v1/other': { userId: 'first.last', cardCount: 5 },
+  [cardPath]: { userId: 'first.last', deckId: 'deck', front: 'Question', back: 'Answer' },
 });
 const cardInput = { front: 'Question', back: 'Answer', hint: '', tags: [] };
 
@@ -315,7 +481,7 @@ test('card creation refuses missing and foreign decks', async () => {
 
 test('500-card imports survive transaction retries with accurate counts and fresh study progress', async () => {
   const store = createStore(
-    { [deckPath]: { username: 'first.last', cardCount: 0 } },
+    { [deckPath]: { userId: 'first.last', cardCount: 0 } },
     { retry: true }
   );
   const api = store.load('app/api/lib/flashcardsDb.ts');
@@ -329,7 +495,7 @@ test('500-card imports survive transaction retries with accurate counts and fres
 
 test('a later failed import chunk preserves counts for the committed cards', async () => {
   const store = createStore(
-    { [deckPath]: { username: 'first.last', cardCount: 0 } },
+    { [deckPath]: { userId: 'first.last', cardCount: 0 } },
     { failCommit: 2 }
   );
   const api = store.load('app/api/lib/flashcardsDb.ts');
@@ -348,8 +514,8 @@ test('large deck deletion stays within write limits and preserves other decks', 
   const initial = initialCards();
   initial[deckPath].cardCount = 1001;
   for (let index = 0; index < 1000; index++)
-    initial[`flashcard_cards_v1/card-${index}`] = { username: 'first.last', deckId: 'deck' };
-  initial['flashcard_cards_v1/other-card'] = { username: 'first.last', deckId: 'other' };
+    initial[`flashcard_cards_v1/card-${index}`] = { userId: 'first.last', deckId: 'deck' };
+  initial['flashcard_cards_v1/other-card'] = { userId: 'first.last', deckId: 'other' };
   const store = createStore(initial);
   const api = store.load('app/api/lib/flashcardsDb.ts');
   assert.equal(await api.deleteDeck('deck', 'outsider'), false);
@@ -362,8 +528,8 @@ test('large deck deletion stays within write limits and preserves other decks', 
 test('identical note, countdown, deck, and card updates do not write', async () => {
   const store = createStore({
     ...initialCards(),
-    'notes_v2/note': { username: 'first.last', title: 'Title', shareToken: null, updatedAt: 123 },
-    'countdowns_v1/countdown': { username: 'first.last', title: 'Title', updatedAt: 123 },
+    'notes_v2/note': { userId: 'first.last', title: 'Title', shareToken: null, updatedAt: 123 },
+    'countdowns_v1/countdown': { userId: 'first.last', title: 'Title', updatedAt: 123 },
   });
   const notes = store.load('app/api/lib/notesDb.ts');
   const countdowns = store.load('app/api/lib/countdownsDb.ts');
@@ -383,7 +549,7 @@ test('deck-copy failures clean up the newly created copy', async () => {
   let deleted;
   const route = loadRoute('flashcards/import', true, {
     '@/app/api/lib/flashcardsDb': {
-      getDeckByIdAny: async () => ({ username: 'owner', title: 'Shared' }),
+      getDeckByIdAny: async () => ({ userId: 'owner', title: 'Shared' }),
       canImportDeck: async () => true,
       getCardsByDeck: async (id, username) => {
         assert.equal(username, 'owner');
@@ -401,28 +567,28 @@ test('deck-copy failures clean up the newly created copy', async () => {
       },
     },
   });
-  await assert.rejects(route.POST(request('POST', { deckId: 'deck' }), context), /Import failed/);
+  assert.equal((await route.POST(request('POST', { deckId: 'deck' }), context)).status, 500);
   assert.equal(deleted, 'copy');
 });
 
 test('deck imports require an active share message in a conversation the requester belongs to', async () => {
-  const sourceDeck = { id: 'deck', username: 'owner' };
+  const sourceDeck = { id: 'deck', userId: 'owner' };
   const message = {
-    senderUsername: 'owner',
+    senderUserId: 'owner',
     conversationId: 'conversation',
     deletedAt: null,
     shareCard: { type: 'flashdeck', deckId: 'deck' },
   };
-  for (const [sharedMessage, participants, allowed] of [
+  for (const [sharedMessage, participantIds, allowed] of [
     [message, ['recipient'], true],
     [message, ['outsider'], false],
     [{ ...message, deletedAt: 123 }, ['recipient'], false],
-    [{ ...message, senderUsername: 'outsider' }, ['recipient'], false],
+    [{ ...message, senderUserId: 'outsider' }, ['recipient'], false],
     [{ ...message, shareCard: { type: 'flashdeck', deckId: 'other' } }, ['recipient'], false],
   ]) {
     const store = createStore({
       'messages_v1/message': sharedMessage,
-      'conversations_v1/conversation': { participants },
+      'conversations_v1/conversation': { participantIds },
     });
     const api = store.load('app/api/lib/flashcardsDb.ts');
     assert.equal(await api.canImportDeck(sourceDeck, 'recipient', 'message'), allowed);
@@ -435,7 +601,7 @@ test('deck imports require an active share message in a conversation the request
 test('unauthorized imports do not read source cards or create a copy', async () => {
   const route = loadRoute('flashcards/import', true, {
     '@/app/api/lib/flashcardsDb': {
-      getDeckByIdAny: async () => ({ id: 'deck', username: 'owner' }),
+      getDeckByIdAny: async () => ({ id: 'deck', userId: 'owner' }),
       canImportDeck: async () => false,
     },
   });
@@ -507,4 +673,74 @@ test('username verification has an upstream deadline and handles malformed sessi
   assert.equal(await auth.authUserWithUsername('cookie', ' FIRST.LAST '), true);
   responseData = {};
   assert.equal(await auth.authUserWithUsername('cookie', 'first.last'), false);
+});
+
+test('message changes require the URL conversation and its current membership', async () => {
+  const initial = {
+    'conversations_v1/first': { participantIds: ['123456'], type: 'dm' },
+    'conversations_v1/second': { participantIds: ['123456'], type: 'group', adminUserId: '123456' },
+    'messages_v1/message': {
+      conversationId: 'first',
+      senderUserId: '123456',
+      content: 'Original',
+      deletedAt: null,
+    },
+  };
+  const store = createStore(initial);
+  const api = store.load('app/api/lib/messagingDb.ts');
+  assert.equal(await api.editMessage('message', 'second', '123456', 'Changed'), null);
+  assert.equal(await api.deleteMessage('message', 'second', '123456'), false);
+  assert.equal(await api.editMessage('message', 'first', '654321', 'Changed'), null);
+  assert.equal(store.data.get('messages_v1/message').content, 'Original');
+  assert.equal((await api.editMessage('message', 'first', '123456', 'Changed')).content, 'Changed');
+  await api.setMessagePinned('message', 'first', '123456', true);
+  await api.setMessagePinned('message', 'first', '123456', true);
+  assert.equal(store.data.get('messages_v1/message').pinned, true);
+});
+
+test('passkey challenges cannot be consumed twice', async () => {
+  const store = createStore({
+    'passkey_challenges/challenge': { challenge: 'test', type: 'authentication', userHandle: '' },
+  });
+  // Preserve a Timestamp-shaped object without relying on structuredClone methods.
+  const timestamp = require('firebase-admin/firestore').Timestamp.now();
+  const db = {
+    collection: (name) => ({ doc: (id) => ({ path: `${name}/${id}` }) }),
+    runTransaction: async (callback) => {
+      let deleted = false;
+      const result = await callback({
+        get: async (ref) => ({
+          exists: store.data.has(ref.path),
+          data: () => ({ ...store.data.get(ref.path), createdAt: timestamp }),
+        }),
+        delete: (ref) => {
+          store.data.delete(ref.path);
+          deleted = true;
+        },
+      });
+      assert.ok(deleted || result === null);
+      return result;
+    },
+  };
+  const api = createLoader({ './firebaseAdmin': { db } })('app/api/lib/passkeyDb.ts');
+  assert.ok(await api.consumeChallenge('challenge'));
+  assert.equal(await api.consumeChallenge('challenge'), null);
+});
+
+test('group creation stores ID members and leaving transfers administration', async () => {
+  const store = createStore();
+  const api = store.load('app/api/lib/messagingDb.ts');
+  const group = await api.createGroupChat({
+    creatorUserId: '123456',
+    creatorDisplayName: 'Creator',
+    groupName: 'Group',
+    members: [{ userId: '654321', displayName: 'Member' }],
+  });
+  assert.equal(group.participantIds.join(','), '123456,654321');
+  assert.equal(group.participantNames['654321'], 'Member');
+  assert.equal(group.adminUserId, '123456');
+  const left = await api.removeGroupMember(group.id, '123456', '123456');
+  assert.equal(left.adminUserId, '654321');
+  assert.equal(left.participantIds.join(','), '654321');
+  assert.equal(await api.updateGroupInfo(group.id, '123456', { groupName: 'Forbidden' }), null);
 });

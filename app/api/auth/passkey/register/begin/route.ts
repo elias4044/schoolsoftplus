@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 
 import { listCredentials, makeUserHandle, saveChallenge } from '@/app/api/lib/passkeyDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { requireSession } from '@/app/api/lib/schoolsoft';
 
 function getRpConfig() {
@@ -18,7 +19,7 @@ function getRpConfig() {
  * Returns WebAuthn registration options.
  * Requires an active session (user must already be logged in via AuthV2).
  */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { username, school } = sess;
   const orgId = req.cookies.get('ssp_ss_orgid')?.value ?? '18';
-  const userHandle = makeUserHandle(username, school);
+  const userHandle = makeUserHandle(sess.userId, school);
 
   const { rpID, rpName } = getRpConfig();
 
@@ -70,10 +71,11 @@ export async function POST(req: NextRequest) {
   // Pass challengeId back as a short-lived httpOnly cookie for the complete step
   res.cookies.set('ssp_pk_challenge_id', challengeId, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 5 * 60,
   });
 
   return res;
-}
+});

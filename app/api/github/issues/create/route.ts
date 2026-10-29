@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
-import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
+import { enforceRateLimit } from '@/app/api/lib/rateLimit';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 const REPO = 'elias4044/schoolsoftplus';
 const API = `https://api.github.com/repos/${REPO}/issues`;
@@ -13,18 +15,15 @@ const TYPE_LABELS: Record<string, string[]> = {
   question: ['question'],
 };
 
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   /* ── Auth ──────────────────────────────────────── */
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  const { cookieString, school, username } = sess;
-
-  if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
-  }
+  const { school, username } = sess;
+  enforceRateLimit('github:issues:' + sess.userId, 3);
 
   /* ── Validate token ────────────────────────────── */
   if (!process.env.GITHUB_TOKEN) {
@@ -35,12 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   /* ── Parse body ────────────────────────────────── */
-  let body: { title?: string; body?: string; type?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 });
-  }
+  const body = (await readRouteBody(req)) as { title?: string; body?: string; type?: string };
 
   const { title, body: rawBody, type = 'question' } = body;
 
@@ -59,6 +53,7 @@ export async function POST(req: NextRequest) {
 
   /* ── Create issue ──────────────────────────────── */
   const upstream = await fetch(API, {
+    signal: AbortSignal.timeout(8_000),
     method: 'POST',
     headers: {
       Accept: 'application/vnd.github+json',
@@ -86,4 +81,4 @@ export async function POST(req: NextRequest) {
     number: issue.number,
     html_url: issue.html_url,
   });
-}
+});

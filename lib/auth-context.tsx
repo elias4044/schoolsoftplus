@@ -2,14 +2,18 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 
 import { clearCache } from './cache';
 import { prefetch } from './cache/prefetch';
+import { clientAuth } from './firebase';
 import { useSession } from './useSession';
+
 
 export interface AuthSession {
   school: string;
   username: string;
+  userId: string;
   name?: string;
   theme: string;
   authType?: 'classic' | 'authv2';
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     !loading && !error && sessionData
       ? {
           school: sessionData.school,
+          userId: sessionData.userId,
           username: sessionData.username ?? sessionData.user.userName,
           name: `${sessionData.user.firstName} ${sessionData.user.lastName}`.trim() || undefined,
           theme: sessionData.theme ?? 'light',
@@ -73,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await fetch('/api/logout', { method: 'POST' });
+    await signOut(clientAuth).catch(() => console.error('[auth] Firebase sign-out failed'));
     clearCache();
     router.replace('/login');
   }, [router]);

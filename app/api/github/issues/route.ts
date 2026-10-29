@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { withValidation } from '@/app/api/lib/routeValidation';
+
 const REPO = 'elias4044/schoolsoftplus';
 const BASE = `https://api.github.com/repos/${REPO}/issues`;
 
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const state = searchParams.get('state') ?? 'open'; // open | closed | all
   const labels = searchParams.get('labels') ?? '';
   const page = searchParams.get('page') ?? '1';
   const per = searchParams.get('per_page') ?? '25';
+
+  if (
+    !['open', 'closed', 'all'].includes(state) ||
+    !/^\d+$/.test(page) ||
+    Number(page) < 1 ||
+    !Number.isSafeInteger(Number(page)) ||
+    !/^\d+$/.test(per) ||
+    Number(per) < 1 ||
+    Number(per) > 100 ||
+    labels.length > 200
+  )
+    return NextResponse.json({ error: 'Invalid issue query.' }, { status: 400 });
 
   const url = new URL(BASE);
   url.searchParams.set('state', state);
@@ -27,7 +41,11 @@ export async function GET(req: NextRequest) {
     headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
 
-  const upstream = await fetch(url.toString(), { headers, next: { revalidate: 60 } });
+  const upstream = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(8_000),
+    headers,
+    next: { revalidate: 60 },
+  });
 
   if (!upstream.ok) {
     return NextResponse.json(
@@ -39,10 +57,12 @@ export async function GET(req: NextRequest) {
   const data = await upstream.json();
 
   // Strip pull requests — GH issues endpoint includes PRs
-  const issues = (data as any[]).filter((i: any) => !i.pull_request);
+  const issues = (Array.isArray(data) ? data : []).filter(
+    (issue: { pull_request?: unknown }) => !issue.pull_request
+  );
 
   const linkHeader = upstream.headers.get('Link') ?? '';
   const hasNext = linkHeader.includes('rel="next"');
 
   return NextResponse.json({ issues, hasNext });
-}
+});

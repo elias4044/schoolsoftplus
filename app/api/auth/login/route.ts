@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
 import { exchangeCodeForToken, makePkcePair, makeState } from '@/app/api/lib/mobileAuth';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
 const CLIENT_ID = 'eApp';
@@ -35,7 +37,7 @@ const SS_REDIRECT = 'com.schoolsoftplus.app://';
        state:    string,   ← store on device; verify against callback state
      }
 */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const school = searchParams.get('school') ?? 'engelska';
   const orgid = searchParams.get('orgid') ?? '18';
@@ -55,7 +57,7 @@ export async function GET(req: NextRequest) {
     `&orgid=${encodeURIComponent(orgid)}`;
 
   return NextResponse.json({ success: true, authUrl, verifier, state });
-}
+});
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/mobile/login
@@ -91,13 +93,13 @@ export async function GET(req: NextRequest) {
      4. GET /rest-api/session to confirm username.
      5. Issue signed JWT and return it.
 ───────────────────────────────────────────────────────────── */
-export async function POST(req: NextRequest) {
-  let body: { username?: string; password?: string; school?: string; orgid?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as {
+    username?: string;
+    password?: string;
+    school?: string;
+    orgid?: string;
+  };
 
   const { username, password } = body;
   if (!username || !password) {
@@ -132,12 +134,15 @@ export async function POST(req: NextRequest) {
   let code: string;
   try {
     const loginRes = await axios.get(passwordLoginUrl, {
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
+      maxRedirects: 0,
       headers: { Accept: 'application/json', 'User-Agent': 'SchoolSoftPlus-Mobile/1.0' },
       validateStatus: () => true,
     });
 
     if (loginRes.status !== 200) {
-      console.warn(`[mobile/login POST] password login status ${loginRes.status}`, loginRes.data);
+      console.warn(`[mobile/login POST] password login status ${loginRes.status}`);
       return NextResponse.json(
         { success: false, error: loginRes.data?.userMessage || 'Authentication failed.' },
         { status: 401 }
@@ -172,4 +177,4 @@ export async function POST(req: NextRequest) {
 
   // Return the SchoolSoft token response directly — the app manages tokens itself.
   return NextResponse.json({ success: true, ...tokenResult });
-}
+});

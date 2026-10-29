@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
-import {
-  createSchoolsoftClient,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 import { trackAssignmentsFetch } from '@/app/api/lib/statsHelper';
 
 // -- GET /api/assignments/week?week=xx&year=xxxx  ------------------------------
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const week = searchParams.get('week');
   const year = searchParams.get('year');
@@ -28,10 +24,6 @@ export async function GET(req: NextRequest) {
   }
   const { cookieString: cookies, school } = sess;
 
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
-
   const api = createSchoolsoftClient(school);
 
   try {
@@ -44,4 +36,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleApiError(error, 'weekAssignments');
   }
-}
+});

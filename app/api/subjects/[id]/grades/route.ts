@@ -4,7 +4,7 @@ import { parseGradeFromReview } from '@/lib/grades/constants';
 import { inferGrade, normalizeAssessmentRaw } from '@/lib/grades/inferGrade';
 import type { ScannedGradeResult } from '@/lib/grades/types';
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 const BASE = '/rest-api/student/ps';
@@ -129,7 +129,10 @@ async function fetchTableRows(
 }
 
 /** POST /api/subjects/[id]/grades — scan reported assignments for grades */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withValidation(async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const sess = await requireSession(req);
   if (!sess) {
@@ -137,9 +140,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const { cookieString: cookies, school } = sess;
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const api = createSchoolsoftClient(school);
 
@@ -186,4 +186,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (error) {
     return handleApiError(error, `subjects/${id}/grades`);
   }
-}
+});

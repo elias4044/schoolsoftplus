@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 /**
  * Mobile authentication helpers.
  *
@@ -5,8 +6,9 @@
  * PKCE helpers for the SchoolSoft OAuth 2.0 + PKCE flow.
  */
 
-import crypto from 'crypto';
 import axios from 'axios';
+
+import { assertSchool, normalizeUserId } from './identity';
 
 /* ─────────────────────────────────────────────────────────────
    Base64url helpers
@@ -83,10 +85,24 @@ export function verifyMobileToken(token: string): MobileTokenPayload | null {
     const expectedSig = b64url(
       crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest()
     );
-    if (sig !== expectedSig) return null;
+    const actualSignature = Buffer.from(sig);
+    const expectedSignature = Buffer.from(expectedSig);
+    if (
+      actualSignature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(actualSignature, expectedSignature)
+    )
+      return null;
+    if (JSON.parse(b64urlDecode(header)).alg !== 'HS256') return null;
 
     const payload = JSON.parse(b64urlDecode(body)) as MobileTokenPayload;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (
+      !Number.isFinite(payload.exp) ||
+      payload.exp <= Math.floor(Date.now() / 1000) ||
+      typeof payload.username !== 'string' ||
+      typeof payload.school !== 'string' ||
+      typeof payload.ssToken !== 'string'
+    )
+      return null;
     return payload;
   } catch {
     return null;
@@ -125,45 +141,65 @@ export function makeState(): string {
    SchoolSoft session helper
 ───────────────────────────────────────────────────────────── */
 
-/** This has never worked? This route doesnt accept Bearer???
- * Calls SchoolSoft's /rest-api/session endpoint using a Bearer access token
- * to retrieve the authenticated user's info (username, school, etc.).
- * Returns null if the token is invalid or the request fails.
- */
-export async function fetchSchoolsoftSession(
-  school: string,
-  accessToken: string
-): Promise<{
+export interface SchoolsoftAccountInfo {
   username: string;
   firstName: string;
   lastName: string;
   email: string;
   schoolName: string;
   userType: string;
-  userId: number | undefined;
-} | null> {
+  userId: number;
+}
+
+export async function fetchSchoolsoftSession(
+  school: string,
+  accessToken: string,
+  orgId = '18'
+): Promise<SchoolsoftAccountInfo | null> {
+  assertSchool(school);
+  const sessionUrl = `https://sms.schoolsoft.se/${school}/rest-api/session`;
+  const options = {
+    timeout: 5_000,
+    maxRedirects: 0,
+    validateStatus: () => true,
+    responseType: 'json' as const,
+  };
   try {
-    const res = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-        'User-Agent': 'SchoolSoftPlus-Mobile/1.0',
-      },
-      validateStatus: () => true,
-      responseType: 'json',
-      timeout: 5_000,
-      signal: AbortSignal.timeout(5_000),
+    let response = await axios.get(sessionUrl, {
+      ...options,
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (res.status !== 200) return null;
-    const d = res.data ?? {};
+    if (response.status !== 200 || !normalizeUserId(response.data?.user?.id)) {
+      const exchange = await axios.get(
+        `https://sms.schoolsoft.se/${school}/eva-apps/auth/login/student`,
+        {
+          ...options,
+          headers: {
+            token: accessToken,
+            orgid: orgId,
+            'User-Agent': 'nyEva',
+            'X-Requested-With': 'com.schoolsoft.eapp.android',
+            redirecturl: `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`,
+          },
+        }
+      );
+      const cookies = exchange.headers['set-cookie'];
+      if (!Array.isArray(cookies)) return null;
+      const cookie = cookies.map((value) => value.split(';')[0]).join('; ');
+      if (!cookie.includes('JSESSIONID=')) return null;
+      response = await axios.get(sessionUrl, { ...options, headers: { Cookie: cookie } });
+    }
+    const data = response.data;
+    const userId = normalizeUserId(data?.user?.id);
+    if (response.status !== 200 || !userId || typeof data.user.userName !== 'string') return null;
     return {
-      username: (d.user?.userName ?? '').toLowerCase(),
-      firstName: d.user?.firstName ?? '',
-      lastName: d.user?.lastName ?? '',
-      email: d.user?.email ?? '',
-      schoolName: d.organization?.name ?? '',
-      userType: d.userType?.name ?? '',
-      userId: typeof d.user?.id === 'number' ? d.user.id : undefined,
+      username: data.user.userName.toLowerCase().trim(),
+      firstName: data.user.firstName ?? '',
+      lastName: data.user.lastName ?? '',
+      email: data.user.email ?? '',
+      schoolName: data.organization?.name ?? '',
+      userType: data.userType?.name ?? '',
+      userId: Number(userId),
     };
   } catch {
     return null;
@@ -189,6 +225,7 @@ export async function exchangeCodeForToken(
 
   try {
     const tokenRes = await fetch(tokenUrl, {
+      signal: AbortSignal.timeout(8_000),
       method: 'POST',
       headers: { accept: 'application/json' },
     });
@@ -196,7 +233,7 @@ export async function exchangeCodeForToken(
     const text = await tokenRes.text();
 
     if (tokenRes.status !== 200) {
-      console.warn(`[mobile] token exchange status ${tokenRes.status}`, text);
+      console.warn(`[mobile] token exchange status ${tokenRes.status}`);
       return null;
     }
 

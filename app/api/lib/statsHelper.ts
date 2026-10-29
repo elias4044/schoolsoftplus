@@ -5,6 +5,7 @@
  */
 
 import admin from 'firebase-admin';
+import { FieldPath } from 'firebase-admin/firestore';
 
 import { db } from './firebaseAdmin';
 
@@ -18,7 +19,7 @@ const STATS_REF = () => db.collection('stats').doc('loginStats');
 export function bumpCounter(field: string, by = 1): void {
   STATS_REF()
     .update({ [field]: inc(by), total_api_calls: inc(1) })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -27,8 +28,8 @@ export function bumpCounter(field: string, by = 1): void {
  */
 export function bumpHistogram(bucket: string, key: string | number): void {
   STATS_REF()
-    .update({ [`${bucket}.${key}`]: inc(1) })
-    .catch(() => {});
+    .update(new FieldPath(bucket, String(key)), inc(1))
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -51,7 +52,7 @@ export function trackLoginEvent(school: string): void {
       [`schools.${school}`]: inc(1),
       [`peak_dates.${date}`]: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -67,7 +68,7 @@ export function trackAiMessage(): void {
       [`ai_hours.${hour}`]: inc(1),
       total_api_calls: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**
@@ -116,7 +117,7 @@ export function trackMessageSent(): void {
       [`message_hours.${hour}`]: inc(1),
       total_api_calls: inc(1),
     })
-    .catch(() => {});
+    .catch(() => console.error('[stats] Counter update failed'));
 }
 
 /**

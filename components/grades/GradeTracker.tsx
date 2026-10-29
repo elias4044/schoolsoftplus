@@ -96,7 +96,7 @@ export function GradeTracker({
     if (res?.tracker) setTracker(res.tracker);
     else {
       setTracker({
-        username: '',
+        userId: '',
         subjectId: Number(subjectId),
         subjectName,
         subjectColor,

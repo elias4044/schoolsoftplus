@@ -16,6 +16,7 @@ export async function authUser(cookies: string, school = 'engelska'): Promise<bo
 
   try {
     const response = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
+      maxRedirects: 0,
       responseType: 'json',
       timeout: 5_000,
       signal: AbortSignal.timeout(5_000),
@@ -61,6 +62,7 @@ export async function authUserWithUsername(
     };
 
     const sessionRes = await axios.get(`https://sms.schoolsoft.se/${school}/rest-api/session`, {
+      maxRedirects: 0,
       responseType: 'json',
       headers: baseHeaders,
       timeout: 5_000,

@@ -80,7 +80,7 @@ export interface GradeSnapshot {
 }
 
 export interface GradeTrackerDoc {
-  username: string;
+  userId: string;
   subjectId: number;
   subjectName: string;
   subjectColor?: string;

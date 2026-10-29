@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 
 import { handleApiError } from '@/app/api/lib/apiError';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  getSessionCookies,
   requireSession,
 } from '@/app/api/lib/schoolsoft';
 
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -61,4 +61,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleApiError(error, 'startpage');
   }
-}
+});

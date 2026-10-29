@@ -1,21 +1,15 @@
 // NOTE: Old route has been moved to /api/news/legacy
 
 import { NextRequest, NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import {
-  createSchoolsoftClient,
-  decodeHtmlResponse,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   // Updated to use AuthV2
 
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get('orgid') ?? 18;
 
   const sess = await requireSession(req);
 
@@ -44,6 +38,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const orgId = searchParams.get('orgid') ?? sess.user?.orgId;
   const api = createSchoolsoftClient(sess.school);
 
   try {
@@ -78,4 +73,4 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleApiError(err, 'news');
   }
-}
+});

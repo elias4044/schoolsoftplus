@@ -33,7 +33,7 @@ function ConvAvatar({ conv, myUsername }: { conv: RTConversation; myUsername: st
       </div>
     );
   }
-  const otherUser = conv.participants.find((p) => p !== myUsername) ?? myUsername;
+  const otherUser = conv.participantIds.find((p) => p !== myUsername) ?? myUsername;
   const name = conv.participantNames?.[otherUser] ?? otherUser;
   const pfp = conv.participantPfpUrls?.[otherUser];
   const initials = name
@@ -65,9 +65,9 @@ function ConvAvatar({ conv, myUsername }: { conv: RTConversation; myUsername: st
 
 export default function MessagesWidget({ size }: Props) {
   const { session } = useAuth();
-  const { conversations, loading } = useConversations(session?.username ?? '');
+  const { conversations, loading } = useConversations(session?.userId ?? '');
 
-  const myUsername = session?.username ?? '';
+  const myUsername = session?.userId ?? '';
 
   const compact = size === '2x1' || size === '4x1';
   const maxShown = compact ? 3 : size === '2x2' ? 5 : 8;
@@ -116,14 +116,14 @@ export default function MessagesWidget({ size }: Props) {
           {shown.map((conv, i) => {
             const otherUser =
               conv.type === 'dm'
-                ? (conv.participants.find((p) => p !== myUsername) ?? myUsername)
+                ? (conv.participantIds.find((p) => p !== myUsername) ?? myUsername)
                 : null;
             const name =
               conv.type === 'group'
                 ? (conv.groupName ?? 'Group')
                 : (conv.participantNames?.[otherUser!] ?? otherUser ?? 'Unknown');
             const preview = conv.lastMessage
-              ? (conv.lastSenderUsername === myUsername ? 'You: ' : '') + conv.lastMessage
+              ? (conv.lastSenderUserId === myUsername ? 'You: ' : '') + conv.lastMessage
               : 'No messages yet';
 
             return (

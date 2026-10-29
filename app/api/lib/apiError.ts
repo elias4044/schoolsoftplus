@@ -1,43 +1,27 @@
 import { NextResponse } from 'next/server';
-import type { AxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 
-interface ApiError extends Error {
-  response?: {
-    status: number;
-    statusText: string;
-    data: unknown;
-  };
-  request?: unknown;
-}
+import { InputError } from './validation';
 
-/**
- * A robust error handler for API route handlers.
- * Logs the error and returns a standardised NextResponse with the
- * appropriate HTTP status code.
- */
-export function handleApiError(
-  error: ApiError | AxiosError | unknown,
-  context: string
-): NextResponse {
-  const err = error as ApiError;
-  console.error(`[${context}] Error:`, err.message);
-
-  if (err.response) {
-    const { status, statusText, data } = err.response;
-    console.error(`[${context}] Upstream status: ${status} ${statusText}`);
-    console.error(`[${context}] Upstream data:`, data);
-    return NextResponse.json(
-      { success: false, error: `Upstream service error: ${statusText}` },
-      { status }
-    );
-  }
-
-  if (err.request) {
-    return NextResponse.json(
-      { success: false, error: 'No response from upstream server.' },
-      { status: 504 }
-    );
-  }
-
-  return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+export function handleApiError(error: unknown, context: string): NextResponse {
+  if (error instanceof InputError)
+    return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+  const upstreamStatus = isAxiosError(error) ? error.response?.status : undefined;
+  const timeout =
+    isAxiosError(error) && ['ECONNABORTED', 'ETIMEDOUT', 'ERR_CANCELED'].includes(error.code ?? '');
+  const status = timeout
+    ? 504
+    : upstreamStatus && upstreamStatus >= 400 && upstreamStatus <= 499
+      ? upstreamStatus
+      : 502;
+  console.error(`[${context}] Upstream request failed`, { status, upstreamStatus });
+  return NextResponse.json(
+    {
+      success: false,
+      error: timeout
+        ? 'SchoolSoft took too long to respond.'
+        : 'Could not retrieve data from SchoolSoft.',
+    },
+    { status }
+  );
 }

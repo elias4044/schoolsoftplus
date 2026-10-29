@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthenticatedUsername } from '@/app/api/lib/authenticatedUser';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
 import { createDeck, getDecksByUser, type DeckColor } from '@/app/api/lib/flashcardsDb';
 import { readJsonObject, validateFields, withValidation } from '@/app/api/lib/routeValidation';
 import { deckFields } from '@/app/api/lib/studyValidation';
@@ -8,16 +8,16 @@ import { deckFields } from '@/app/api/lib/studyValidation';
 const validColors: DeckColor[] = ['violet', 'rose', 'amber', 'emerald', 'sky', 'slate'];
 
 export const GET = withValidation(async function GET(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const decks = await getDecksByUser(username);
+  const decks = await getDecksByUser(userId);
   return NextResponse.json({ success: true, decks });
 });
 
 export const POST = withValidation(async function POST(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await readJsonObject(req);
   validateFields(body, deckFields);
@@ -25,7 +25,7 @@ export const POST = withValidation(async function POST(req: NextRequest) {
   const title = typeof body.title === 'string' ? body.title.trim().slice(0, 120) : '';
   if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 });
 
-  const deck = await createDeck(username, {
+  const deck = await createDeck(userId, {
     title,
     description: typeof body.description === 'string' ? body.description.trim().slice(0, 500) : '',
     color: validColors.includes(body.color as DeckColor) ? (body.color as DeckColor) : 'violet',

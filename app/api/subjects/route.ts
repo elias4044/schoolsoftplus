@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import {
   applySessionCookieUpdates,
   createSchoolsoftClient,
@@ -15,20 +15,13 @@ type SubjectEntity = {
 
 // -- GET /api/subjects  --------------------------------------------------------
 // Returns all subjects, each enriched with entities, unread counts, and teachers.
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school } = sess;
-
-  const authOk = await authUser(cookies, school);
-  if (!authOk) {
-    const res = NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-    applySessionCookieUpdates(res, sess.cookieUpdates ?? null);
-    return res;
-  }
 
   const api = createSchoolsoftClient(school);
 
@@ -87,4 +80,4 @@ export async function GET(req: NextRequest) {
     applySessionCookieUpdates(errRes as NextResponse, sess?.cookieUpdates ?? null);
     return errRes;
   }
-}
+});

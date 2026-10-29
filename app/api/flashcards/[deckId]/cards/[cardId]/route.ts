@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthenticatedUsername } from '@/app/api/lib/authenticatedUser';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
 import { deleteCard, updateCard } from '@/app/api/lib/flashcardsDb';
 import {
   assertDocumentId,
@@ -14,8 +14,8 @@ export const PATCH = withValidation(async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ deckId: string; cardId: string }> }
 ) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { deckId, cardId } = await params;
   assertDocumentId(deckId);
@@ -46,7 +46,7 @@ export const PATCH = withValidation(async function PATCH(
   if (body.lastReview === null || typeof body.lastReview === 'number')
     updates.lastReview = body.lastReview;
 
-  const card = await updateCard(cardId, deckId, username, updates);
+  const card = await updateCard(cardId, deckId, userId, updates);
   if (!card) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true, card });
@@ -56,13 +56,13 @@ export const DELETE = withValidation(async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ deckId: string; cardId: string }> }
 ) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { deckId, cardId } = await params;
   assertDocumentId(deckId);
   assertDocumentId(cardId);
-  const ok = await deleteCard(cardId, deckId, username);
+  const ok = await deleteCard(cardId, deckId, userId);
   if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true });

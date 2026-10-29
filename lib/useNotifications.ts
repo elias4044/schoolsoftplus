@@ -44,9 +44,9 @@ export function useNotifications(
     for (const c of conversations) {
       const prev = prevConvosRef.current.get(c.id) ?? 0;
       // New message in this convo from someone else, and not active
-      if (c.lastAt > prev && c.lastSenderUsername !== username && c.id !== activeConvoId) {
+      if (c.lastAt > prev && c.lastSenderUserId !== username && c.id !== activeConvoId) {
         fireNotification(
-          c.participantNames[c.lastSenderUsername] || c.lastSenderUsername,
+          c.participantNames[c.lastSenderUserId] || c.lastSenderUserId,
           c.lastMessage
         );
       }
@@ -61,7 +61,7 @@ export function useNotifications(
       if (!prevMsgIdsRef.current.has(m.id)) {
         prevMsgIdsRef.current.add(m.id);
         // Don't notify for initial batch
-        if (m.isNew && m.senderUsername !== username && document.hidden) {
+        if (m.isNew && m.senderUserId !== username && document.hidden) {
           fireNotification(m.senderDisplayName, m.content);
         }
       }

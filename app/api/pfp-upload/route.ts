@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
-import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
+import { readRequestBytes, withValidation } from '@/app/api/lib/routeValidation';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
  * POST /api/pfp-upload
@@ -9,13 +9,10 @@ import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
  * Proxies the upload to ImgBB using the server-side API token.
  * Returns: { success, url }
  */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const apiKey = process.env.IMGBB_API_TOKEN;
   if (!apiKey) {
@@ -25,16 +22,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const bytes = await readRequestBytes(req, 5 * 1024 * 1024 + 64 * 1024);
   let formData: FormData;
   try {
-    formData = await req.formData();
+    formData = await new Response(new Uint8Array(bytes), {
+      headers: { 'Content-Type': req.headers.get('content-type') ?? '' },
+    }).formData();
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid form data.' }, { status: 400 });
   }
 
-  const file = formData.get('image') as File | null;
-  if (!file)
+  const file = formData.get('image');
+  if (!(file instanceof File))
     return NextResponse.json({ success: false, error: 'No image provided.' }, { status: 400 });
+
+  if (
+    !['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'].includes(
+      file.type
+    )
+  )
+    return NextResponse.json({ error: 'Unsupported image type.' }, { status: 400 });
 
   // Size guard: 5 MB
   if (file.size > 5 * 1024 * 1024) {
@@ -53,6 +60,7 @@ export async function POST(req: NextRequest) {
   body.append('image', base64);
 
   const res = await fetch('https://api.imgbb.com/1/upload', {
+    signal: AbortSignal.timeout(8_000),
     method: 'POST',
     body,
   });
@@ -69,5 +77,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Upload failed.' }, { status: 502 });
   }
 
-  return NextResponse.json({ success: true, url: data.data.display_url });
-}
+  return NextResponse.json({ success: true, url: data.data.display_url || data.data.url });
+});

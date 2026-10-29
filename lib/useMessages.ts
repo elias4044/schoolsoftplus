@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   collection,
   limit,
@@ -12,6 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 
+import { normalizeMessageIdentity, type AccountAliases } from './accountReferences';
 import { clientDb } from './firebase';
 import { useFirebaseAuth } from './useFirebaseAuth';
 
@@ -54,7 +55,7 @@ export interface FlashDeckShareCard {
   cardCount: number;
   tags: string[];
   subjectName: string | null;
-  sharedByUsername: string;
+  sharedByUserId: string;
   sharedAt: number;
 }
 
@@ -63,7 +64,7 @@ export type ShareCard = NoteShareCard | GradeShareCard | FlashDeckShareCard;
 export interface RTMessage {
   id: string;
   conversationId: string;
-  senderUsername: string;
+  senderUserId: string;
   senderDisplayName: string;
   content: string;
   edited: boolean;
@@ -81,18 +82,19 @@ export interface RTMessage {
 export interface RTConversation {
   id: string;
   type: 'dm' | 'group';
-  participants: string[];
+  participantIds: string[];
   participantNames: Record<string, string>;
   participantPfpUrls: Record<string, string>;
   groupName: string | null;
   groupDescription: string | null;
-  adminUsername: string | null;
+  adminUserId: string | null;
   encrypted: boolean;
   lastMessage: string;
-  lastSenderUsername: string;
+  lastSenderUserId: string;
   lastAt: number;
   lastReadAt: Record<string, number>;
   createdAt: number;
+  participantAliases?: AccountAliases;
 }
 
 /* ── useConversations ─────────────────────────────────── */
@@ -108,7 +110,7 @@ export function useConversations(username: string) {
     setLoading(true);
     const q = query(
       collection(clientDb, 'conversations_v1'),
-      where('participants', 'array-contains', username),
+      where('participantIds', 'array-contains', username),
       orderBy('lastAt', 'desc'),
       limit(50)
     );
@@ -121,15 +123,16 @@ export function useConversations(username: string) {
           return {
             id: doc.id,
             type: (d.type === 'group' ? 'group' : 'dm') as 'dm' | 'group',
-            participants: d.participants ?? [],
+            participantIds: d.participantIds ?? [],
+            participantAliases: d.participantAliases ?? {},
             participantNames: d.participantNames ?? {},
             participantPfpUrls: d.participantPfpUrls ?? {},
             groupName: d.groupName ?? null,
             groupDescription: d.groupDescription ?? null,
-            adminUsername: d.adminUsername ?? null,
+            adminUserId: d.adminUserId ?? null,
             encrypted: d.encrypted ?? false,
             lastMessage: d.lastMessage ?? '',
-            lastSenderUsername: d.lastSenderUsername ?? '',
+            lastSenderUserId: d.lastSenderUserId ?? '',
             lastAt: d.lastAt ?? 0,
             lastReadAt: d.lastReadAt ?? {},
             createdAt: d.createdAt ?? 0,
@@ -153,7 +156,7 @@ export function useConversations(username: string) {
 }
 
 /* ── useMessages ──────────────────────────────────────── */
-export function useMessages(conversationId: string | null) {
+export function useMessages(conversationId: string | null, aliases?: AccountAliases) {
   const { fbUser, ready } = useFirebaseAuth();
   const [messages, setMessages] = useState<RTMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -206,7 +209,7 @@ export function useMessages(conversationId: string | null) {
           return {
             id: doc.id,
             conversationId: d.conversationId ?? '',
-            senderUsername: d.senderUsername ?? '',
+            senderUserId: d.senderUserId ?? d.senderUsername ?? '',
             senderDisplayName: d.senderDisplayName ?? '',
             content: d.content ?? '',
             edited: d.edited ?? false,
@@ -232,5 +235,9 @@ export function useMessages(conversationId: string | null) {
     };
   }, [ready, fbUser, conversationId, applyUpdate]);
 
-  return { messages, loading };
+  const normalizedMessages = useMemo(
+    () => messages.map((message) => normalizeMessageIdentity(message, aliases ?? {}) as RTMessage),
+    [messages, aliases]
+  );
+  return { messages: normalizedMessages, loading };
 }

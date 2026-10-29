@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import {
-  createSchoolsoftClient,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 import { trackScheduleView } from '@/app/api/lib/statsHelper';
 
 /** ISO week number for a given date */
@@ -20,7 +17,7 @@ function isoWeek(date: Date): number {
   );
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -74,4 +71,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleApiError(error, 'schedule');
   }
-}
+});

@@ -1,9 +1,7 @@
 'use client';
 
-/* ── Reveal wrapper ─────────────────────────────────────── */ import {
-  useRef,
-  useState,
-} from 'react';
+/* ── Reveal wrapper ─────────────────────────────────────── */
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import {

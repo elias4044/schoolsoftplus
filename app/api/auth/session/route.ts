@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
+import { normalizeUserId } from '@/app/api/lib/identity';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient } from '@/app/api/lib/schoolsoft';
+
 /* -------------------------------------------------------------
    GET /api/mobile/session
    -------------------------------------------------------------
 */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const ssToken = req.headers.get('x-ss-token');
   if (!ssToken) {
     return NextResponse.json(
@@ -30,6 +34,8 @@ export async function GET(req: NextRequest) {
   let rawCookies: string[];
   try {
     const res = await axios.get(sessionUrl, {
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'nyEva',
@@ -50,7 +56,7 @@ export async function GET(req: NextRequest) {
     rawCookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
 
     if (rawCookies.length === 0) {
-      console.warn(`[mobile/session] no cookies in response (status ${res.status})`, res.headers);
+      console.warn(`[mobile/session] no cookies in response (status ${res.status})`);
       return NextResponse.json(
         { success: false, error: 'SchoolSoft did not return any session cookies.' },
         { status: 502 }
@@ -77,7 +83,7 @@ export async function GET(req: NextRequest) {
   const usertype = cookieMap['usertype'] ?? '1';
 
   if (!jsessionid || !hash) {
-    console.warn('[mobile/session] missing JSESSIONID or hash', cookieMap);
+    console.warn('[mobile/session] missing JSESSIONID or hash');
     return NextResponse.json(
       {
         success: false,
@@ -87,13 +93,21 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const { data } = await createSchoolsoftClient(school).get('/rest-api/session', {
+    headers: { Cookie: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}` },
+    responseType: 'json',
+  });
+  const verifiedId = normalizeUserId(data?.user?.id);
+  if (!verifiedId || typeof data?.user?.userName !== 'string')
+    return NextResponse.json({ error: 'Account verification failed.' }, { status: 401 });
   return NextResponse.json({
     success: true,
     school,
-    username,
+    username: data.user.userName.toLowerCase(),
+    userId: verifiedId,
     ssp_jsessionid: jsessionid,
     ssp_hash: hash,
     ssp_usertype: usertype,
     cookieHeader: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}`,
   });
-}
+});

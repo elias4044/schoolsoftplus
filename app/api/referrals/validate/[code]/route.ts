@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getProfile } from '@/app/api/lib/profileDb';
-import { getUsernameByCode } from '@/app/api/lib/referralDb';
+import { getUserIdByCode } from '@/app/api/lib/referralDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 
 /**
  * GET /api/referrals/validate/[code]
  * Public endpoint — validates a referral code and returns minimal referrer info
  * (display name, school, pfp) for the join page. Does not expose private data.
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+export const GET = withValidation(async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   const { code } = await params;
 
   if (!code || typeof code !== 'string') {
@@ -22,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
   }
 
   try {
-    const username = await getUsernameByCode(clean);
+    const username = await getUserIdByCode(clean);
     if (!username) {
       return NextResponse.json(
         { success: false, error: 'Invalid or expired code.' },
@@ -48,4 +52,4 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
       { status: 500 }
     );
   }
-}
+});

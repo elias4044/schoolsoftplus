@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
 import { getProfile } from '@/app/api/lib/profileDb';
-import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
  * GET /api/profile/[username]
  * Public-ish: any authenticated user can view another user's profile.
  * Email is omitted from the response.
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
+export const GET = withValidation(async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ username: string }> }
+) {
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const { username } = await params;
   const profile = await getProfile(username.toLowerCase().trim());
@@ -26,4 +26,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
   const { email: _email, ...publicProfile } = profile;
   void _email;
   return NextResponse.json({ success: true, profile: publicProfile });
-}
+});

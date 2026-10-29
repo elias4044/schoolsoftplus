@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { db } from '@/app/api/lib/firebaseAdmin';
+import { withValidation } from '@/app/api/lib/routeValidation';
 
-export async function GET() {
+export const GET = withValidation(async function GET() {
   try {
     const statsDoc = await db.collection('stats').doc('loginStats').get();
 
@@ -45,4 +46,4 @@ export async function GET() {
     console.error('[stats] Error:', (error as Error).message);
     return NextResponse.json({ success: false, error: 'Failed to fetch stats.' }, { status: 500 });
   }
-}
+});

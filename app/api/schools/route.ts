@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
+import { withValidation } from '@/app/api/lib/routeValidation';
+
 // ---------------------------------------------------------------------------
 // Module-level cache — avoids hammering SchoolSoft on every page load.
 // The list rarely changes; 1-hour TTL is plenty. Please note, this does not work across serverless function instances (vercel for example)
@@ -30,7 +32,7 @@ function extractSlug(evaUrl: string): string {
 // GET /api/schools
 // No auth required. Returns { schools: { name, id }[] } sorted by name.
 // ---------------------------------------------------------------------------
-export async function GET() {
+export const GET = withValidation(async function GET() {
   const now = Date.now();
 
   if (cachedSchools && now < cacheExpiry) {
@@ -46,6 +48,8 @@ export async function GET() {
 
   try {
     const { data } = await axios.get<{ name: string; evaUrl: string }[]>(SCHOOLSOFT_LIST_URL, {
+      signal: AbortSignal.timeout(8_000),
+      maxRedirects: 0,
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -83,4 +87,4 @@ export async function GET() {
       { status: 502 }
     );
   }
-}
+});

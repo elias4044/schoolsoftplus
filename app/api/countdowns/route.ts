@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthenticatedUsername } from '@/app/api/lib/authenticatedUser';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
 import {
   createCountdown,
   deleteCountdown,
@@ -18,16 +18,16 @@ import {
 import { countdownFields } from '@/app/api/lib/studyValidation';
 
 export const GET = withValidation(async function GET(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const countdowns = await getCountdownsByUser(username);
+  const countdowns = await getCountdownsByUser(userId);
   return NextResponse.json({ success: true, countdowns });
 });
 
 export const POST = withValidation(async function POST(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await readJsonObject(req);
 
@@ -41,7 +41,7 @@ export const POST = withValidation(async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'targetDate (unix ms) is required' }, { status: 400 });
   }
 
-  const countdown = await createCountdown(username, {
+  const countdown = await createCountdown(userId, {
     title,
     description: typeof body.description === 'string' ? body.description : '',
     targetDate,
@@ -56,8 +56,8 @@ export const POST = withValidation(async function POST(req: NextRequest) {
 });
 
 export const PATCH = withValidation(async function PATCH(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get('id');
   assertDocumentId(id);
@@ -76,20 +76,20 @@ export const PATCH = withValidation(async function PATCH(req: NextRequest) {
   if (typeof body.pinned === 'boolean') patch.pinned = body.pinned;
   if (typeof body.archived === 'boolean') patch.archived = body.archived;
 
-  const updated = await updateCountdown(id, username, patch);
+  const updated = await updateCountdown(id, userId, patch);
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true, countdown: updated });
 });
 
 export const DELETE = withValidation(async function DELETE(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get('id');
   assertDocumentId(id);
 
-  const ok = await deleteCountdown(id, username);
+  const ok = await deleteCountdown(id, userId);
   if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true });

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
-import {
-  createSchoolsoftClient,
-  getSchool,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 // -- GET /api/subjects/[id]  ---------------------------------------------------
 // Returns detailed data for a single subject room.
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withValidation(async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const sess = await requireSession(req);
   if (!sess) {
@@ -19,10 +17,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { cookieString: cookies, school } = sess;
-
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const api = createSchoolsoftClient(school);
   try {
@@ -57,4 +51,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error) {
     return handleApiError(error, 'subjectData');
   }
-}
+});

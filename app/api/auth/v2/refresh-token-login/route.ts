@@ -3,20 +3,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   applyAuthV2Cookies,
   AuthV2Error,
-  recordAuthV2Login,
   refreshAuthV2Session,
   syncPasskeyRefreshToken,
 } from '@/app/api/auth/v2/lib';
+import { recordLogin } from '@/app/api/lib/loginStats';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
-export async function POST(req: NextRequest) {
-  let body: { school?: string; refreshToken?: string; orgid?: string };
-
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON body.' }, { status: 400 });
-  }
+export const POST = withValidation(async function POST(req: NextRequest) {
+  const body = (await readRouteBody(req)) as {
+    school?: string;
+    refreshToken?: string;
+    orgid?: string;
+  };
 
   const school = body.school?.trim() ?? '';
   const refreshToken = body.refreshToken?.trim() ?? '';
@@ -37,9 +37,17 @@ export async function POST(req: NextRequest) {
       requireBrowserSession: true,
     });
 
-    await recordAuthV2Login(session.username);
+    const { ensureAccountMigration } = await import('@/app/api/lib/accountMigration');
+    await ensureAccountMigration({
+      userId: session.userId,
+      username: session.username,
+      school: session.school,
+    });
+    await recordLogin(session.userId, session.school, 'authv2').catch(() =>
+      console.error('[login] Statistics update failed')
+    );
     trackLoginEvent(session.school);
-    await syncPasskeyRefreshToken(session.username, session.school, session.refreshToken);
+    await syncPasskeyRefreshToken(session.userId, session.school, session.refreshToken);
 
     const res = NextResponse.json({
       success: true,
@@ -60,4 +68,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

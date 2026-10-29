@@ -2,44 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import * as cheerio from 'cheerio';
 
-import { authUser } from '@/app/api/lib/auth';
+import { enforceRateLimit } from '@/app/api/lib/rateLimit';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  getSessionCookies,
   requireSession,
 } from '@/app/api/lib/schoolsoft';
 import { trackAiMessage } from '@/app/api/lib/statsHelper';
 
-// Rate limiting
-const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS_PER_MINUTE = 12;
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/insight
 // Body: { systemPrompt, fetchAssignments?, fetchSchedule?, fetchLunch?, fetchNews?, week?, year? }
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   // Rate limiting
-  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter((t) => now - t < 60_000);
-  if (timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-    return NextResponse.json(
-      { success: false, message: 'Too many requests. Please wait a moment.' },
-      { status: 429 }
-    );
-  }
-  rateLimitMap.set(ip, [...timestamps, now]);
-
-  // Auth
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
   }
-  if (!(await authUser(sess.cookieString, sess.school))) {
-    return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
-  }
+  enforceRateLimit('ai:insight:' + sess.userId, 12);
+
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
   }
@@ -48,7 +33,7 @@ export async function POST(req: NextRequest) {
   const schoolApi = createSchoolsoftClient(school);
 
   // Parse body
-  let body: {
+  const body = (await readRouteBody(req)) as {
     systemPrompt?: string;
     fetchAssignments?: boolean;
     fetchSchedule?: boolean;
@@ -57,11 +42,6 @@ export async function POST(req: NextRequest) {
     week?: string;
     year?: string;
   };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, message: 'Invalid JSON body.' }, { status: 400 });
-  }
 
   if (!body.systemPrompt) {
     return NextResponse.json({ success: false, message: 'Missing systemPrompt.' }, { status: 400 });
@@ -162,10 +142,12 @@ export async function POST(req: NextRequest) {
     : 'No additional data was fetched. Please provide a general helpful response based on the system instruction.';
 
   try {
-    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { timeout: 30_000 },
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (genAI.models as any).generateContent({
+    const result = await genAI.models.generateContent({
       model: 'gemini-3.1-flash-lite',
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       config: {
@@ -175,8 +157,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts: any[] = result.candidates?.[0]?.content?.parts ?? [];
+    const parts = result.candidates?.[0]?.content?.parts ?? [];
     const text = parts.find((p) => p.text)?.text?.trim() ?? 'No response received.';
 
     trackAiMessage();
@@ -188,4 +169,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

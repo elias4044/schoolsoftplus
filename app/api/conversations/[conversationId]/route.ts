@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
 import { getDeckByIdAny } from '@/app/api/lib/flashcardsDb';
 import {
   addGroupMember,
@@ -9,6 +8,7 @@ import {
   getConversation,
   getMessages,
   getPinnedMessages,
+  getReplyMessage,
   markConversationRead,
   removeGroupMember,
   ReplyTo,
@@ -18,11 +18,9 @@ import {
 } from '@/app/api/lib/messagingDb';
 import { getNoteById } from '@/app/api/lib/notesDb';
 import { getProfile } from '@/app/api/lib/profileDb';
-import {
-  createSchoolsoftClient,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 import { trackMessageSent } from '@/app/api/lib/statsHelper';
 
 interface Params {
@@ -39,8 +37,8 @@ function stripMd(md: string) {
 }
 
 /** Server-side: build a verified NoteShareCard */
-async function buildNoteCard(noteId: string, username: string): Promise<ShareCard | null> {
-  const note = await getNoteById(noteId, username);
+async function buildNoteCard(noteId: string, userId: string): Promise<ShareCard | null> {
+  const note = await getNoteById(noteId, userId);
   if (!note) return null;
   return {
     type: 'note',
@@ -54,9 +52,9 @@ async function buildNoteCard(noteId: string, username: string): Promise<ShareCar
 }
 
 /** Server-side: build a verified FlashDeckShareCard */
-async function buildFlashDeckCard(deckId: string, username: string): Promise<ShareCard | null> {
+async function buildFlashDeckCard(deckId: string, userId: string): Promise<ShareCard | null> {
   const deck = await getDeckByIdAny(deckId);
-  if (!deck || deck.username !== username) return null;
+  if (!deck || deck.userId !== userId) return null;
   return {
     type: 'flashdeck',
     deckId: deck.id,
@@ -67,7 +65,7 @@ async function buildFlashDeckCard(deckId: string, username: string): Promise<Sha
     cardCount: deck.cardCount,
     tags: deck.tags.slice(0, 10),
     subjectName: deck.subjectName,
-    sharedByUsername: username,
+    sharedByUserId: userId,
     sharedAt: Date.now(),
   } satisfies FlashDeckShareCard;
 }
@@ -185,18 +183,15 @@ async function buildGradeCard(
 }
 
 // GET /api/conversations/[conversationId]?pinned=true
-export async function GET(req: NextRequest, { params }: Params) {
+export const GET = withValidation(async function GET(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  const { cookieString, school, username } = sess;
-  if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
+  const { cookieString, school, userId } = sess;
 
   const convo = await getConversation(conversationId);
-  if (!convo || !convo.participants.includes(username)) {
+  if (!convo || !convo.participantIds.includes(userId)) {
     return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
   }
 
@@ -206,40 +201,32 @@ export async function GET(req: NextRequest, { params }: Params) {
     : await getMessages(conversationId);
 
   return NextResponse.json({ success: true, messages });
-}
+});
 
 // POST /api/conversations/[conversationId]  – send a message
 // Body: { content?: string; replyTo?: ReplyTo; shareCard?: { type: "note"; noteId: string } | { type: "grade"; assignmentId: string } }
-export async function POST(req: NextRequest, { params }: Params) {
+export const POST = withValidation(async function POST(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  const { cookieString, school, username } = sess;
-  if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
+  const { cookieString, school, userId } = sess;
 
   const convo = await getConversation(conversationId);
-  if (!convo || !convo.participants.includes(username)) {
+  if (!convo || !convo.participantIds.includes(userId)) {
     return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
   }
 
-  let body: {
+  const body = (await readRouteBody(req)) as {
     content?: string;
     replyTo?: ReplyTo;
     shareCard?: { type: string; noteId?: string; assignmentId?: string; deckId?: string };
-  } = {};
-  try {
-    body = await req.json();
-  } catch {
-    /* empty */
-  }
+  };
 
   // ── Share card (server-validated, client only provides IDs) ─────────────
   let verifiedShareCard: ShareCard | null = null;
   if (body.shareCard?.type === 'note' && body.shareCard.noteId) {
-    verifiedShareCard = await buildNoteCard(body.shareCard.noteId, username);
+    verifiedShareCard = await buildNoteCard(body.shareCard.noteId, userId);
     if (!verifiedShareCard) {
       return NextResponse.json(
         { success: false, error: 'Note not found or access denied.' },
@@ -256,7 +243,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, error: 'Assignment not found.' }, { status: 404 });
     }
   } else if (body.shareCard?.type === 'flashdeck' && body.shareCard.deckId) {
-    verifiedShareCard = await buildFlashDeckCard(body.shareCard.deckId, username);
+    verifiedShareCard = await buildFlashDeckCard(body.shareCard.deckId, userId);
     if (!verifiedShareCard) {
       return NextResponse.json(
         { success: false, error: 'Deck not found or access denied.' },
@@ -277,23 +264,28 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Message is empty.' }, { status: 400 });
   }
 
-  const replyTo = body.replyTo
+  const original = body.replyTo
+    ? await getReplyMessage(body.replyTo.messageId, conversationId)
+    : null;
+  if (body.replyTo && !original)
+    return NextResponse.json({ error: 'Reply message not found.' }, { status: 404 });
+  const replyTo = original
     ? {
-        messageId: String(body.replyTo.messageId ?? '').slice(0, 100),
-        content: String(body.replyTo.content ?? '').slice(0, 200),
-        senderDisplayName: String(body.replyTo.senderDisplayName ?? '').slice(0, 100),
+        messageId: original.id,
+        content: convo.encrypted ? original.content : original.content.slice(0, 200),
+        senderDisplayName: original.senderDisplayName,
       }
     : null;
 
-  const profile = await getProfile(username);
+  const profile = await getProfile(userId);
   const senderDisplayName =
     profile?.displayName ||
     `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() ||
-    username;
+    userId;
 
   const message = await createMessage(
     conversationId,
-    username,
+    userId,
     senderDisplayName,
     content,
     replyTo,
@@ -301,39 +293,31 @@ export async function POST(req: NextRequest, { params }: Params) {
   );
   trackMessageSent();
   return NextResponse.json({ success: true, message });
-}
+});
 
 // PATCH /api/conversations/[conversationId]  – group management
 // Body: { action: "rename" | "add_member" | "remove_member" | "transfer_admin", ... }
-export async function PATCH(req: NextRequest, { params }: Params) {
+export const PATCH = withValidation(async function PATCH(req: NextRequest, { params }: Params) {
   const { conversationId } = await params;
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  const { cookieString, school, username } = sess;
-  if (!(await authUser(cookieString, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
+  const { cookieString, school, userId } = sess;
 
   const convo = await getConversation(conversationId);
-  if (!convo || !convo.participants.includes(username)) {
+  if (!convo || !convo.participantIds.includes(userId)) {
     return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
   }
 
-  let body: {
+  const body = (await readRouteBody(req)) as {
     action?: string;
     groupName?: string;
     groupDescription?: string;
     targetUsername?: string;
-  } = {};
-  try {
-    body = await req.json();
-  } catch {
-    /* empty */
-  }
+  };
 
   if (body.action === 'mark_read') {
-    await markConversationRead(conversationId, username);
+    await markConversationRead(conversationId, userId);
     return NextResponse.json({ success: true });
   }
 
@@ -345,7 +329,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   if (body.action === 'rename') {
-    const updated = await updateGroupInfo(conversationId, username, {
+    const updated = await updateGroupInfo(conversationId, userId, {
       groupName: body.groupName,
       groupDescription: body.groupDescription,
     });
@@ -368,20 +352,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       profile.displayName ||
       `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() ||
       target;
-    const updated = await addGroupMember(conversationId, username, target, displayName);
+    const updated = await addGroupMember(conversationId, userId, target, displayName);
     if (!updated)
       return NextResponse.json({ success: false, error: 'Forbidden.' }, { status: 403 });
     return NextResponse.json({ success: true, conversation: updated });
   }
 
   if (body.action === 'remove_member' || body.action === 'leave') {
-    const target = body.action === 'leave' ? username : (body.targetUsername ?? '').trim();
+    const target = body.action === 'leave' ? userId : (body.targetUsername ?? '').trim();
     if (!target)
       return NextResponse.json(
         { success: false, error: 'targetUsername required.' },
         { status: 400 }
       );
-    const updated = await removeGroupMember(conversationId, username, target);
+    const updated = await removeGroupMember(conversationId, userId, target);
     if (!updated)
       return NextResponse.json({ success: false, error: 'Forbidden.' }, { status: 403 });
     return NextResponse.json({ success: true, conversation: updated });
@@ -394,11 +378,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         { success: false, error: 'targetUsername required.' },
         { status: 400 }
       );
-    const updated = await transferGroupAdmin(conversationId, username, target);
+    const updated = await transferGroupAdmin(conversationId, userId, target);
     if (!updated)
       return NextResponse.json({ success: false, error: 'Forbidden.' }, { status: 403 });
     return NextResponse.json({ success: true, conversation: updated });
   }
 
   return NextResponse.json({ success: false, error: 'Unknown action.' }, { status: 400 });
-}
+});

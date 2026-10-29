@@ -26,7 +26,7 @@ interface UnreadProviderProps {
 
 export function UnreadProvider({ children }: UnreadProviderProps) {
   const { session } = useSession();
-  const username = session?.username ?? '';
+  const username = session?.userId ?? '';
 
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [optimisticReadAt, setOptimisticReadAt] = useState<Record<string, number>>({});

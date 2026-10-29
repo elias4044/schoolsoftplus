@@ -1,4 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { withValidation } from '@/app/api/lib/routeValidation';
 
 const GEO_BASE = 'https://geocoding-api.open-meteo.com/v1';
 const WEATHER_BASE = 'https://api.open-meteo.com/v1';
@@ -58,7 +60,7 @@ interface GeoResult {
 
 async function geocodeCity(q: string): Promise<GeoResult> {
   const url = `${GEO_BASE}/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;
-  const res = await fetch(url, { next: { revalidate: 86400 } });
+  const res = await fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 86400 } });
   if (!res.ok) throw new Error(`Geocoding error ${res.status}`);
   const json = await res.json();
   const r = json.results?.[0];
@@ -90,7 +92,7 @@ async function fetchWeatherForCoords(
     `${WEATHER_BASE}/forecast?latitude=${lat}&longitude=${lon}` +
     `&current=${CURRENT_PARAMS}&daily=sunrise,sunset&wind_speed_unit=kmh&timezone=auto&forecast_days=1`;
 
-  const res = await fetch(url, { next: { revalidate: 300 } });
+  const res = await fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 300 } });
   if (!res.ok) throw new Error(`Open-Meteo error ${res.status}`);
   const raw = await res.json();
 
@@ -122,6 +124,7 @@ async function reverseGeocode(
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
   try {
     const res = await fetch(url, {
+      signal: AbortSignal.timeout(8_000),
       headers: { 'User-Agent': 'SchoolSoftPlus/1.0' },
       next: { revalidate: 86400 },
     });
@@ -139,11 +142,23 @@ async function reverseGeocode(
   }
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const lat = searchParams.get('lat');
   const lon = searchParams.get('lon');
   const city = searchParams.get('city');
+  if (
+    (lat !== null || lon !== null) &&
+    (!lat?.trim() ||
+      !lon?.trim() ||
+      !Number.isFinite(Number(lat)) ||
+      !Number.isFinite(Number(lon)) ||
+      Math.abs(Number(lat)) > 90 ||
+      Math.abs(Number(lon)) > 180)
+  )
+    return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
+  if (city !== null && (!city.trim() || city.length > 200))
+    return NextResponse.json({ error: 'Invalid city.' }, { status: 400 });
 
   try {
     let data: WeatherData;
@@ -161,4 +176,4 @@ export async function GET(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 502 });
   }
-}
+});

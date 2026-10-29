@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import {
   createSchoolsoftClient,
   decodeHtmlResponse,
-  getSessionCookies,
   requireSession,
 } from '@/app/api/lib/schoolsoft';
 
@@ -36,17 +35,13 @@ export interface StaffSection {
  * Fetches the staff list from SchoolSoft's right_student_staff.jsp and returns
  * structured JSON organized by section (Mentors, Teachers, etc.).
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { cookieString: cookies, school } = sess;
-
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const api = createSchoolsoftClient(school);
 
@@ -165,4 +160,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleApiError(error, 'Failed to fetch staff list.');
   }
-}
+});

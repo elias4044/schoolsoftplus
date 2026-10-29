@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authUser } from '@/app/api/lib/auth';
-import { getSessionCookies, requireSession } from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { requireSession } from '@/app/api/lib/schoolsoft';
 
 /**
  * GET /api/gif?q=<query>&limit=<n>
  * Proxies Giphy GIF search (or trending GIFs when q is empty).
  * Requires env var GIPHY_API_KEY.
  */
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   const sess = await requireSession(req);
   if (!sess)
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  if (!(await authUser(sess.cookieString, sess.school)))
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 
   const apiKey = process.env.GIPHY_API_KEY;
@@ -22,11 +20,10 @@ export async function GET(req: NextRequest) {
       { status: 503 }
     );
 
-  const q = (req.nextUrl.searchParams.get('q') ?? '').trim();
-  const limit = Math.min(
-    Math.max(parseInt(req.nextUrl.searchParams.get('limit') ?? '20', 10), 1),
-    30
-  );
+  const q = (req.nextUrl.searchParams.get('q') ?? '').trim().slice(0, 100);
+  const limit = Number(req.nextUrl.searchParams.get('limit') ?? '20');
+  if (!Number.isInteger(limit) || limit < 1 || limit > 30)
+    return NextResponse.json({ error: 'Invalid limit.' }, { status: 400 });
 
   const base = 'https://api.giphy.com/v1/gifs';
   const common = `api_key=${encodeURIComponent(apiKey)}&limit=${limit}&rating=pg`;
@@ -36,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   let giphyRes: Response;
   try {
-    giphyRes = await fetch(url);
+    giphyRes = await fetch(url, { signal: AbortSignal.timeout(8_000) });
   } catch {
     return NextResponse.json(
       { success: false, error: 'GIF service unavailable.' },
@@ -73,4 +70,4 @@ export async function GET(req: NextRequest) {
     .filter((g) => g.preview && g.full);
 
   return NextResponse.json({ success: true, gifs });
-}
+});

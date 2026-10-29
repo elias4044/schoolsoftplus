@@ -2,178 +2,90 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helpers
-
-    // Is the caller signed in (via Firebase custom token)?
     function isAuthed() {
-      return request.auth != null && request.auth.uid != null;
+      return request.auth != null && request.auth.token.identityVersion == 2 && request.auth.uid.matches('^[1-9][0-9]*$');
+    }
+    function isParticipant(data) {
+      return isAuthed() && request.auth.uid in data.participantIds;
+    }
+    function isParticipantOf(conversationId) {
+      return isParticipant(get(/databases/$(database)/documents/conversations_v1/$(conversationId)).data);
+    }
+    function isCallParty(data) {
+      return isAuthed() && (request.auth.uid == data.callerUserId || request.auth.uid == data.calleeUserId);
+    }
+    function isGroupMember(callId) {
+      return isParticipantOf(get(/databases/$(database)/documents/group_calls_v2/$(callId)).data.conversationId);
+    }
+    function isConnectionParty(callId, connectionKey) {
+      let connection = get(/databases/$(database)/documents/group_calls_v2/$(callId)/connections/$(connectionKey)).data;
+      return isGroupMember(callId) && (request.auth.uid == connection.initiatorUserId || request.auth.uid == connection.responderUserId);
     }
 
-    // Is the caller the owner of this document (keyed by uid/username)?
-    function isOwner(uid) {
-      return isAuthed() && request.auth.uid == uid;
+    match /profiles_v1/{userId} {
+      allow read: if isAuthed();
+      allow write: if false;
     }
-
-    // Is the caller a participant in a conversation document?
-    function isParticipant(convData) {
-      return isAuthed() && request.auth.uid in convData.participants;
-    }
-
-    // Is the caller a participant in a given conversation by ID?
-    function isParticipantOf(convId) {
-      return isAuthed() &&
-        request.auth.uid in
-          get(/databases/$(database)/documents/conversations_v1/$(convId)).data.participants;
-    }
-
-    //  Profiles
-    match /profiles_v1/{username} {
-      allow read:  if isAuthed();
-      allow write: if isOwner(username);
-    }
-
-    // Conversations
-    match /conversations_v1/{convId} {
-      allow read:   if isParticipant(resource.data);
-      // Allow participants to update ONLY the lastReadAt map (cross-device unread sync)
+    match /conversations_v1/{conversationId} {
+      allow read: if isParticipant(resource.data);
       allow update: if isParticipant(resource.data) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastReadAt']);
-      allow write:  if false;
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastReadAt']) &&
+        request.resource.data.lastReadAt.diff(resource.data.lastReadAt).affectedKeys().hasOnly([request.auth.uid]);
+      allow create, delete: if false;
     }
-
-    // Messages
-    match /messages_v1/{msgId} {
-      allow read:  if isAuthed() && isParticipantOf(resource.data.conversationId);
+    match /messages_v1/{messageId} {
+      allow read: if isParticipantOf(resource.data.conversationId);
       allow write: if false;
     }
-
-    // Notes
-    match /notes_v2/{noteId} {
-      allow read, write: if false;
-    }
-
-    match /final_grades_v1/{username} {
-      allow read, write: if false;
-    }
-
-    // Countdowns
-    match /countdowns_v1/{countdownId} {
-      allow read, write: if false;
-    }
-
-    // Stats
-    match /stats/{docId} {
-      allow read:  if true;
-      allow write: if false;
-    }
-
-    //  Friendships 
-    // A friendship document has userA and userB fields (both set to the username/uid).
-    // Only the two parties involved can read their friendship doc.
-    // All writes go through the server-side API (Admin SDK bypasses rules).
     match /friendships_v1/{friendshipId} {
-      allow read: if isAuthed() &&
-        (request.auth.uid == resource.data.userA ||
-         request.auth.uid == resource.data.userB);
+      allow read: if isAuthed() && (request.auth.uid == resource.data.userAId || request.auth.uid == resource.data.userBId);
       allow write: if false;
     }
-
-    //  Presence 
-    // Any authenticated user can read presence (needed for status dots).
-    // Only the owner can write their own presence document.
-    match /presence_v1/{username} {
-      allow read:  if isAuthed();
-      allow write: if isOwner(username);
+    match /presence_v1/{userId} {
+      allow read: if isAuthed();
+      allow write: if false;
     }
-
-    //  Group Invites 
-    // The invited user and the inviter can read an invite document.
-    // All writes go through the server-side API.
     match /group_invites_v1/{inviteId} {
-      allow read: if isAuthed() &&
-        (request.auth.uid == resource.data.invitedUsername ||
-         request.auth.uid == resource.data.invitedBy);
+      allow read: if isAuthed() && (request.auth.uid == resource.data.invitedUserId || request.auth.uid == resource.data.invitedById);
       allow write: if false;
     }
-
-    //  Voice Calls (WebRTC signaling) 
-    // Both caller and callee can read/list call documents.
-    // list: Firestore query rules must not rely on resource.data, so we allow
-    //       any authenticated user to *list* — the where() clause in the client
-    //       already scopes results to calleeUsername == uid, which Firestore
-    //       enforces at the query level. Individual document reads are still
-    //       gated below.
     match /calls_v1/{callId} {
-      allow list: if isAuthed();
-      allow get: if isAuthed() && (
-        request.auth.uid == resource.data.callerUsername ||
-        request.auth.uid == resource.data.calleeUsername
-      );
-      allow create: if isAuthed() &&
-        request.auth.uid == request.resource.data.callerUsername;
-      allow update: if isAuthed() && (
-        request.auth.uid == resource.data.callerUsername ||
-        request.auth.uid == resource.data.calleeUsername
-      );
-      allow delete: if isAuthed() && (
-        request.auth.uid == resource.data.callerUsername ||
-        request.auth.uid == resource.data.calleeUsername
-      );
-
-      // ICE candidates — both parties can read/write/delete
-      match /callerCandidates/{candidateId} {
-        allow read, create, delete: if isAuthed() && (
-          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.callerUsername ||
-          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.calleeUsername
-        );
-      }
-      match /calleeCandidates/{candidateId} {
-        allow read, create, delete: if isAuthed() && (
-          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.callerUsername ||
-          request.auth.uid == get(/databases/$(database)/documents/calls_v1/$(callId)).data.calleeUsername
-        );
+      allow read, delete: if isCallParty(resource.data);
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.callerUserId &&
+        request.resource.data.calleeUserId.matches('^[1-9][0-9]*$') && request.resource.data.calleeUserId != request.auth.uid;
+      allow update: if isCallParty(resource.data) &&
+        request.resource.data.callerUserId == resource.data.callerUserId &&
+        request.resource.data.calleeUserId == resource.data.calleeUserId;
+      match /{candidateCollection}/{candidateId} {
+        allow read, create, delete: if candidateCollection in ['callerCandidates', 'calleeCandidates'] &&
+          isCallParty(get(/databases/$(database)/documents/calls_v1/$(callId)).data);
       }
     }
-    //  Group Voice Calls (WebRTC signaling — mesh) 
-    // Any authenticated user may read/write active group call documents.
-    // The conversationId in the document ties access to a conversation,
-    // but we keep rules simple here since conversation membership is
-    // enforced at the query level and client-side guards.
     match /group_calls_v2/{callId} {
-      allow read, list: if isAuthed();
-      allow create: if isAuthed() &&
-        request.auth.uid == request.resource.data.startedBy &&
-        request.resource.data.status == "active";
-      allow update: if isAuthed();
+      allow read: if isParticipantOf(resource.data.conversationId);
+      allow create: if isAuthed() && isParticipantOf(request.resource.data.conversationId) &&
+        request.resource.data.startedByUserId == request.auth.uid &&
+        request.resource.data.participantIds == [request.auth.uid] && request.resource.data.status == 'active';
+      allow update: if isParticipantOf(resource.data.conversationId) &&
+        request.resource.data.conversationId == resource.data.conversationId &&
+        request.resource.data.startedByUserId == resource.data.startedByUserId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'status', 'endedAt']) &&
+        request.resource.data.participantIds.toSet().difference(resource.data.participantIds.toSet()).hasOnly([request.auth.uid]) &&
+        resource.data.participantIds.toSet().difference(request.resource.data.participantIds.toSet()).hasOnly([request.auth.uid]);
       allow delete: if false;
-
       match /connections/{connectionKey} {
-        allow read, write: if isAuthed();
-
-        match /fromInitiator/{candidateId} {
-          allow read, create, delete: if isAuthed();
-        }
-        match /fromResponder/{candidateId} {
-          allow read, create, delete: if isAuthed();
+        allow read, delete: if isGroupMember(callId) &&
+          (request.auth.uid == resource.data.initiatorUserId || request.auth.uid == resource.data.responderUserId);
+        allow create: if isGroupMember(callId) && request.auth.uid == request.resource.data.initiatorUserId &&
+          request.resource.data.responderUserId in get(/databases/$(database)/documents/group_calls_v2/$(callId)).data.participantIds;
+        allow update: if isConnectionParty(callId, connectionKey) &&
+          request.resource.data.initiatorUserId == resource.data.initiatorUserId &&
+          request.resource.data.responderUserId == resource.data.responderUserId;
+        match /{direction}/{candidateId} {
+          allow read, create, delete: if direction in ['fromInitiator', 'fromResponder'] && isConnectionParty(callId, connectionKey);
         }
       }
     }
-    //  Referrals 
-    match /referrals_v1/{username} {
-      allow read: if isOwner(username);
-      allow write: if false;
-    }
-
-    // Referral code lookup — publicly readable so the join page can
-    // display the referrer's name without requiring authentication.
-    // No sensitive data is stored here (just username + createdAt).
-    match /referral_codes_v1/{code} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    //  Default deny 
     match /{document=**} {
       allow read, write: if false;
     }

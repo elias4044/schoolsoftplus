@@ -26,12 +26,13 @@
  *     userHandle   string
  *     createdAt    Timestamp
  *
- * userHandle = base64url(username@school) — both lowercase.
+ * userHandle = base64url(userId@school) — both lowercase.
  */
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { db } from './firebaseAdmin';
+import { assertUserId } from './identity';
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -39,8 +40,9 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
    userHandle helpers
 ───────────────────────────────────────────────────────────── */
 
-export function makeUserHandle(username: string, school: string): string {
-  const raw = `${username.toLowerCase()}@${school.toLowerCase()}`;
+export function makeUserHandle(userId: string, school: string): string {
+  assertUserId(userId);
+  const raw = `${userId}@${school.toLowerCase()}`;
   return Buffer.from(raw, 'utf8')
     .toString('base64')
     .replace(/\+/g, '-')
@@ -58,6 +60,7 @@ export interface PasskeyUserDoc {
   school: string;
   orgId: string;
   username: string;
+  userId?: string;
   lastTokenUpdate: Timestamp;
 }
 
@@ -97,6 +100,7 @@ export async function upsertPasskeyUser(
     school: string;
     orgId: string;
     username: string;
+    userId: string;
   }
 ): Promise<void> {
   await db
@@ -229,12 +233,12 @@ export async function saveChallenge(
  */
 export async function consumeChallenge(challengeId: string): Promise<PasskeyChallenge | null> {
   const ref = db.collection('passkey_challenges').doc(challengeId);
-  const doc = await ref.get();
-  // Always delete — even on failure, so stale docs don't accumulate
-  await ref.delete().catch(() => {});
-  if (!doc.exists) return null;
-  const data = doc.data() as PasskeyChallenge & { createdAt: Timestamp };
-  const ageMs = Date.now() - data.createdAt.toMillis();
-  if (ageMs > CHALLENGE_TTL_MS) return null;
-  return data;
+  return db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(ref);
+    if (!doc.exists) return null;
+    transaction.delete(ref);
+    const data = doc.data() as PasskeyChallenge;
+    const ageMs = Date.now() - data.createdAt.toMillis();
+    return ageMs >= 0 && ageMs < CHALLENGE_TTL_MS ? data : null;
+  });
 }

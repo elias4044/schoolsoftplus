@@ -11,9 +11,9 @@ export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 
 export interface RTFriendship {
   id: string;
-  userA: string;
-  userB: string;
-  requestedBy: string;
+  userAId: string;
+  userBId: string;
+  requestedById: string;
   status: FriendshipStatus;
   createdAt: number;
   updatedAt: number;
@@ -45,8 +45,8 @@ export function useFriends(username: string) {
 
     const friendships_col = collection(clientDb, 'friendships_v1');
 
-    const qA = query(friendships_col, where('userA', '==', username));
-    const qB = query(friendships_col, where('userB', '==', username));
+    const qA = query(friendships_col, where('userAId', '==', username));
+    const qB = query(friendships_col, where('userBId', '==', username));
 
     // Merge two snapshots
     const allByIdRef = { current: new Map<string, RTFriendship>() };
@@ -57,9 +57,9 @@ export function useFriends(username: string) {
       const d = doc.data();
       return {
         id: doc.id,
-        userA: d.userA,
-        userB: d.userB,
-        requestedBy: d.requestedBy,
+        userAId: d.userAId,
+        userBId: d.userBId,
+        requestedById: d.requestedById,
         status: d.status,
         createdAt: d.createdAt ?? 0,
         updatedAt: d.updatedAt ?? 0,
@@ -69,8 +69,8 @@ export function useFriends(username: string) {
     function recompute() {
       const all = [...allByIdRef.current.values()];
       const newFriends = all.filter((f) => f.status === 'accepted');
-      const newReceived = all.filter((f) => f.status === 'pending' && f.requestedBy !== username);
-      const newSent = all.filter((f) => f.status === 'pending' && f.requestedBy === username);
+      const newReceived = all.filter((f) => f.status === 'pending' && f.requestedById !== username);
+      const newSent = all.filter((f) => f.status === 'pending' && f.requestedById === username);
       setFriends(newFriends);
       setReceived(newReceived);
       setSent(newSent);
@@ -78,7 +78,7 @@ export function useFriends(username: string) {
       // Fetch profiles for unknown users
       const toFetch = new Set<string>();
       for (const f of all) {
-        const other = f.userA === username ? f.userB : f.userA;
+        const other = f.userAId === username ? f.userBId : f.userAId;
         toFetch.add(other);
       }
       toFetch.forEach((u) => {
@@ -142,22 +142,22 @@ export function useFriends(username: string) {
 
   /** Returns the username of the other party in a friendship */
   function otherUser(f: RTFriendship): string {
-    return f.userA === username ? f.userB : f.userA;
+    return f.userAId === username ? f.userBId : f.userAId;
   }
 
   /** Returns true if username is friends with target */
   function isFriend(target: string): boolean {
-    return friends.some((f) => f.userA === target || f.userB === target);
+    return friends.some((f) => f.userAId === target || f.userBId === target);
   }
 
   /** Returns the pending request (received) from a specific user */
   function pendingFrom(target: string): RTFriendship | undefined {
-    return received.find((f) => f.requestedBy === target);
+    return received.find((f) => f.requestedById === target);
   }
 
   /** Returns the pending request (sent) to a specific user */
   function sentTo(target: string): RTFriendship | undefined {
-    return sent.find((f) => f.userA === target || f.userB === target);
+    return sent.find((f) => f.userAId === target || f.userBId === target);
   }
 
   return { friends, received, sent, loading, profileMap, otherUser, isFriend, pendingFrom, sentTo };

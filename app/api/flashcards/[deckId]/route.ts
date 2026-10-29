@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthenticatedUsername } from '@/app/api/lib/authenticatedUser';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
 import {
   deleteDeck,
   getCardsByDeck,
@@ -22,15 +22,15 @@ export const GET = withValidation(async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ deckId: string }> }
 ) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { deckId } = await params;
   assertDocumentId(deckId);
-  const deck = await getDeckById(deckId, username);
+  const deck = await getDeckById(deckId, userId);
   if (!deck) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const cards = await getCardsByDeck(deckId, username);
+  const cards = await getCardsByDeck(deckId, userId);
   return NextResponse.json({ success: true, deck, cards });
 });
 
@@ -38,8 +38,8 @@ export const PATCH = withValidation(async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ deckId: string }> }
 ) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { deckId } = await params;
   assertDocumentId(deckId);
@@ -66,7 +66,7 @@ export const PATCH = withValidation(async function PATCH(
       .slice(0, 20);
   }
 
-  const deck = await updateDeck(deckId, username, updates);
+  const deck = await updateDeck(deckId, userId, updates);
   if (!deck) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true, deck });
@@ -76,12 +76,12 @@ export const DELETE = withValidation(async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ deckId: string }> }
 ) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { deckId } = await params;
   assertDocumentId(deckId);
-  const ok = await deleteDeck(deckId, username);
+  const ok = await deleteDeck(deckId, userId);
   if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   return NextResponse.json({ success: true });

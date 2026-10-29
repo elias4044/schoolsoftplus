@@ -15,6 +15,8 @@ import {
   updatePasskeyToken,
   type PasskeyCredential,
 } from '@/app/api/lib/passkeyDb';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { decrypt, encrypt } from '@/app/api/lib/serverCrypto';
 
 const CLIENT_ID = 'eApp';
@@ -39,7 +41,7 @@ function getRpConfig() {
  * 5. Sets all session cookies identically to AuthV2 callback.
  * 6. Re-encrypts and persists the new refresh token.
  */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   const challengeId = req.cookies.get('ssp_pk_auth_challenge_id')?.value;
   if (!challengeId) {
     return NextResponse.json(
@@ -48,15 +50,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { response: AuthenticationResponseJSON };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 });
-  }
+  const body = (await readRouteBody(req)) as { response: AuthenticationResponseJSON };
 
   const challengeDoc = await consumeChallenge(challengeId);
-  if (!challengeDoc) {
+  if (!challengeDoc || challengeDoc.type !== 'authentication') {
     return NextResponse.json(
       { success: false, error: 'Authentication challenge expired. Please try again.' },
       { status: 400 }
@@ -174,13 +171,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const refreshRes = await fetch(refreshUrl, {
+      signal: AbortSignal.timeout(8_000),
       method: 'POST',
       headers: { accept: 'application/json' },
     });
 
     if (refreshRes.status !== 200) {
-      const text = await refreshRes.text().catch(() => '');
-      console.warn(`[passkey/authenticate/complete] refresh failed (${refreshRes.status}):`, text);
+      console.warn(`[passkey/authenticate/complete] refresh failed (${refreshRes.status}):`);
       return NextResponse.json(
         {
           success: false,
@@ -211,10 +208,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Keep the rotated token even if a later SchoolSoft request fails.
+  const { ciphertext, iv } = encrypt(newRefreshToken);
+  await updatePasskeyToken(userHandle, ciphertext, iv);
+
   // Derive JSESSIONID via eva-apps
-  const sessionInfo = await fetchSchoolsoftSession(school, ssToken);
-  const canonicalUsername = sessionInfo?.username ?? passkeyUser.username;
+  const sessionInfo = await fetchSchoolsoftSession(school, ssToken, orgId);
+  if (
+    !sessionInfo ||
+    (passkeyUser.userId
+      ? String(sessionInfo.userId) !== passkeyUser.userId
+      : sessionInfo.username.toLowerCase().trim() !== passkeyUser.username.toLowerCase().trim())
+  )
+    return NextResponse.json({ error: 'Passkey account could not be verified.' }, { status: 401 });
+  const canonicalUsername = sessionInfo.username;
   const userId = sessionInfo?.userId?.toString() ?? '';
+  const { ensureAccountMigration } = await import('@/app/api/lib/accountMigration');
+  await ensureAccountMigration({
+    userId,
+    username: canonicalUsername.toLowerCase().trim(),
+    school,
+  });
   const redirectUrl = `https://sms.schoolsoft.se/${school}/react/#/student/subjectrooms`;
   const sessionUrl = `https://sms.schoolsoft.se/${encodeURIComponent(school)}/eva-apps/auth/login/student`;
 
@@ -224,6 +238,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const sessionRes = await axios.get(sessionUrl, {
+      timeout: 8_000,
+      signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'nyEva',
@@ -259,18 +275,18 @@ export async function POST(req: NextRequest) {
     console.error('[passkey/authenticate/complete] eva-apps error:', (err as Error).message);
   }
 
-  // Persist re-encrypted refresh token back to Firestore (fire-and-forget)
-  const { ciphertext, iv } = encrypt(newRefreshToken);
-  updatePasskeyToken(userHandle, ciphertext, iv).catch((err) =>
-    console.error('[passkey/authenticate/complete] token update error:', (err as Error).message)
-  );
-
   // Set all session cookies — same pattern as AuthV2 callback
   const ssTokenExpiresAt = Math.floor(Date.now() / 1000) + expiresIn;
 
   const res = NextResponse.json({ success: true, redirectTo: '/dashboard' });
 
-  const base = { httpOnly: true, sameSite: 'lax' as const, path: '/', maxAge: 60 * 60 * 24 * 7 };
+  const base = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  };
   const authv2 = { ...base, maxAge: 60 * 60 * 24 * 30 };
 
   if (jsessionid && hash) {
@@ -280,6 +296,7 @@ export async function POST(req: NextRequest) {
   }
   res.cookies.set('ssp_school', school, { ...base, httpOnly: false });
   res.cookies.set('ssp_username', canonicalUsername, { ...base, httpOnly: false });
+  res.cookies.set('ssp_userid', userId, base);
   res.cookies.set('ssp_auth_type', 'authv2', { ...base, httpOnly: false });
   res.cookies.set('ssp_ss_token', ssToken, authv2);
   res.cookies.set('ssp_ss_refresh_token', newRefreshToken, authv2);
@@ -290,4 +307,4 @@ export async function POST(req: NextRequest) {
   res.cookies.set('ssp_pk_auth_challenge_id', '', { maxAge: 0, path: '/' });
 
   return res;
-}
+});

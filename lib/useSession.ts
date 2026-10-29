@@ -33,6 +33,7 @@ interface Session {
   // Injected by our /api/session route
   school: string;
   username: string;
+  userId: string;
 }
 
 interface UseSessionResult {

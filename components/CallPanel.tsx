@@ -215,7 +215,7 @@ function PulseRing() {
 /*  Props  */
 export interface IncomingCallInfo {
   callId: string;
-  callerUsername: string;
+  callerUserId: string;
   callerDisplayName?: string;
   callerAvatarUrl?: string;
 }
@@ -290,7 +290,7 @@ export function CallPanel({
     phase !== 'idle' && phase !== 'ended' && phase !== 'declined' && phase !== 'failed';
   const showIncoming = !!incomingCall && phase === 'idle' && groupPhase === 'idle';
   const activeName = remoteDisplayName ?? session?.remoteUsername ?? 'Unknown';
-  const callerName = incomingCall?.callerDisplayName ?? incomingCall?.callerUsername ?? 'Unknown';
+  const callerName = incomingCall?.callerDisplayName ?? incomingCall?.callerUserId ?? 'Unknown';
 
   const isActiveGroup = groupPhase === 'in_call' || groupPhase === 'joining';
 
@@ -574,8 +574,8 @@ export function CallPanel({
                       className="text-[10px] tabular-nums"
                       style={{ color: 'oklch(0.60 0.20 148)' }}
                     >
-                      {groupTimer} &middot; {groupSession?.participants.length ?? 0} participant
-                      {(groupSession?.participants.length ?? 0) !== 1 ? 's' : ''}
+                      {groupTimer} &middot; {groupSession?.participantIds.length ?? 0} participant
+                      {(groupSession?.participantIds.length ?? 0) !== 1 ? 's' : ''}
                     </p>
                   )}
                 </div>
@@ -612,9 +612,9 @@ export function CallPanel({
               </div>
 
               {/* Participant avatar row */}
-              {groupSession && groupSession.participants.length > 0 && (
+              {groupSession && groupSession.participantIds.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {groupSession.participants.slice(0, 8).map((p) => {
+                  {groupSession.participantIds.slice(0, 8).map((p) => {
                     const profile = groupParticipantProfiles[p];
                     const isPeerMuted = groupMutedPeers?.has(p) ?? false;
                     return (
@@ -672,14 +672,14 @@ export function CallPanel({
                       </div>
                     );
                   })}
-                  {groupSession.participants.length > 8 && (
+                  {groupSession.participantIds.length > 8 && (
                     <span className="text-muted-foreground ml-0.5 text-[10px]">
-                      +{groupSession.participants.length - 8}
+                      +{groupSession.participantIds.length - 8}
                     </span>
                   )}
                 </div>
               )}
-              {groupSession && groupSession.participants.length > 0 && onGroupTogglePeerMute && (
+              {groupSession && groupSession.participantIds.length > 0 && onGroupTogglePeerMute && (
                 <p className="text-muted-foreground/50 text-[9px] leading-tight">
                   Tap a participant to mute them for you only.
                 </p>
@@ -786,7 +786,7 @@ export function GroupCallEncryptionNotice({
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                 This group uses end-to-end encrypted messages, but{' '}
                 <strong>voice calls are not encrypted</strong> with the same group key. The call
-                uses WebRTC's built-in transport encryption (DTLS-SRTP), but participants do not
+                uses WebRTC's built-in transport encryption (DTLS-SRTP), but participantIds do not
                 need the group password to join.
               </p>
             </div>

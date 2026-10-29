@@ -16,7 +16,7 @@ export interface FinalGradeSubject {
 }
 
 export interface FinalGradesDoc {
-  username: string;
+  userId: string;
   subjects: FinalGradeSubject[];
   updatedAt: number;
 }

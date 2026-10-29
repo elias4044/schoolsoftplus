@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthenticatedUsername } from '@/app/api/lib/authenticatedUser';
+import { getAuthenticatedUserId } from '@/app/api/lib/authenticatedUser';
 import {
   bulkCreateCards,
   canImportDeck,
@@ -12,8 +12,8 @@ import {
 import { assertDocumentId, readJsonObject, withValidation } from '@/app/api/lib/routeValidation';
 
 export const POST = withValidation(async function POST(req: NextRequest) {
-  const username = await getAuthenticatedUsername(req);
-  if (!username)
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId)
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   const body = await readJsonObject(req);
 
@@ -33,7 +33,7 @@ export const POST = withValidation(async function POST(req: NextRequest) {
   const sourceDeck = await getDeckByIdAny(deckId);
   if (
     !sourceDeck ||
-    !(await canImportDeck(sourceDeck, username, body.messageId as string | undefined))
+    !(await canImportDeck(sourceDeck, userId, body.messageId as string | undefined))
   ) {
     return NextResponse.json(
       { success: false, error: 'Deck no longer available.' },
@@ -41,9 +41,9 @@ export const POST = withValidation(async function POST(req: NextRequest) {
     );
   }
 
-  const sourceCards = await getCardsByDeck(deckId, sourceDeck.username);
+  const sourceCards = await getCardsByDeck(deckId, sourceDeck.userId);
 
-  const newDeck = await createDeck(username, {
+  const newDeck = await createDeck(userId, {
     title: sourceDeck.title,
     description: sourceDeck.description,
     color: sourceDeck.color,
@@ -62,14 +62,14 @@ export const POST = withValidation(async function POST(req: NextRequest) {
 
   if (cardData.length > 0) {
     try {
-      const cards = await bulkCreateCards(newDeck.id, username, cardData);
+      const cards = await bulkCreateCards(newDeck.id, userId, cardData);
       if (!cards)
         return NextResponse.json(
           { success: false, error: 'Deck no longer available.' },
           { status: 404 }
         );
     } catch (error) {
-      await deleteDeck(newDeck.id, username);
+      await deleteDeck(newDeck.id, userId);
       throw error;
     }
   }

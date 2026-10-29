@@ -73,7 +73,7 @@ export interface CallSession {
 
 export interface IncomingCall {
   callId: string;
-  callerUsername: string;
+  callerUserId: string;
 }
 
 export interface UseCallReturn {
@@ -81,8 +81,8 @@ export interface UseCallReturn {
   session: CallSession | null;
   error: string | null;
   isMuted: boolean;
-  startCall: (myUsername: string, calleeUsername: string) => Promise<void>;
-  acceptCall: (callId: string, callerUsername: string, myUsername: string) => Promise<void>;
+  startCall: (myUsername: string, calleeUserId: string) => Promise<void>;
+  acceptCall: (callId: string, callerUserId: string, myUsername: string) => Promise<void>;
   declineCall: (callId: string) => Promise<void>;
   hangUp: () => Promise<void>;
   toggleMute: () => void;
@@ -94,7 +94,7 @@ export type GroupCallPhase = 'idle' | 'joining' | 'in_call' | 'ended' | 'failed'
 export interface GroupCallSession {
   callId: string;
   conversationId: string;
-  participants: string[];
+  participantIds: string[];
 }
 
 export interface UseGroupCallReturn {
@@ -252,7 +252,7 @@ export function useCall(): UseCallReturn {
 
   /* ── startCall (outgoing) ─────────────────────────────── */
   const startCall = useCallback(
-    async (myUsername: string, calleeUsername: string) => {
+    async (myUsername: string, calleeUserId: string) => {
       if (phase !== 'idle') return;
       setError(null);
       iceCandidateBufferRef.current = [];
@@ -287,8 +287,8 @@ export function useCall(): UseCallReturn {
         await pc.setLocalDescription(offer);
 
         await setDoc(callDocRef, {
-          callerUsername: myUsername,
-          calleeUsername,
+          callerUserId: myUsername,
+          calleeUserId,
           offer: { type: offer.type, sdp: offer.sdp },
           answer: null,
           status: 'ringing',
@@ -296,7 +296,7 @@ export function useCall(): UseCallReturn {
           expireAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
         });
 
-        setSession({ callId: callDocRef.id, remoteUsername: calleeUsername, isOutgoing: true });
+        setSession({ callId: callDocRef.id, remoteUsername: calleeUserId, isOutgoing: true });
         setPhase('calling');
 
         const expectedCallId = callDocRef.id;
@@ -376,7 +376,7 @@ export function useCall(): UseCallReturn {
 
   /* ── acceptCall (incoming) ────────────────────────────── */
   const acceptCall = useCallback(
-    async (callId: string, callerUsername: string, myUsername: string) => {
+    async (callId: string, callerUserId: string, myUsername: string) => {
       if (phase !== 'idle') return;
       setError(null);
       iceCandidateBufferRef.current = [];
@@ -393,7 +393,7 @@ export function useCall(): UseCallReturn {
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
         callIdRef.current = callId;
-        setSession({ callId, remoteUsername: callerUsername, isOutgoing: false });
+        setSession({ callId, remoteUsername: callerUserId, isOutgoing: false });
 
         const callDocRef = doc(clientDb, 'calls_v1', callId);
         const callSnap = await getDoc(callDocRef);
@@ -609,21 +609,21 @@ export function useGroupCall(): UseGroupCallReturn {
           const callRef = doc(clientDb, 'group_calls_v2', callId);
           const callSnap = await getDoc(callRef);
           if (callSnap.exists()) {
-            const remaining = (callSnap.data().participants as string[]).filter(
+            const remaining = (callSnap.data().participantIds as string[]).filter(
               (p) => p !== myUsername
             );
             if (remaining.length === 0) {
-              await updateDoc(callRef, { status: 'ended', participants: [] });
+              await updateDoc(callRef, { status: 'ended', participantIds: [] });
             } else {
-              await updateDoc(callRef, { participants: arrayRemove(myUsername) });
+              await updateDoc(callRef, { participantIds: arrayRemove(myUsername) });
             }
           }
 
           // Delete connection documents for this user
           const connectionsRef = collection(clientDb, 'group_calls_v2', callId, 'connections');
           const [asInit, asResp] = await Promise.all([
-            getDocs(query(connectionsRef, where('initiator', '==', myUsername))),
-            getDocs(query(connectionsRef, where('responder', '==', myUsername))),
+            getDocs(query(connectionsRef, where('initiatorUserId', '==', myUsername))),
+            getDocs(query(connectionsRef, where('responderUserId', '==', myUsername))),
           ]);
           const batch = writeBatch(clientDb);
           for (const d of [...asInit.docs, ...asResp.docs]) {
@@ -693,7 +693,7 @@ export function useGroupCall(): UseGroupCallReturn {
                 if (!prev) return prev;
                 return {
                   ...prev,
-                  participants: prev.participants.filter((p) => p !== peerUsername),
+                  participantIds: prev.participantIds.filter((p) => p !== peerUsername),
                 };
               });
             }
@@ -780,8 +780,8 @@ export function useGroupCall(): UseGroupCallReturn {
         await entry.pc.setLocalDescription(offer);
 
         await setDoc(connectionRef, {
-          initiator: myUsername,
-          responder: peerUsername,
+          initiatorUserId: myUsername,
+          responderUserId: peerUsername,
           offer: { type: offer.type, sdp: offer.sdp },
           answer: null,
           createdAt: Date.now(),
@@ -831,7 +831,7 @@ export function useGroupCall(): UseGroupCallReturn {
     [createGroupPeer, drainGroupBuffer, addGroupCandidate, cleanupPeer]
   );
 
-  /* ── respond to an incoming connection (we are responder) */
+  /* ── respond to an incoming connection (we are responderUserId) */
   const handleIncomingConnection = useCallback(
     async (
       initiatorUsername: string,
@@ -879,8 +879,8 @@ export function useGroupCall(): UseGroupCallReturn {
         entry.unsubs.push(unsubIce);
 
         setSession((prev) => {
-          if (!prev || prev.participants.includes(initiatorUsername)) return prev;
-          return { ...prev, participants: [...prev.participants, initiatorUsername] };
+          if (!prev || prev.participantIds.includes(initiatorUsername)) return prev;
+          return { ...prev, participantIds: [...prev.participantIds, initiatorUsername] };
         });
       } catch {
         cleanupPeer(initiatorUsername);
@@ -900,20 +900,20 @@ export function useGroupCall(): UseGroupCallReturn {
           cleanupAll(false);
           return;
         }
-        const participants = snap.data().participants as string[];
-        setSession((prev) => (prev ? { ...prev, participants } : prev));
+        const participantIds = snap.data().participantIds as string[];
+        setSession((prev) => (prev ? { ...prev, participantIds } : prev));
       });
       unsubsRef.current.push(unsubCall);
 
       const connectionsRef = collection(clientDb, 'group_calls_v2', callId, 'connections');
-      const incomingQuery = query(connectionsRef, where('responder', '==', myUsername));
+      const incomingQuery = query(connectionsRef, where('responderUserId', '==', myUsername));
       const unsubConns = onSnapshot(incomingQuery, (snap) => {
         snap.docChanges().forEach(async (change) => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            if (data.offer && !peersRef.current.has(data.initiator)) {
+            if (data.offer && !peersRef.current.has(data.initiatorUserId)) {
               await handleIncomingConnection(
-                data.initiator,
+                data.initiatorUserId,
                 change.doc.id,
                 data.offer as RTCSessionDescriptionInit,
                 callId
@@ -945,14 +945,14 @@ export function useGroupCall(): UseGroupCallReturn {
 
         await setDoc(callDocRef, {
           conversationId,
-          startedBy: myUsername,
+          startedByUserId: myUsername,
           status: 'active',
-          participants: [myUsername],
+          participantIds: [myUsername],
           createdAt: Date.now(),
           expireAt: Timestamp.fromMillis(Date.now() + 4 * 60 * 60 * 1000),
         });
 
-        setSession({ callId: callDocRef.id, conversationId, participants: [myUsername] });
+        setSession({ callId: callDocRef.id, conversationId, participantIds: [myUsername] });
         setPhase('in_call');
 
         subscribeToGroupCall(callDocRef.id, myUsername);
@@ -991,13 +991,17 @@ export function useGroupCall(): UseGroupCallReturn {
           if (!snap.exists()) throw new Error('Call not found.');
           const data = snap.data();
           if (data.status !== 'active') throw new Error('Call has ended.');
-          const current = data.participants as string[];
+          const current = data.participantIds as string[];
           if (current.includes(myUsername)) return current.filter((p) => p !== myUsername);
-          tx.update(callRef, { participants: arrayUnion(myUsername) });
+          tx.update(callRef, { participantIds: arrayUnion(myUsername) });
           return current;
         });
 
-        setSession({ callId, conversationId, participants: [...existingParticipants, myUsername] });
+        setSession({
+          callId,
+          conversationId,
+          participantIds: [...existingParticipants, myUsername],
+        });
         setPhase('in_call');
 
         for (const peer of existingParticipants) {
@@ -1108,7 +1112,7 @@ export function useIncomingCall(username: string): IncomingCall | null {
 
     const q = query(
       collection(clientDb, 'calls_v1'),
-      where('calleeUsername', '==', username),
+      where('calleeUserId', '==', username),
       where('status', '==', 'ringing')
     );
 
@@ -1124,13 +1128,13 @@ export function useIncomingCall(username: string): IncomingCall | null {
             (d) =>
               ({ id: d.id, ...d.data() }) as {
                 id: string;
-                callerUsername: string;
+                callerUserId: string;
                 createdAt: number;
               }
           )
           .sort((a, b) => b.createdAt - a.createdAt);
         const first = sorted[0];
-        setIncomingCall({ callId: first.id, callerUsername: first.callerUsername });
+        setIncomingCall({ callId: first.id, callerUserId: first.callerUserId });
       },
       (err) => {
         // Silently handle permission-denied (rules not yet deployed) or auth errors.
@@ -1153,11 +1157,11 @@ export function useIncomingCall(username: string): IncomingCall | null {
 ══════════════════════════════════════════════════════════════ */
 export function useActiveGroupCallForConversation(
   conversationId: string | null
-): { callId: string; participants: string[]; startedBy: string } | null {
+): { callId: string; participantIds: string[]; startedByUserId: string } | null {
   const [data, setData] = useState<{
     callId: string;
-    participants: string[];
-    startedBy: string;
+    participantIds: string[];
+    startedByUserId: string;
   } | null>(null);
   const { fbUser, ready } = useFirebaseAuth();
 
@@ -1184,8 +1188,8 @@ export function useActiveGroupCallForConversation(
         const callData = d.data();
         setData({
           callId: d.id,
-          participants: callData.participants as string[],
-          startedBy: callData.startedBy as string,
+          participantIds: callData.participantIds as string[],
+          startedByUserId: callData.startedByUserId as string,
         });
       },
       () => setData(null)

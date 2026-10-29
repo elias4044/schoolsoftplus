@@ -1,46 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-import { authUserWithUsername } from '@/app/api/lib/auth';
+import { enforceRateLimit } from '@/app/api/lib/rateLimit';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
 import { requireSession } from '@/app/api/lib/schoolsoft';
 
 // Rate limiting
-const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS_PER_MINUTE = 8;
 
 /** POST /api/ai/flashcards — generate flashcard Q&A pairs from source text */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   // Rate limiting
-  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter((t) => now - t < 60_000);
-  if (timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-    return NextResponse.json(
-      { success: false, message: 'Too many requests. Please wait.' },
-      { status: 429 }
-    );
-  }
-  rateLimitMap.set(ip, [...timestamps, now]);
-
-  // Auth
   const sess = await requireSession(req);
   if (!sess)
     return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
-  const username = sess.username.toLowerCase().trim();
-  if (!(await authUserWithUsername(sess.cookieString, username, sess.school))) {
-    return NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
-  }
+
+  enforceRateLimit('ai:flashcards:' + sess.userId, 8);
 
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
   }
 
-  let body: { text?: string; count?: number; language?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ success: false, message: 'Invalid JSON.' }, { status: 400 });
-  }
+  const body = (await readRouteBody(req)) as { text?: string; count?: number; language?: string };
 
   const text = typeof body.text === 'string' ? body.text.trim() : '';
   if (!text || text.length < 20) {
@@ -83,7 +64,10 @@ Source text:
 ${text}`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { timeout: 30_000 },
+    });
     const result = await ai.models.generateContent({
       model: 'gemini-3.1-flash-lite',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -133,4 +117,4 @@ ${text}`;
     console.error('[ai/flashcards] Gemini error:', (err as Error).message);
     return NextResponse.json({ success: false, message: 'AI generation failed.' }, { status: 500 });
   }
-}
+});

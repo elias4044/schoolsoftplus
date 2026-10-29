@@ -91,7 +91,7 @@ function timeAgo(ms: number) {
 
 export default function ReferralsPage() {
   const { session } = useSession();
-  const username = session?.username ?? '';
+  const username = session?.userId ?? '';
 
   const [data, setData] = useState<ReferralData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);

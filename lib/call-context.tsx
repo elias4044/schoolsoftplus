@@ -46,15 +46,15 @@ function useRemoteProfile(username: string | null): RemoteProfile | null {
 }
 
 function useGroupParticipantProfiles(
-  participants: string[]
+  participantIds: string[]
 ): Record<string, { displayName: string; avatarUrl: string }> {
   const [profiles, setProfiles] = useState<
     Record<string, { displayName: string; avatarUrl: string }>
   >({});
 
   useEffect(() => {
-    if (participants.length === 0) return;
-    for (const username of participants) {
+    if (participantIds.length === 0) return;
+    for (const username of participantIds) {
       if (profiles[username]) continue;
       fetch(`/api/profile/${encodeURIComponent(username)}`)
         .then((r) => r.json())
@@ -72,7 +72,7 @@ function useGroupParticipantProfiles(
         .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [participants.join(',')]);
+  }, [participantIds.join(',')]);
 
   return profiles;
 }
@@ -130,9 +130,9 @@ function GlobalCallPanel({
   ringtoneCustomUrl: string;
 }) {
   const remoteProfile = useRemoteProfile(call.session?.remoteUsername ?? null);
-  const callerProfile = useRemoteProfile(incomingCall?.callerUsername ?? null);
+  const callerProfile = useRemoteProfile(incomingCall?.callerUserId ?? null);
   const groupParticipantProfiles = useGroupParticipantProfiles(
-    groupCall.session?.participants ?? []
+    groupCall.session?.participantIds ?? []
   );
 
   return (
@@ -143,7 +143,7 @@ function GlobalCallPanel({
         incomingCall
           ? {
               callId: incomingCall.callId,
-              callerUsername: incomingCall.callerUsername,
+              callerUserId: incomingCall.callerUserId,
               callerDisplayName: callerProfile?.displayName,
               callerAvatarUrl: callerProfile?.avatarUrl,
             }
@@ -156,7 +156,7 @@ function GlobalCallPanel({
       remoteAvatarUrl={remoteProfile?.avatarUrl}
       onAccept={() => {
         if (incomingCall) {
-          call.acceptCall(incomingCall.callId, incomingCall.callerUsername, username);
+          call.acceptCall(incomingCall.callId, incomingCall.callerUserId, username);
         }
       }}
       onDecline={() => {
@@ -181,7 +181,7 @@ function GlobalCallPanel({
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { session } = useSession();
-  const username = session?.username ?? '';
+  const username = session?.userId ?? '';
   const call = useCall();
   const groupCall = useGroupCall();
   const incomingCall = useIncomingCall(username);

@@ -6,6 +6,7 @@ import {
   refreshAuthV2Session,
   syncPasskeyRefreshToken,
 } from '@/app/api/auth/v2/lib';
+import { withValidation } from '@/app/api/lib/routeValidation';
 
 /**
  * POST /api/auth/v2/token-refresh
@@ -18,7 +19,7 @@ import {
  * Called automatically by the client when the session approaches expiry
  * (the `ssp_ss_token_expires` cookie holds the Unix timestamp).
  */
-export async function POST(req: NextRequest) {
+export const POST = withValidation(async function POST(req: NextRequest) {
   const refreshToken = req.cookies.get('ssp_ss_refresh_token')?.value;
   const school = req.cookies.get('ssp_school')?.value ?? 'engelska';
   const orgid = req.cookies.get('ssp_ss_orgid')?.value ?? '18';
@@ -42,7 +43,13 @@ export async function POST(req: NextRequest) {
 
     const res = NextResponse.json({ success: true, expiresAt: session.ssTokenExpiresAt });
     applyAuthV2Cookies(res, session);
-    await syncPasskeyRefreshToken(session.username, session.school, session.refreshToken);
+    const { ensureAccountMigration } = await import('@/app/api/lib/accountMigration');
+    await ensureAccountMigration({
+      userId: session.userId,
+      username: session.username,
+      school: session.school,
+    });
+    await syncPasskeyRefreshToken(session.userId, session.school, session.refreshToken);
     return res;
   } catch (error) {
     if (error instanceof AuthV2Error) {
@@ -55,4 +62,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

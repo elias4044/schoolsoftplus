@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
-import {
-  createSchoolsoftClient,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 // ---------------------------------------------------------------------------
 // GET /api/assignment/[id]?type=assignment|planning
@@ -86,7 +82,10 @@ function normalizeAssignmentView(raw: Record<string, unknown>, id: string) {
   };
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withValidation(async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type') ?? 'assignment'; // default to assignment
@@ -96,10 +95,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
   }
   const { cookieString: cookies, school } = sess;
-
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
 
   const api = createSchoolsoftClient(school);
 
@@ -205,4 +200,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error) {
     return handleApiError(error, `assignment/${id}`);
   }
-}
+});

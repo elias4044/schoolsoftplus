@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 
 import { saveChallenge } from '@/app/api/lib/passkeyDb';
+import { withValidation } from '@/app/api/lib/routeValidation';
 
 function getRpId(): string {
   const rpID = process.env.PASSKEY_RP_ID;
@@ -17,7 +18,7 @@ function getRpId(): string {
  * No username or school is required — the passkey itself encodes the user identity.
  * No session is required (this is the unauthenticated login entry point).
  */
-export async function POST(_req: NextRequest) {
+export const POST = withValidation(async function POST(_req: NextRequest) {
   const rpID = getRpId();
 
   const options = await generateAuthenticationOptions({
@@ -36,10 +37,11 @@ export async function POST(_req: NextRequest) {
   // Pass challengeId as a short-lived httpOnly cookie for the complete step
   res.cookies.set('ssp_pk_auth_challenge_id', challengeId, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 5 * 60,
   });
 
   return res;
-}
+});

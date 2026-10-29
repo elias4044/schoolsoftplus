@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { authUser } from '@/app/api/lib/auth';
-import {
-  createSchoolsoftClient,
-  getSessionCookies,
-  requireSession,
-} from '@/app/api/lib/schoolsoft';
+import { readRouteBody } from '@/app/api/lib/requestBody';
+import { withValidation } from '@/app/api/lib/routeValidation';
+import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
 
 // -- ANY /api/custom  ----------------------------------------------------------
 // Proxies an arbitrary path on the SchoolSoft API.
 // Pass the path in the `x-url` header (e.g. "rest-api/student/ps/something").
-export async function GET(req: NextRequest) {
+export const GET = withValidation(async function GET(req: NextRequest) {
   return proxyRequest(req, 'GET');
-}
-export async function POST(req: NextRequest) {
+});
+export const POST = withValidation(async function POST(req: NextRequest) {
   return proxyRequest(req, 'POST');
-}
-export async function PUT(req: NextRequest) {
+});
+export const PUT = withValidation(async function PUT(req: NextRequest) {
   return proxyRequest(req, 'PUT');
-}
-export async function DELETE(req: NextRequest) {
+});
+export const DELETE = withValidation(async function DELETE(req: NextRequest) {
   return proxyRequest(req, 'DELETE');
-}
+});
 
 async function proxyRequest(req: NextRequest, method: string): Promise<NextResponse> {
   const customURL = req.headers.get('x-url');
@@ -34,6 +31,14 @@ async function proxyRequest(req: NextRequest, method: string): Promise<NextRespo
     );
   }
 
+  if (
+    !/^(?:rest-api|eva\/api)\/[A-Za-z0-9_/?=&%.,:+~-]+$/.test(customURL) ||
+    /(?:^|\/|%2f)(?:\.\.|%2e)/i.test(customURL) ||
+    customURL.includes('://') ||
+    /%0[ad]/i.test(customURL)
+  ) {
+    return NextResponse.json({ error: 'Invalid SchoolSoft API path.' }, { status: 400 });
+  }
   const sess = await requireSession(req);
   if (!sess) {
     return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
@@ -41,21 +46,10 @@ async function proxyRequest(req: NextRequest, method: string): Promise<NextRespo
 
   const { cookieString: cookies, school } = sess;
 
-  if (!(await authUser(cookies, school))) {
-    return NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
-  }
-
   const api = createSchoolsoftClient(school);
 
   try {
-    let body: unknown = undefined;
-    if (method !== 'GET' && method !== 'DELETE') {
-      try {
-        body = await req.json();
-      } catch {
-        // no body
-      }
-    }
+    const body = method === 'GET' || !req.body ? undefined : await readRouteBody(req);
 
     const response = await api.request({
       method,

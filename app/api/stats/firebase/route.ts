@@ -1,3 +1,5 @@
+import { withValidation } from '@/app/api/lib/routeValidation';
+
 import { db } from '../../lib/firebaseAdmin';
 
 // app/api/firebase/route.ts
@@ -8,7 +10,7 @@ export const runtime = 'nodejs';
 // `service_status/firestore` and can contain fields like `operational`,
 // `today`, `month`, `limits`, `exceeded` and an optional `errorCode`.
 
-export async function GET() {
+export const GET = withValidation(async function GET() {
   try {
     const ref = db.doc('service_status/firestore');
     const snap = await ref.get();
@@ -57,13 +59,17 @@ export async function GET() {
     }
 
     return Response.json({ operational: true, today, month, limits, exceeded });
-  } catch (err: any) {
+  } catch {
     // Network / read failures should be treated as service down so the
     // frontend can show an outage message.
-    const code = err?.code || 'FAILED_TO_FETCH';
+    const code = 'FAILED_TO_FETCH';
     return new Response(
-      JSON.stringify({ operational: false, error: code, message: String(err?.message ?? err) }),
+      JSON.stringify({
+        operational: false,
+        error: code,
+        message: 'Service status is unavailable.',
+      }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
-}
+});

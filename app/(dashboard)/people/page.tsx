@@ -52,7 +52,7 @@ function initials(u: UserSearchResult) {
 
 export default function PeoplePage() {
   const { session } = useSession();
-  const username = session?.username ?? '';
+  const username = session?.userId ?? '';
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
