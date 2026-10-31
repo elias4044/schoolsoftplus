@@ -85,7 +85,6 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | **Live stats**         | Public stats page with real-time aggregate usage across all users                     |
 | **Keyboard shortcuts** | `Alt+1–7`, `Alt+N/M/U/P/,/A/Q` for instant navigation anywhere in the app             |
 | **Dark-first design**  | Designed in `oklch` colour space for pixel-perfect dark mode                          |
-| **PWA / installable**  | Web app manifest for Add to Home Screen on mobile                                     |
 | **Private by default** | Credentials forwarded directly to SchoolSoft and immediately discarded — never stored |
 
 ---
@@ -98,7 +97,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | Language      | TypeScript 5                                                              |
 | Styling       | Tailwind CSS v4 · oklch colour space                                      |
 | UI components | shadcn/ui · Radix UI primitives                                           |
-| Animation     | Framer Motion · GSAP                                                      |
+| Animation     | Framer Motion                                                      |
 | Database      | Firebase Firestore (notes, messages, friends, presence, stats)            |
 | Auth          | httpOnly session cookies proxied from SchoolSoft + Firebase custom tokens |
 | AI            | Google Gemini via `@google/genai`                                         |
@@ -115,6 +114,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 - Node.js 20+
 - A SchoolSoft account (student)
 - Firebase project with Firestore enabled
+- [ImageHost](https://github.com/elias4044/imagehost) for any image uploads
 - Google Gemini API key (optional — only needed for AI features)
 
 ### Local Development
@@ -162,38 +162,6 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## Backend documentation
 
 The [backend reference](docs/README.md) explains all routes, authentication flows, data models, realtime signaling, configuration, and failure behavior. The [route index](docs/backend/routes/README.md) covers every exported HTTP operation with examples and source-derived contracts. These Markdown files also load in the Developer Portal after publication to this repository's main branch.
-
-## Project Structure
-
-```
-schoolsoftplus/
-├── app/
-│   ├── (auth)/ # Login page (unauthenticated)
-│   ├── (dashboard)/ # Main app pages (authenticated)
-│   ├── api/
-│   │   ├── login/ logout/ # Auth proxy (deprecated)
-│   │   ├── auth/ # All auth routes (AuthV2)
-│   │   └── lib/ # Shared server helpers
-│   │       ├── schoolsoft.ts # Axios client + session helpers
-│   │       └── auth.ts # Session validation
-│   ├── stats/ # Public stats page
-│   ├── changelog/ # Changelog page
-│   ├── open-source/ # Open source info
-│   ├── terms/ # Terms & Privacy
-│   └── login-help/ # Login troubleshooting
-├── components/
-├── ssp-bruno # For Bruno HTTP client (API testing)
-└── lib/
-    ├── auth-context.tsx         # Auth state (login/logout)
-    ├── useSession.ts            # Session hook
-    ├── useMessages.ts           # Real-time messaging hook
-    ├── useFriends.ts            # Real-time friends hook
-    ├── usePresence.ts           # Online status hooks
-    ├── useNotifications.ts      # Push notification helper
-    ├── crypto.ts                # AES-256-GCM E2EE helpers
-    ├── firebase.ts              # Firebase client SDK
-    └── widgets/                 # Widget registry + layout hook
-```
 
 ---
 

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 
 import { fadeUp, staggerContainer } from '@/lib/animations';
+import { uploadImage } from '@/lib/image-upload';
 import { useSession } from '@/lib/useSession';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -79,15 +80,6 @@ const ACCENT_PRESETS = [
 /*  Helpers  */
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-async function uploadImage(file: File): Promise<string> {
-  const form = new FormData();
-  form.append('image', file);
-  const res = await fetch('/api/pfp-upload', { method: 'POST', body: form });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error ?? 'Upload failed');
-  return data.url as string;
 }
 
 /*  Component  */
@@ -195,7 +187,7 @@ export default function ProfilePage() {
       const setter = field === 'pfp' ? setPfpUploading : setCoverUploading;
       setter(true);
       try {
-        const url = await uploadImage(file);
+        const url = await uploadImage(file, '/api/pfp-upload');
         if (field === 'pfp') {
           setPfpUrl(url);
           // Save immediately with the new pfp URL (don't wait for debounce)
@@ -537,7 +529,7 @@ export default function ProfilePage() {
             <input
               ref={coverInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -581,7 +573,7 @@ export default function ProfilePage() {
               <input
                 ref={pfpInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];

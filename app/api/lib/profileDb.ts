@@ -13,8 +13,8 @@ export interface UserProfile {
   pronouns: string;
   location: string;
   website: string;
-  pfpUrl: string; // hosted on imgbb
-  coverUrl: string; // banner image, hosted on imgbb
+  pfpUrl: string;
+  coverUrl: string;
   accentColor: string; // profile accent e.g. "#7c6af7"
   // social links
   github: string;

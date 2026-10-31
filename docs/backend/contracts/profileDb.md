@@ -2,7 +2,7 @@
 
 [Implementation](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/lib/profileDb.ts#L1) | [Contract index](README.md) | [Architecture](../architecture.md)
 
-Source SHA-256: `6060da23ff9728ec117980b8d8c29cc3559aeb4e1cf5320598aef82527a9f65a`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
+Source SHA-256: `4395c71e828ca87b29ac477a0a2f8654888c1248ae1f3ada31f84dbdd4abaf82`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
 
 ## UserProfile
 
@@ -16,8 +16,8 @@ export interface UserProfile {
   pronouns: string;
   location: string;
   website: string;
-  pfpUrl: string; // hosted on imgbb
-  coverUrl: string; // banner image, hosted on imgbb
+  pfpUrl: string;
+  coverUrl: string;
   accentColor: string; // profile accent e.g. "#7c6af7"
   // social links
   github: string;

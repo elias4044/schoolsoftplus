@@ -1,6 +1,6 @@
 # Every backend route
 
-75 route files export 104 HTTP operations. This inventory counts explicit exports; framework-provided HEAD/OPTIONS behavior is not an additional authored handler.
+75 route files export 106 HTTP operations. This inventory counts explicit exports; framework-provided HEAD/OPTIONS behavior is not an additional authored handler.
 
 Each page includes a reviewed explanation, method-specific example, source fingerprint, inputs, response branches, cookie writes, and direct upstream calls. Read the linked domain guide for helper effects, ownership, data models, and failure behavior.
 
@@ -49,7 +49,7 @@ Each page includes a reviewed explanation, method-specific example, source finge
 | [`/api/login`](login.md) | POST | [authentication](../authentication.md) |
 | [`/api/logout`](logout.md) | POST | [authentication](../authentication.md) |
 | [`/api/lunch`](lunch.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
-| [`/api/msg-upload`](msg-upload.md) | POST | [integrations](../integrations.md) |
+| [`/api/msg-upload`](msg-upload.md) | POST, GET | [integrations](../integrations.md) |
 | [`/api/news`](news.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/news/[id]`](news-id.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/news/legacy`](news-legacy.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
@@ -60,7 +60,7 @@ Each page includes a reviewed explanation, method-specific example, source finge
 | [`/api/notes/shared/[token]`](notes-shared-token.md) | GET | [study-tools](../study-tools.md) |
 | [`/api/people/class`](people-class.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/people/staff`](people-staff.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
-| [`/api/pfp-upload`](pfp-upload.md) | POST | [integrations](../integrations.md) |
+| [`/api/pfp-upload`](pfp-upload.md) | POST, GET | [integrations](../integrations.md) |
 | [`/api/presence`](presence.md) | GET, PATCH | [social](../social.md) |
 | [`/api/profile`](profile.md) | GET, PUT | [social](../social.md) |
 | [`/api/profile/[username]`](profile-username.md) | GET | [social](../social.md) |
