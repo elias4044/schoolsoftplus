@@ -21,6 +21,8 @@ import {
 } from '@/lib/notification-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { menuIconButtonClassName } from '@/components/ui/menu-styles';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function notifIcon(type: NotifType) {
@@ -146,140 +148,118 @@ export function NotificationBell({ className }: { className?: string }) {
     useNotificationCenter();
   const [open, setOpen] = useState(false);
 
-  const handleOpen = () => {
-    setOpen((v) => !v);
-    if (!open) markAllRead();
+  const handleOpen = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) markAllRead();
   };
 
   return (
-    <div className={cn('relative', className)}>
-      <button
-        onClick={handleOpen}
-        className="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
-      >
-        <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span
-            className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white"
-            style={{ background: 'oklch(0.65 0.22 278)' }}
-          >
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 z-90" onClick={() => setOpen(false)} />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: -8 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute top-full right-0 z-100 mt-2 w-80 overflow-hidden rounded-2xl shadow-2xl md:top-auto md:right-auto md:bottom-full md:left-0"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid oklch(1 0 0 / 10%)',
-              }}
+    <Popover open={open} onOpenChange={handleOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(menuIconButtonClassName, 'relative', className)}
+          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span
+              className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white"
+              style={{ background: 'var(--brand)' }}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/7 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-3.5 w-3.5" style={{ color: 'oklch(0.65 0.22 278)' }} />
-                  <span className="text-xs font-semibold">Notifications</span>
-                </div>
-                {notifications.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={markAllRead}
-                      title="Mark all read"
-                    >
-                      <CheckCheck className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-destructive h-6 w-6"
-                      onClick={clearAll}
-                      title="Clear all"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" aria-label="Notifications" className="w-96 overflow-hidden p-0">
+        {/* Header */}
+        <div className="border-border flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Bell className="text-muted-foreground size-4" />
+            <span className="text-sm font-semibold">Notifications</span>
+          </div>
+          {notifications.length > 0 && (
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-11 w-11"
+                onClick={markAllRead}
+                title="Mark all read"
+                aria-label="Mark all notifications as read"
+              >
+                <CheckCheck className="h-3 w-3" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive h-11 w-11"
+                onClick={clearAll}
+                title="Clear all"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
 
-              {/* Notification list */}
-              <div className="max-h-96 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-10">
-                    <Bell className="text-muted-foreground/20 h-8 w-8" />
-                    <p className="text-muted-foreground text-xs">No notifications yet</p>
-                  </div>
-                ) : (
-                  <AnimatePresence initial={false}>
-                    {notifications.map((n) => (
-                      <motion.div
-                        key={n.id}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="border-b border-white/5 last:border-0"
-                      >
-                        <div
-                          className={cn(
-                            'flex items-start gap-3 px-4 py-3',
-                            !n.read && 'bg-primary/3'
-                          )}
+        {/* Notification list */}
+        <div className="max-h-[min(28rem,calc(100dvh-12rem))] overflow-y-auto overscroll-contain">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10">
+              <Bell className="text-muted-foreground/20 h-8 w-8" />
+              <p className="text-muted-foreground text-sm">No notifications yet</p>
+            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {notifications.map((n) => (
+                <motion.div
+                  key={n.id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="border-border border-b last:border-0"
+                >
+                  <div
+                    className={cn('flex items-start gap-3 px-4 py-3', !n.read && 'bg-primary/3')}
+                  >
+                    {notifIcon(n.type)}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-snug font-semibold">{n.title}</p>
+                      {n.message && (
+                        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                          {n.message}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground mt-1 text-xs">{timeAgo(n.createdAt)}</p>
+                      {n.action && (
+                        <button
+                          onClick={() => {
+                            n.action!.onClick();
+                            setOpen(false);
+                          }}
+                          className="text-brand-strong mt-1 min-h-11 text-sm font-medium underline-offset-4 hover:underline"
                         >
-                          {notifIcon(n.type)}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs leading-snug font-semibold">{n.title}</p>
-                            {n.message && (
-                              <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[10px]">
-                                {n.message}
-                              </p>
-                            )}
-                            <p className="text-muted-foreground/50 mt-1 text-[9px]">
-                              {timeAgo(n.createdAt)}
-                            </p>
-                            {n.action && (
-                              <button
-                                onClick={() => {
-                                  n.action!.onClick();
-                                  setOpen(false);
-                                }}
-                                className="mt-1 text-[10px] font-semibold hover:underline"
-                                style={{ color: 'oklch(0.65 0.22 278)' }}
-                              >
-                                {n.action.label}
-                              </button>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => dismissNotification(n.id)}
-                            className="text-muted-foreground hover:text-foreground flex h-4 w-4 shrink-0 items-center justify-center"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+                          {n.action.label}
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => dismissNotification(n.id)}
+                      className={menuIconButtonClassName}
+                      aria-label={`Dismiss ${n.title}`}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

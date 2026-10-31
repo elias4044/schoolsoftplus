@@ -1392,17 +1392,17 @@ export default function NoteEditor({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground h-7 w-7"
+                className="text-muted-foreground h-11 w-11"
                 aria-label="More actions"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
-              <DropdownMenuItem onClick={openFind} className="gap-2 text-xs">
+              <DropdownMenuItem onClick={openFind}>
                 <Search className="h-3.5 w-3.5" /> Find &amp; replace
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={copyContent} className="gap-2 text-xs">
+              <DropdownMenuItem onClick={copyContent}>
                 {contentCopied ? (
                   <Check className="h-3.5 w-3.5 text-green-400" />
                 ) : (
@@ -1411,24 +1411,24 @@ export default function NoteEditor({
                 Copy markdown
               </DropdownMenuItem>
               {onDuplicate && (
-                <DropdownMenuItem onClick={onDuplicate} className="gap-2 text-xs">
+                <DropdownMenuItem onClick={onDuplicate}>
                   <CopyPlus className="h-3.5 w-3.5" /> Duplicate
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => exportNote('md')} className="gap-2 text-xs">
+              <DropdownMenuItem onClick={() => exportNote('md')}>
                 <Download className="h-3.5 w-3.5" /> Export as Markdown
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportNote('txt')} className="gap-2 text-xs">
+              <DropdownMenuItem onClick={() => exportNote('txt')}>
                 <Download className="h-3.5 w-3.5" /> Export as plain text
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShortcutsOpen(true)} className="gap-2 text-xs">
+              <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
                 <Keyboard className="h-3.5 w-3.5" /> Keyboard shortcuts
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setDeleteOpen(true)}
-                className="text-destructive focus:text-destructive gap-2 text-xs"
+                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete note
               </DropdownMenuItem>

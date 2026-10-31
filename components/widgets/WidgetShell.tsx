@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,6 +8,15 @@ import { ChevronDown, GripVertical, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SIZE_LABELS, sizeToClasses, WIDGET_REGISTRY } from '@/lib/widgets/registry';
 import type { WidgetInstance, WidgetSize } from '@/lib/widgets/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { menuIconButtonClassName } from '@/components/ui/menu-styles';
 
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
@@ -23,7 +31,6 @@ interface Props {
 export function WidgetShell({ instance, children, onResize, onRemove, editing }: Props) {
   const meta = WIDGET_REGISTRY[instance.widgetId];
   const Icon = meta.icon;
-  const [sizeOpen, setSizeOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: instance.instanceId,
@@ -75,7 +82,11 @@ export function WidgetShell({ instance, children, onResize, onRemove, editing }:
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 'auto' }}
               exit={{ opacity: 0, width: 0 }}
-              className="text-muted-foreground hover:text-foreground shrink-0 cursor-grab transition-colors active:cursor-grabbing"
+              className={cn(
+                menuIconButtonClassName,
+                'cursor-grab touch-none active:cursor-grabbing'
+              )}
+              aria-label={`Move ${meta.label}`}
               {...attributes}
               {...listeners}
             >
@@ -98,42 +109,31 @@ export function WidgetShell({ instance, children, onResize, onRemove, editing }:
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative"
             >
-              <button
-                onClick={() => setSizeOpen((o) => !o)}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 rounded bg-white/5 px-1.5 py-0.5 text-[10px] transition-colors hover:bg-white/10"
-              >
-                {instance.size} <ChevronDown className="h-2.5 w-2.5" />
-              </button>
-
-              <AnimatePresence>
-                {sizeOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                    className="absolute top-full right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-white/10 shadow-xl"
-                    style={{ background: 'var(--card)' }}
-                    onMouseLeave={() => setSizeOpen(false)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label={`Resize ${meta.label}`}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs outline-none focus-visible:ring-2"
                   >
-                    {meta.allowedSizes.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => {
-                          onResize(instance.instanceId, s);
-                          setSizeOpen(false);
-                        }}
-                        className={cn(
-                          'flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors hover:bg-white/5',
-                          s === instance.size && 'text-primary'
-                        )}
-                      >
-                        <span>{SIZE_LABELS[s]}</span>
-                        <span className="text-muted-foreground text-[10px]">{s}</span>
-                      </button>
+                    {instance.size}
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Widget size</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={instance.size}
+                    onValueChange={(size) => onResize(instance.instanceId, size as WidgetSize)}
+                  >
+                    {meta.allowedSizes.map((size) => (
+                      <DropdownMenuRadioItem key={size} value={size}>
+                        {SIZE_LABELS[size]}
+                        <span className="text-muted-foreground ml-auto text-xs">{size}</span>
+                      </DropdownMenuRadioItem>
                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </motion.div>
           )}
         </AnimatePresence>
@@ -146,7 +146,8 @@ export function WidgetShell({ instance, children, onResize, onRemove, editing }:
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => onRemove(instance.instanceId)}
-              className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
+              className={cn(menuIconButtonClassName, 'hover:text-destructive')}
+              aria-label={`Remove ${meta.label}`}
             >
               <X className="h-3.5 w-3.5" />
             </motion.button>
