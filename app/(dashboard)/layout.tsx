@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { CallProvider } from '@/lib/call-context';
 import { NotificationProvider } from '@/lib/notification-context';
 import { UnreadProvider } from '@/lib/unread-context';
+import { menuIconButtonClassName } from '@/components/ui/menu-styles';
 import { AiChatPanel } from '@/components/ai-chat-panel';
 import { CinematicTransition } from '@/components/CinematicTransition';
 import { CommandPalette, triggerCommandPalette } from '@/components/command-palette';
@@ -60,28 +61,38 @@ function LoadingScreen() {
 }
 
 /* Mobile top header */
-function MobileHeader({ onMenuOpen, onAiOpen }: { onMenuOpen: () => void; onAiOpen: () => void }) {
+function MobileHeader({
+  onMenuOpen,
+  onAiOpen,
+  menuOpen,
+}: {
+  onMenuOpen: () => void;
+  onAiOpen: () => void;
+  menuOpen: boolean;
+}) {
   return (
     <header
-      className="border-sidebar-border fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b px-4 md:hidden"
+      className="border-sidebar-border fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-2 border-b px-2 md:hidden"
       style={{ background: 'var(--sidebar)' }}
     >
       <button
         onClick={onMenuOpen}
-        className="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+        className={menuIconButtonClassName}
         aria-label="Open menu"
+        aria-expanded={menuOpen}
+        aria-controls="mobile-navigation"
       >
         <Menu className="h-5 w-5" />
       </button>
 
-      <span className={'text-gradient text-sm font-bold tracking-tight ' + comfortaa.className}>
+      <span className={'truncate text-sm font-bold tracking-tight ' + comfortaa.className}>
         Schoolsoft+
       </span>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => triggerCommandPalette()}
-          className="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent flex h-9 w-9 items-center justify-center rounded-lg transition-colors active:scale-95"
+          className={menuIconButtonClassName}
           aria-label="Open command palette"
         >
           <Search className="h-5 w-5" />
@@ -90,7 +101,7 @@ function MobileHeader({ onMenuOpen, onAiOpen }: { onMenuOpen: () => void; onAiOp
         <NotificationBell />
         <button
           onClick={onAiOpen}
-          className="text-muted-foreground hover:text-primary hover:bg-brand-dim flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+          className={menuIconButtonClassName}
           aria-label="Open AI Assistant"
         >
           <Bot className="h-5 w-5" />
@@ -118,9 +129,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="bg-background flex h-screen overflow-hidden">
+    <div className="bg-background flex h-dvh overflow-hidden">
       {/* Mobile top bar */}
-      <MobileHeader onMenuOpen={() => setSidebarOpen(true)} onAiOpen={() => setAiOpen(true)} />
+      <MobileHeader
+        menuOpen={sidebarOpen}
+        onMenuOpen={() => setSidebarOpen(true)}
+        onAiOpen={() => setAiOpen(true)}
+      />
 
       {/* Sidebar (desktop fixed, mobile drawer) */}
       <Sidebar

@@ -3,10 +3,11 @@
 import * as React from 'react';
 import { type DialogProps } from '@radix-ui/react-dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Command as CommandPrimitive } from 'cmdk';
-import { Search } from 'lucide-react';
+import { Command as CommandPrimitive, useCommandState } from 'cmdk';
+import { Search, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { menuIconButtonClassName, menuItemClassName } from '@/components/ui/menu-styles';
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -15,7 +16,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      'bg-popover/95 text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-2xl backdrop-blur-2xl',
+      'bg-popover text-popover-foreground flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl',
       className
     )}
     {...props}
@@ -32,19 +33,29 @@ const CommandDialog = ({ children, containerClassName, ...props }: CommandDialog
   return (
     <DialogPrimitive.Root {...props}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-150" />
+        <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 duration-150 motion-reduce:animate-none" />
         <DialogPrimitive.Content
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            document.querySelector<HTMLInputElement>('[cmdk-input]')?.focus();
+          }}
           className={cn(
-            'bg-background/90 fixed top-[16%] left-1/2 z-50 w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 p-0 shadow-2xl shadow-black/50 backdrop-blur-2xl transition-all duration-150 md:top-[20%]',
-            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98]',
-            'motion-reduce:transform-none motion-reduce:transition-opacity',
+            'bg-popover fixed top-4 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl -translate-x-1/2 flex-col overflow-hidden rounded-2xl p-0 shadow-2xl shadow-black/30 outline-none sm:top-[12dvh] sm:max-h-[76dvh]',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-150 motion-reduce:animate-none',
             containerClassName
           )}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <Command className="[&_[cmdk-group-heading]]:text-muted-foreground/70 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group]]:px-1.5 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-1 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item]_svg]:h-4 [&_[cmdk-item]_svg]:w-4">
-            {children}
-          </Command>
+          <DialogPrimitive.Title className="sr-only">Quick jump</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            Search pages, actions, and appearance settings.
+          </DialogPrimitive.Description>
+          <DialogPrimitive.Close
+            aria-label="Close quick jump"
+            className={cn(menuIconButtonClassName, 'absolute top-1.5 right-2 z-10')}
+          >
+            <X className="size-4" />
+          </DialogPrimitive.Close>
+          <Command>{children}</Command>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -65,7 +76,7 @@ const CommandInput = React.forwardRef<
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        'placeholder:text-muted-foreground/50 flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-base',
+        'placeholder:text-muted-foreground flex h-14 w-full min-w-0 rounded-md bg-transparent py-3 text-base outline-none disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
       {...props}
@@ -77,16 +88,33 @@ CommandInput.displayName = CommandPrimitive.Input.displayName;
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn(
-      'max-h-[380px] scroll-py-2 overflow-x-hidden overflow-y-auto p-1.5 focus:outline-none',
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+  const search = useCommandState((state) => state.search);
+
+  React.useEffect(() => {
+    // cmdk reorders results during filtering; reset after its selection and layout updates.
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [search]);
+
+  return (
+    <CommandPrimitive.List
+      ref={(element) => {
+        listRef.current = element;
+        if (typeof ref === 'function') return ref(element);
+        if (ref) ref.current = element;
+      }}
+      className={cn(
+        'max-h-[min(26rem,calc(100dvh-8rem))] min-h-0 flex-1 scroll-py-2 overflow-x-hidden overflow-y-auto overscroll-contain p-2 [overflow-anchor:none] focus:outline-none',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 CommandList.displayName = CommandPrimitive.List.displayName;
 
 const CommandEmpty = React.forwardRef<
@@ -108,7 +136,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground/70 overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase',
+      'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
       className
     )}
     {...props}
@@ -135,11 +163,8 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors duration-100 ease-out outline-none select-none',
-      'data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50',
-      'data-[selected=true]:bg-brand-soft data-[selected=true]:text-foreground',
-      'active:scale-[0.985] active:transition-transform active:duration-75',
-      '[&_svg]:pointer-events-none [&_svg]:shrink-0',
+      menuItemClassName,
+      'data-[selected=true]:bg-accent data-[selected=true]:text-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50',
       className
     )}
     {...props}
@@ -151,7 +176,7 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
   return (
     <span
       className={cn(
-        'border-border/50 bg-muted/60 text-muted-foreground/80 ml-auto inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-tight',
+        'text-muted-foreground ml-auto hidden shrink-0 items-center gap-0.5 pl-4 text-xs sm:inline-flex',
         className
       )}
       {...props}
