@@ -17,6 +17,8 @@ Types, exported constants, and function signatures extracted from every API help
 - [app/api/lib/gradeValidation.ts](gradeValidation.md)
 - [app/api/lib/groupInvitesDb.ts](groupInvitesDb.md)
 - [app/api/lib/identity.ts](identity.md)
+- [app/api/lib/imageHost.ts](imageHost.md)
+- [app/api/lib/imageUploadRoute.ts](imageUploadRoute.md)
 - [app/api/lib/layoutDb.ts](layoutDb.md)
 - [app/api/lib/loginStats.ts](loginStats.md)
 - [app/api/lib/messagingDb.ts](messagingDb.md)

@@ -465,11 +465,12 @@ export default function TermsPage() {
               in conversations.
             </Bullet>
             <Bullet>
-              Profile picture URLs point to externally hosted images. We do not host images
-              ourselves. Please refer to link{' '}
-              <a href="https://imgbb.com/privacy" className="text-blue-400 underline">
-                ImgDB TOS
+              Profile pictures, cover images, and uploaded message images are hosted on{' '}
+              <a href="https://img.e4044.com" className="text-blue-400 underline">
+                img.e4044.com
               </a>
+              . Images are scanned before publication and served through public image URLs. GIFs
+              selected through Giphy remain hosted by Giphy.
             </Bullet>
           </ul>
           <Callout color="oklch(0.72 0.18 190)">

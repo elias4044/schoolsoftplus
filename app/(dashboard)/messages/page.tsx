@@ -51,6 +51,7 @@ import remarkGfm from 'remark-gfm';
 
 import { useCallContext } from '@/lib/call-context';
 import { decryptMessage, deriveKey, encryptMessage } from '@/lib/crypto';
+import { uploadImage as uploadHostedImage } from '@/lib/image-upload';
 import { useUnread } from '@/lib/unread-context';
 import { useActiveGroupCallForConversation } from '@/lib/useCall';
 import { useFriends } from '@/lib/useFriends';
@@ -1264,7 +1265,10 @@ export default function MessagesPage() {
   const { conversations, loading: convoLoading } = useConversations(username);
   const { markRead, setCurrentConversation } = useUnread();
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
-  const { messages, loading: msgLoading } = useMessages(activeConvo?.id ?? null, activeConvo?.participantAliases);
+  const { messages, loading: msgLoading } = useMessages(
+    activeConvo?.id ?? null,
+    activeConvo?.participantAliases
+  );
 
   // Update unread context when active conversation changes
   useEffect(() => {
@@ -1864,15 +1868,11 @@ export default function MessagesPage() {
     async (file: File) => {
       if (imageUploading) return;
       setImageUploading(true);
-      const fd = new FormData();
-      fd.append('image', file);
       try {
-        const res = await fetch('/api/msg-upload', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.success) setImagePreview({ url: data.url, name: file.name });
-        else alert(data.error ?? 'Upload failed.');
-      } catch {
-        alert('Upload failed.');
+        const url = await uploadHostedImage(file, '/api/msg-upload');
+        setImagePreview({ url, name: file.name });
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Upload failed.');
       } finally {
         setImageUploading(false);
       }
@@ -2803,7 +2803,7 @@ export default function MessagesPage() {
                       type="file"
                       ref={fileInputRef}
                       className="hidden"
-                      accept="image/jpeg,image/png,image/gif,image/webp,image/avif,image/bmp"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {

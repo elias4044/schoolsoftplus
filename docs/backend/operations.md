@@ -9,7 +9,7 @@ This page describes configuration and verification for the checked-in backend. I
 | FIREBASE_SERVICE_ACCOUNT_KEY | Base64 of complete service-account JSON; Firebase Admin initialization, Firestore and custom tokens |
 | GEMINI_API_KEY | AI note/flashcard/insight provider calls |
 | GITHUB_TOKEN | Optional for reading issues, required for creating them |
-| IMGBB_API_TOKEN | Both image-upload handlers |
+| IMAGE_HOST_API_TOKEN | Both image-upload handlers |
 | GIPHY_API_KEY | GIF search/trending |
 | MOBILE_JWT_SECRET | HS256 signing/verification helpers; required for `/api/auth/token` |
 | NEXT_PUBLIC_APP_URL | Browser AuthV2 callback base; distinct from NEXT_PUBLIC_BASE_URL |
@@ -35,7 +35,8 @@ Passkey encryption uses a fresh twelve-byte IV and appends a sixteen-byte GCM au
 | Dedicated AuthV2/mobile/passkey network calls | Generally eight seconds, with five-second mobile identity bridge calls |
 | AI | Thirty seconds per provider request |
 | File destination download | Ten seconds, no redirects |
-| ImgBB, Giphy, GitHub, weather/geocoding | Eight-second abort signals |
+| ImageHost | Fifteen-second upstream timeout; client polls scanning for up to two minutes |
+| Giphy, GitHub, weather/geocoding | Eight-second abort signals |
 | JSON stream | 4,000,000 bytes |
 | Upload request | File limit plus 64 KiB multipart allowance |
 | Grade tracker serialized body | 800,000 bytes in addition to stream limit |

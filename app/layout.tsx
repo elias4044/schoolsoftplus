@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
 
 import { AppThemeProvider } from '@/lib/theme-context';
@@ -117,7 +116,6 @@ export default function RootLayout({
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </AppThemeProvider>
         <Analytics />
-        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
       </body>
     </html>
   );

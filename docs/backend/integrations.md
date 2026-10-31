@@ -30,14 +30,14 @@ Note and insight provider failures return 500 and include an error message field
 
 ## Image uploads
 
-`POST /api/pfp-upload` and `POST /api/msg-upload` require a verified session and `IMGBB_API_TOKEN`. Send multipart FormData with field `image` holding a File. The handlers bound total multipart bytes before parsing, check the declared MIME type and file size, base64-encode the file, and POST to ImgBB with an eight-second timeout. They do not inspect image signatures or transform image pixels.
+`POST /api/pfp-upload` and `POST /api/msg-upload` require a verified session and the server-only `IMAGE_HOST_API_TOKEN` (scopes `images:read` and `images:write`). Send multipart FormData with field `image` holding a File. The handlers bound request bytes before parsing and forward multipart `file` and `public=true` to `https://img.e4044.com/api/v1/images` using bearer authentication. Requests have a fifteen-second upstream timeout.
 
-| Route | File limit | Allowed MIME types |
-| --- | --- | --- |
-| pfp-upload | 5 MiB | image/jpeg, png, gif, webp, avif, bmp |
-| msg-upload | 10 MiB | Same, plus image/jpg |
+Both routes accept JPEG, PNG, and static WebP. Profile/cover uploads are limited to 5 MiB; message uploads to 10 MiB. The platform validates and scans the image. GIF, AVIF, and BMP uploads are unsupported. Giphy search and delivery remain an explicit exception.
 
-The total request cap adds 64 KiB for multipart framing. Crossing it returns 413; a parsed file above the limit returns 400. Malformed form data, missing File, and unsupported type return 400. Missing key returns 503. Provider non-success returns 502; an uncaught transport exception falls through to the wrapper's 500. Success is `{success:true,url}` using display_url, falling back to url. A GIF message upload also forwards a sanitized filename. Uploading does not update a profile or send a message; perform that second API request explicitly.
+An approved image returns HTTP 200 with `{success:true,pending:false,url}`. An upload awaiting scanning returns HTTP 202 with `{success:true,pending:true,id,state}`. Poll `GET` on the same route with `?id=<id>` until ready; GET also requires a verified session. Do not persist a pending upload as a profile or message image. The web client polls for up to two minutes. Blocked images return 422, expired images 410, and scan/service errors 502. Delivery uses public `https://img.e4044.com/i/<id>.webp` URLs and never exposes the bearer key.
+
+After approval, save profile URLs with `PUT /api/profile`; this propagates avatars to conversation snapshots. Other API clients must also handle HTTP 202 and poll before saving the URL.
+
 
 ```js
 const form = new FormData();
