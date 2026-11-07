@@ -1,6 +1,6 @@
 # Every backend route
 
-75 route files export 106 HTTP operations. This inventory counts explicit exports; framework-provided HEAD/OPTIONS behavior is not an additional authored handler.
+76 route files export 107 HTTP operations. This inventory counts explicit exports; framework-provided HEAD/OPTIONS behavior is not an additional authored handler.
 
 Each page includes a reviewed explanation, method-specific example, source fingerprint, inputs, response branches, cookie writes, and direct upstream calls. Read the linked domain guide for helper effects, ownership, data models, and failure behavior.
 
@@ -76,6 +76,7 @@ Each page includes a reviewed explanation, method-specific example, source finge
 | [`/api/stats/firebase`](stats-firebase.md) | GET | [integrations](../integrations.md) |
 | [`/api/subjects`](subjects.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/subjects/[id]`](subjects-id.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
+| [`/api/subjects/[id]/assessment`](subjects-id-assessment.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/subjects/[id]/grades`](subjects-id-grades.md) | POST | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/subjects/results_all`](subjects-results_all.md) | GET | [schoolsoft-data](../schoolsoft-data.md) |
 | [`/api/users/search`](users-search.md) | GET | [social](../social.md) |

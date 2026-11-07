@@ -2,7 +2,7 @@
 
 [Implementation](https://github.com/elias4044/schoolsoftplus/blob/main/lib/grades/constants.ts#L1) | [Contract index](README.md) | [Architecture](../architecture.md)
 
-Source SHA-256: `6b4b9fe83c6f333232ebbd7ddd7f5c96d8310b2eaa8e548a04a542f5d3b928f8`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
+Source SHA-256: `60e6826e0cfb9dedc773db1d588b47946715d4a4b1af919f77b4eb0c5bfdf7ab`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
 
 ## GRADE_LETTERS
 

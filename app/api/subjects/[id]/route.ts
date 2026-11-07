@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { withValidation } from '@/app/api/lib/routeValidation';
+import { InputError, withValidation } from '@/app/api/lib/routeValidation';
 import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
+import { cachedSchoolsoftGet } from '@/app/api/lib/schoolsoftReadCache';
+import { fetchHolisticSubjects, resolveSubjectAssessment } from '@/app/api/lib/subjectMapping';
 
 // -- GET /api/subjects/[id]  ---------------------------------------------------
 // Returns detailed data for a single subject room.
@@ -19,29 +21,61 @@ export const GET = withValidation(async function GET(
   const { cookieString: cookies, school } = sess;
 
   const api = createSchoolsoftClient(school);
+  const view = req.nextUrl.searchParams.get('view');
+  if (view && !['coursework', 'assignments', 'assessment-link'].includes(view))
+    throw new InputError('Invalid subject view');
+  const force = req.nextUrl.searchParams.get('refresh') === '1';
+  const get = (path: string) => cachedSchoolsoftGet(api, cookies, path, { maxAge: 60_000, force });
   try {
-    const [subjectRes, examinationsRes, submissionsRes, assignmentsRes] = await Promise.all([
-      api.get(`/rest-api/student/ps/subjectroom/${id}`, {
-        headers: { Cookie: cookies },
-        responseType: 'json',
-      }),
-      api.get(`/rest-api/student/ps/assignments/examinations?activityId=${id}`, {
-        headers: { Cookie: cookies },
-        responseType: 'json',
-      }),
-      api.get(`/rest-api/student/ps/assignments/submissions?activityId=${id}`, {
-        headers: { Cookie: cookies },
-        responseType: 'json',
-      }),
-      api.get(`/rest-api/student/ps/subjectroom/${id}/table/rows`, {
-        headers: { Cookie: cookies },
-        responseType: 'json',
-      }),
-    ]);
+    if (view === 'assignments') {
+      const { data: assignments } = await get(`/rest-api/student/ps/subjectroom/${id}/table/rows`);
+      return NextResponse.json({ success: true, assignments });
+    }
+    const [subjectRes, examinationsRes, submissionsRes, assignmentsRes, holisticRows] =
+      await Promise.all([
+        get(`/rest-api/student/ps/subjectroom/${id}`),
+        view
+          ? Promise.resolve({ data: [] })
+          : get(`/rest-api/student/ps/assignments/examinations?activityId=${id}`),
+        view
+          ? Promise.resolve({ data: [] })
+          : get(`/rest-api/student/ps/assignments/submissions?activityId=${id}`),
+        get(`/rest-api/student/ps/subjectroom/${id}/table/rows`),
+        view === 'assessment-link' || req.nextUrl.searchParams.get('includeAssessment') === 'true'
+          ? fetchHolisticSubjects(api, cookies, force)
+          : null,
+      ]);
+
+    const room = subjectRes.data as Record<string, unknown>;
+    const assessmentLink = holisticRows
+      ? await resolveSubjectAssessment(
+          api,
+          cookies,
+          {
+            id,
+            subject: String(room.subject ?? ''),
+            assignmentIds: Array.isArray(assignmentsRes.data)
+              ? assignmentsRes.data
+                  .filter((row: { entityType: string }) => row.entityType === 'ASSIGNMENT')
+                  .map((row: { id: number }) => row.id)
+              : [],
+          },
+          holisticRows,
+          force
+        )
+      : null;
 
     return NextResponse.json({
       success: true,
-      subject: subjectRes.data,
+      subject: {
+        ...room,
+        ...(assessmentLink
+          ? { holisticAssessmentId: assessmentLink.subject?.holisticAssessmentId ?? null }
+          : {}),
+      },
+      ...(assessmentLink
+        ? { assessmentLink: assessmentLink.status, assessmentSummary: assessmentLink.subject }
+        : {}),
       overview: {
         examinations: examinationsRes.data,
         submissions: submissionsRes.data,

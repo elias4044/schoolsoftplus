@@ -1,9 +1,20 @@
-import type { AssessedCriteriaTab, GradeInference, PartialMoment } from './types';
+import type { AssessedCriteriaTab, CriteriaLevel, GradeInference, PartialMoment } from './types';
+
+export function isFailedCriterion(level?: CriteriaLevel): boolean {
+  return level?.levelEnum === 'FAIL_TO_MEET_CRITERIA' || level?.levelEnum === 'MEET_F_LEVEL';
+}
 
 export function inferGradeFromPoints(moments: PartialMoment[]): GradeInference | null {
-  const totalMax = moments.reduce((s, m) => s + m.max, 0);
+  const scored = moments.filter(
+    (moment) =>
+      Number.isFinite(moment.points) &&
+      Number.isFinite(moment.max) &&
+      moment.points >= 0 &&
+      moment.max > 0
+  );
+  const totalMax = scored.reduce((s, m) => s + m.max, 0);
   if (totalMax === 0) return null;
-  const totalPoints = moments.reduce((s, m) => s + m.points, 0);
+  const totalPoints = scored.reduce((s, m) => s + m.points, 0);
   const pct = (totalPoints / totalMax) * 100;
 
   const grade =
@@ -15,7 +26,13 @@ export function inferGradeFromPoints(moments: PartialMoment[]): GradeInference |
 export function inferGradeFromCriteria(tabs: AssessedCriteriaTab[]): GradeInference | null {
   const allCriteria = tabs.flatMap((t) => t.assessedCriteria ?? []);
   if (!allCriteria.length) return null;
-  const levels = allCriteria.map((c) => c.level?.value ?? 0).filter((v) => v >= 7);
+  if (allCriteria.some((criterion) => isFailedCriterion(criterion.level))) {
+    return { grade: 'F', confidence: 'estimated', source: 'criteria' };
+  }
+  const levels = allCriteria
+    .filter((criterion) => criterion.level?.levelEnum !== 'NO_ASSESSMENT_MADE')
+    .map((c) => c.level?.value ?? 0)
+    .filter((v) => Number.isFinite(v) && v >= 7);
   if (!levels.length) return null;
   const minLevel = Math.min(...levels);
   const avgLevel = levels.reduce((s, v) => s + v, 0) / levels.length;
@@ -39,9 +56,7 @@ export function inferGrade(
   moments: PartialMoment[],
   tabs: AssessedCriteriaTab[]
 ): GradeInference | null {
-  if (tabs.length > 0) return inferGradeFromCriteria(tabs);
-  if (moments.length > 0) return inferGradeFromPoints(moments);
-  return null;
+  return inferGradeFromCriteria(tabs) ?? inferGradeFromPoints(moments);
 }
 
 /** Normalize raw SchoolSoft assessment payload */

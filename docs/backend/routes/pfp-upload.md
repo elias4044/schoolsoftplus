@@ -4,7 +4,7 @@ Upload authenticated JPEG, PNG, or static WebP images to img.e4044.com. Return 2
 
 [Domain guide](../integrations.md) | [Common validation and errors](../architecture.md) | [All routes](README.md)
 
-Implementation: [app/api/pfp-upload/route.ts](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/pfp-upload/route.ts#L1). Source SHA-256: `dd3b64c9d5b83f432ea5d9660ed4c70ce10594e3a27fc2a178ff12b63b93f3c1`.
+Implementation: [app/api/pfp-upload/route.ts](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/pfp-upload/route.ts#L1). Source SHA-256: `36003f09361aafef260f77210cb67e974a2d0176ca50b4be8333339ba65ea6ed`.
 
 The following expressions are extracted from executable source. They are not example response values. Conditional branches, local variables, and upstream payloads retain their source names; consult the guide for their meaning. Shared wrapper errors and validation apply in addition to the branches shown here. Non-ASCII characters in excerpts are escaped. Source links follow main and can move after this snapshot.
 

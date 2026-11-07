@@ -1,642 +1,454 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
-import {
-  BarChart3,
-  ChevronDown,
-  Eye,
-  EyeOff,
-  Loader2,
-  Minus,
-  Pencil,
-  Plus,
-  Scan,
-  Settings2,
-  Sparkles,
-  Target,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
+import { ChartNoAxesCombined, ListChecks, Plus, Save, Scan, Settings2 } from 'lucide-react';
 
-import { ApiError, apiFetch } from '@/lib/api-client';
+import { apiFetch } from '@/lib/api-client';
+import { useCachedResource, writeCache } from '@/lib/cache';
+import { fetchGradeTracker, gradeTrackerKey } from '@/lib/cache/grade-tracker';
 import { computeAnalytics } from '@/lib/grades/analytics';
-import { GRADE_LETTERS, OVERALL_GRADE_STYLE } from '@/lib/grades/constants';
+import { GRADE_LETTERS } from '@/lib/grades/constants';
+import { createManualEntry, updateGradeEntry } from '@/lib/grades/entries';
 import type { GradeEntry, GradeTrackerDoc, ScannedGradeResult } from '@/lib/grades/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { subjectDate } from '@/lib/subjects/presentation';
+import { AnimatedDisclosure, AnimatedPanel } from '@/components/subjects/SubjectMotion';
+import { SubjectSelect } from '@/components/subjects/SubjectSelect';
 
-import {
-  GradeDistributionChart,
-  GradeTrendChart,
-  SnapshotHistoryChart,
-} from './GradeTrackerCharts';
+import { GradeSummary } from './GradeSummary';
+
+const TrackerCharts = dynamic(() => import('./TrackerCharts'), {
+  loading: () => <p className="text-muted-foreground py-5 text-sm">Loading chart...</p>,
+});
 
 interface GradeTrackerProps {
   subjectId: string;
   subjectName: string;
   subjectColor: string;
-  /** desktop sidebar vs mobile inline */
   variant?: 'sidebar' | 'mobile';
+  refreshKey?: number;
 }
 
-function GradeBadge({ grade, size = 'md' }: { grade: string; size?: 'sm' | 'md' | 'lg' }) {
-  const g = grade.trim().toUpperCase().charAt(0);
-  const style = OVERALL_GRADE_STYLE[g] ?? OVERALL_GRADE_STYLE.F;
-  const dim =
-    size === 'lg' ? 'w-14 h-14 text-2xl' : size === 'sm' ? 'w-7 h-7 text-xs' : 'w-10 h-10 text-lg';
-  return (
-    <div
-      className={`flex shrink-0 items-center justify-center rounded-xl font-black ${dim}`}
-      style={{
-        background: style.bg,
-        color: style.color,
-        border: `1.5px solid ${style.border}`,
-      }}
-    >
-      {g || '—'}
-    </div>
-  );
+export function GradeTracker(props: GradeTrackerProps) {
+  return <Tracker key={`${props.subjectId}:${props.refreshKey ?? 0}`} {...props} />;
 }
 
-function TrendIcon({ label }: { label: string }) {
-  if (label === 'improving') return <TrendingUp className="h-3.5 w-3.5 text-green-400" />;
-  if (label === 'declining') return <TrendingDown className="h-3.5 w-3.5 text-red-400/80" />;
-  return <Minus className="text-muted-foreground h-3.5 w-3.5" />;
-}
-
-export function GradeTracker({
-  subjectId,
-  subjectName,
-  subjectColor,
-  variant = 'sidebar',
-}: GradeTrackerProps) {
-  const [tracker, setTracker] = useState<GradeTrackerDoc | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [scanning, setScanning] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [expanded, setExpanded] = useState(variant === 'sidebar');
-  const [showSettings, setShowSettings] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [chartTab, setChartTab] = useState<'trend' | 'dist' | 'history'>('trend');
-
-  const [manualTitle, setManualTitle] = useState('');
-  const [manualGrade, setManualGrade] = useState('C');
-  const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
-  const [scanMessage, setScanMessage] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const res = await apiFetch<{ success: boolean; tracker: GradeTrackerDoc | null }>(
-      `/api/grade-tracker/${subjectId}`
-    );
-    if (res?.tracker) setTracker(res.tracker);
-    else {
-      setTracker({
-        userId: '',
-        subjectId: Number(subjectId),
-        subjectName,
-        subjectColor,
-        settings: {
-          targetGrade: 'C',
-          weightMode: 'equal',
-          showEstimated: true,
-          includeManual: true,
-        },
-        entries: [],
-        snapshots: [],
-        updatedAt: Date.now(),
-      });
-    }
-    setLoading(false);
-  }, [subjectId, subjectName, subjectColor]);
-
+function Tracker({ subjectId, subjectName, subjectColor, refreshKey = 0 }: GradeTrackerProps) {
+  const active = useRef(true);
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const persist = useCallback(
-    async (patch: {
-      entries?: GradeEntry[];
-      settings?: GradeTrackerDoc['settings'];
-      scanned?: ScannedGradeResult[];
-      addSnapshot?: boolean;
-    }) => {
-      setSaving(true);
-      try {
-        const res = await apiFetch<{ success: boolean; tracker: GradeTrackerDoc }>(
-          `/api/grade-tracker/${subjectId}`,
-          {
-            method: 'PUT',
-            body: {
-              subjectName,
-              subjectColor,
-              ...patch,
-            } as unknown as BodyInit,
-          }
-        );
-        if (res?.tracker) setTracker(res.tracker);
-      } finally {
-        setSaving(false);
-      }
-    },
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const resource = useCachedResource(gradeTrackerKey(subjectId), (force) =>
+    fetchGradeTracker(subjectId, force || refreshKey > 0)
+  );
+  const [edited, setEdited] = useState<GradeTrackerDoc | null>(null);
+  const empty: GradeTrackerDoc = useMemo(
+    () => ({
+      userId: '',
+      subjectId: Number(subjectId),
+      subjectName,
+      subjectColor,
+      settings: { targetGrade: 'C', weightMode: 'equal', showEstimated: true, includeManual: true },
+      entries: [],
+      snapshots: [],
+      updatedAt: 0,
+    }),
     [subjectId, subjectName, subjectColor]
   );
+  const tracker =
+    edited && (!resource.data || edited.updatedAt >= resource.data.updatedAt)
+      ? edited
+      : (resource.data ?? empty);
+  const analytics = useMemo(() => computeAnalytics(tracker.entries, tracker.settings), [tracker]);
+  const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [message, setMessage] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showCharts, setShowCharts] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [title, setTitle] = useState('');
+  const [grade, setGrade] = useState('C');
+  const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const busy = saving || scanning || resource.refreshing;
 
-  const handleScan = async () => {
-    setScanning(true);
-    setScanMessage(null);
+  async function persist(patch: {
+    entries?: GradeEntry[];
+    settings?: GradeTrackerDoc['settings'];
+    scanned?: ScannedGradeResult[];
+    addSnapshot?: boolean;
+  }) {
+    setSaving(true);
+    setMessage('');
     try {
-      const scanRes = await apiFetch<{
+      const response = await apiFetch<{ success: boolean; tracker: GradeTrackerDoc }>(
+        `/api/grade-tracker/${subjectId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ subjectName, subjectColor, ...patch }),
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (!response.success || !response.tracker) throw new Error('Could not save your changes.');
+      if (!active.current) return false;
+      writeCache(gradeTrackerKey(subjectId), response.tracker);
+      setEdited(response.tracker);
+      setMessage('Saved');
+      return true;
+    } catch {
+      setMessage('Could not save your changes. Try again.');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function scan() {
+    setScanning(true);
+    setMessage('');
+    try {
+      const response = await apiFetch<{
         success: boolean;
         grades: ScannedGradeResult[];
-        scanned?: number;
-        total?: number;
         skipped?: number;
       }>(`/api/subjects/${subjectId}/grades`, { method: 'POST' });
-      if (scanRes?.grades) {
-        await persist({ scanned: scanRes.grades, addSnapshot: true });
-        const n = scanRes.scanned ?? scanRes.grades.length;
-        const total = scanRes.total ?? n;
-        if (n === 0) {
-          setScanMessage('No reported grades found for this subject yet.');
-        } else if (scanRes.skipped && scanRes.skipped > 0) {
-          setScanMessage(`Imported ${n} of ${total} assignments (some could not be loaded).`);
-        } else {
-          setScanMessage(`Imported ${n} grade${n === 1 ? '' : 's'}.`);
-        }
+      if (!response.success || !Array.isArray(response.grades))
+        throw new Error('Invalid scan response');
+      if (!active.current) return;
+      if (await persist({ scanned: response.grades, addSnapshot: true })) {
+        setMessage(
+          `${response.grades.length} results imported${response.skipped ? `; ${response.skipped} could not be loaded` : ''}.`
+        );
       }
-    } catch (e) {
-      const msg =
-        e instanceof ApiError ? e.message : 'Scan failed. Try again or add grades manually.';
-      setScanMessage(msg);
+    } catch {
+      setMessage('Results could not be imported. Try again or add an entry.');
     } finally {
       setScanning(false);
     }
-  };
-
-  const handleAddManual = async () => {
-    if (!manualTitle.trim() || !tracker) return;
-    const id = `manual-${crypto.randomUUID()}`;
-    const entry: GradeEntry = {
-      id,
-      title: manualTitle.trim(),
-      type: 'Manual',
-      endDate: manualDate,
-      source: 'manual',
-      reported: false,
-      grade: manualGrade.toUpperCase(),
-      gradeSource: 'manual',
-      excluded: false,
-      userOverride: true,
-      scannedAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await persist({ entries: [entry, ...tracker.entries], addSnapshot: true });
-    setManualTitle('');
-    setShowAdd(false);
-  };
-
-  const updateEntry = async (id: string, patch: Partial<GradeEntry>) => {
-    if (!tracker) return;
-    const entries = tracker.entries.map((e) =>
-      e.id === id
-        ? {
-            ...e,
-            ...patch,
-            updatedAt: Date.now(),
-            userOverride: patch.grade != null ? true : e.userOverride,
-          }
-        : e
-    );
-    await persist({ entries, addSnapshot: false });
-    setEditingId(null);
-  };
-
-  const analytics = useMemo(
-    () => (tracker ? computeAnalytics(tracker.entries, tracker.settings) : null),
-    [tracker]
-  );
-
-  const isMobile = variant === 'mobile';
-
-  if (loading) {
-    return (
-      <div className="bg-card text-muted-foreground flex min-h-[120px] items-center justify-center gap-2 rounded-xl border border-white/7 p-4 text-sm">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading grades…
-      </div>
-    );
   }
 
-  if (!tracker || !analytics) return null;
+  async function handleAddEntry(event: React.FormEvent) {
+    event.preventDefault();
+    if (!title.trim() || busy) return;
+    const entry = createManualEntry(title, grade, date);
+    if (await persist({ entries: [entry, ...tracker.entries], addSnapshot: true })) {
+      setTitle('');
+      setShowAdd(false);
+    }
+  }
 
-  const targetStyle = OVERALL_GRADE_STYLE[tracker.settings.targetGrade] ?? OVERALL_GRADE_STYLE.C;
-  const avgStyle = OVERALL_GRADE_STYLE[analytics.averageGrade] ?? OVERALL_GRADE_STYLE.F;
+  async function updateEntry(entry: GradeEntry, patch: Partial<GradeEntry>) {
+    await persist({
+      entries: tracker.entries.map((row) =>
+        row.id === entry.id ? updateGradeEntry(row, patch) : row
+      ),
+    });
+  }
 
-  const summaryBlock = (
-    <div className="flex items-center gap-3">
-      <GradeBadge grade={analytics.averageGrade} size="lg" />
-      <div className="min-w-0 flex-1">
-        <p className="text-muted-foreground text-[10px] tracking-widest uppercase">Average</p>
-        <p className="text-lg font-bold" style={{ color: avgStyle.color }}>
-          {analytics.count > 0 ? analytics.averageGrade : '—'}
-          <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-            {analytics.count} graded
-          </span>
-        </p>
-        <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[10px]">
-          <TrendIcon label={analytics.trendLabel} />
-          <span className="capitalize">{analytics.trendLabel}</span>
-          {analytics.recentChange != null && (
-            <span
-              style={{
-                color: analytics.recentChange >= 0 ? 'oklch(0.65 0.22 148)' : 'oklch(0.65 0.2 25)',
-              }}
-            >
-              {analytics.recentChange >= 0 ? '+' : ''}
-              {analytics.recentChange.toFixed(1)} last
-            </span>
-          )}
+  const fieldClass = 'border-border bg-background min-h-11 w-full rounded-lg border px-3 text-sm';
+  return (
+    <section
+      id={`grade-tracker-${subjectId}`}
+      className="subject-panel grade-tracker"
+      aria-label="Grade tracker"
+    >
+      <header className="flex items-start justify-between gap-3 p-5 pb-4">
+        <div>
+          <h2 className="font-semibold">Grade tracker</h2>
+          <p className="text-muted-foreground mt-1 text-xs">Your personal progress</p>
         </div>
-      </div>
-    </div>
-  );
-
-  const statsRow = (
-    <div className="mt-3 grid grid-cols-3 gap-2">
-      <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-muted-foreground text-[9px] uppercase">Target</p>
-        <p className="text-sm font-bold" style={{ color: targetStyle.color }}>
-          {tracker.settings.targetGrade}
-        </p>
-        <p className="text-muted-foreground text-[9px]">
-          {analytics.targetGap >= 0 ? '+' : ''}
-          {analytics.targetGap.toFixed(1)}
-        </p>
-      </div>
-      <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-muted-foreground text-[9px] uppercase">Volatility</p>
-        <p className="text-sm font-bold tabular-nums">{analytics.volatility.toFixed(1)}</p>
-      </div>
-      <div className="rounded-lg bg-white/3 px-2 py-2 text-center">
-        <p className="text-muted-foreground text-[9px] uppercase">Streak</p>
-        <p className="text-sm font-bold tabular-nums">
-          {analytics.streakUp > 0
-            ? `↑${analytics.streakUp}`
-            : analytics.streakDown > 0
-              ? `↓${analytics.streakDown}`
-              : '—'}
-        </p>
-      </div>
-    </div>
-  );
-
-  const inner = (
-    <>
-      {summaryBlock}
-      {statsRow}
-
-      {/* Chart tabs */}
-      <div className="mt-4 flex gap-1 rounded-lg bg-white/4 p-0.5">
-        {(
-          [
-            { id: 'trend' as const, label: 'Trend', icon: TrendingUp },
-            { id: 'dist' as const, label: 'Mix', icon: BarChart3 },
-            { id: 'history' as const, label: 'Scans', icon: Sparkles },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setChartTab(id)}
-            className={`flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-medium transition-colors ${
-              chartTab === id
-                ? 'text-foreground bg-white/10'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Icon className="h-3 w-3" /> {label}
+        <button
+          className="subject-action"
+          aria-label="Grade tracker settings"
+          aria-expanded={showSettings}
+          onClick={() => setShowSettings((value) => !value)}
+        >
+          <Settings2 className="size-4" />
+        </button>
+      </header>
+      {resource.loading && !edited ? (
+        <div className="px-5 pb-5" role="status">
+          <div className="bg-secondary h-12 rounded" />
+          <p className="text-muted-foreground mt-3 text-sm">Loading saved grades...</p>
+        </div>
+      ) : resource.error && !resource.data && !edited ? (
+        <div className="p-5 pt-0" role="alert">
+          <p className="text-sm">Your saved grades could not be loaded.</p>
+          <button className="subject-action mt-3" onClick={() => resource.refresh()}>
+            Try again
           </button>
-        ))}
-      </div>
-      <div className="mt-2">
-        {chartTab === 'trend' && (
-          <GradeTrendChart analytics={analytics} subjectColor={subjectColor} />
-        )}
-        {chartTab === 'dist' && <GradeDistributionChart analytics={analytics} />}
-        {chartTab === 'history' && (
-          <SnapshotHistoryChart snapshots={tracker.snapshots} subjectColor={subjectColor} />
-        )}
-      </div>
-
-      {scanMessage && (
-        <p className="text-muted-foreground mt-2 text-[10px] leading-snug">{scanMessage}</p>
-      )}
-
-      {/* Actions */}
-      <div className="mt-3 flex gap-2">
-        <Button
-          size="sm"
-          className="h-8 flex-1 gap-1.5 text-xs"
-          onClick={handleScan}
-          disabled={scanning || saving}
-        >
-          {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scan className="h-3 w-3" />}
-          Scan subject
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-white/10 px-2.5 text-xs"
-          onClick={() => setShowAdd((a) => !a)}
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 border-white/10 px-2.5 text-xs"
-          onClick={() => setShowSettings((s) => !s)}
-        >
-          <Settings2 className="h-3 w-3" />
-        </Button>
-      </div>
-
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mt-3 space-y-2 overflow-hidden rounded-lg border border-white/7 bg-white/2 p-3"
-          >
-            <div>
-              <Label className="text-muted-foreground text-[10px]">Target grade</Label>
-              <select
-                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs"
-                value={tracker.settings.targetGrade}
-                onChange={(e) =>
-                  persist({
-                    settings: {
-                      ...tracker.settings,
-                      targetGrade: e.target.value as typeof tracker.settings.targetGrade,
-                    },
-                  })
-                }
-              >
-                {GRADE_LETTERS.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label className="text-muted-foreground text-[10px]">Weighting</Label>
-              <select
-                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs"
-                value={tracker.settings.weightMode}
-                onChange={(e) =>
-                  persist({
-                    settings: {
-                      ...tracker.settings,
-                      weightMode: e.target.value as 'equal' | 'recent',
-                    },
-                  })
-                }
-              >
-                <option value="equal">Equal</option>
-                <option value="recent">Recent-heavy</option>
-              </select>
-            </div>
-          </motion.div>
-        )}
-        {showAdd && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mt-3 space-y-2 overflow-hidden rounded-lg border border-white/7 bg-white/2 p-3"
-          >
-            <Input
-              placeholder="Title"
-              value={manualTitle}
-              onChange={(e) => setManualTitle(e.target.value)}
-              className="h-8 border-white/10 bg-white/5 text-xs"
+        </div>
+      ) : (
+        <>
+          <div className="px-5 pb-5">
+            {resource.error && (
+              <p className="text-muted-foreground mb-3 text-xs" role="status">
+                Showing saved grades. Could not refresh.{' '}
+                <button className="min-h-11 underline" onClick={() => resource.refresh()}>
+                  Try again
+                </button>
+              </p>
+            )}
+            <GradeSummary
+              grade={analytics.averageGrade}
+              target={tracker.settings.targetGrade}
+              count={analytics.count}
             />
-            <div className="flex gap-2">
-              <select
-                className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-2 text-xs"
-                value={manualGrade}
-                onChange={(e) => setManualGrade(e.target.value)}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                className="subject-action subject-action-primary flex-1"
+                disabled={busy}
+                onClick={() => void scan()}
               >
-                {GRADE_LETTERS.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-              <Input
-                type="date"
-                value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
-                className="h-8 flex-1 border-white/10 bg-white/5 text-xs"
-              />
+                <Scan className="size-4" />
+                {scanning ? 'Importing...' : 'Import results'}
+              </button>
+              <button
+                className="subject-action"
+                aria-label="Add grade entry"
+                aria-expanded={showAdd}
+                disabled={busy}
+                onClick={() => setShowAdd((value) => !value)}
+              >
+                <Plus className="size-4" />
+                Add
+              </button>
             </div>
-            <Button
-              size="sm"
-              className="h-8 w-full text-xs"
-              onClick={handleAddManual}
-              disabled={saving}
-            >
-              Add entry
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Entry list */}
-      <div className="mt-4 max-h-[280px] scrollbar-thin space-y-1 overflow-y-auto pr-0.5">
-        {tracker.entries.length === 0 ? (
-          <p className="text-muted-foreground py-4 text-center text-xs">
-            Scan reported assignments or add a grade manually
-          </p>
-        ) : (
-          tracker.entries.map((entry) => {
-            const g = entry.excluded ? '—' : entry.grade;
-            const href = entry.assignmentId
-              ? `/subjects/${subjectId}/${entry.assignmentId}?type=assignment`
-              : undefined;
-            const isEditing = editingId === entry.id;
-
-            return (
-              <div
-                key={entry.id}
-                className={`rounded-lg border px-2 py-2 transition-colors ${
-                  entry.excluded ? 'border-white/4 opacity-45' : 'border-white/6 hover:bg-white/3'
-                }`}
+            {message && (
+              <p className="mt-3 text-sm leading-relaxed" role="status">
+                {message}
+              </p>
+            )}
+            <AnimatedPanel open={showAdd}>
+              <form
+                onSubmit={(event) => void handleAddEntry(event)}
+                className="border-border mt-5 space-y-3 border-t pt-5"
               >
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <select
-                      className="h-7 w-full rounded border border-white/10 bg-white/5 text-xs"
-                      value={entry.grade}
-                      onChange={(e) =>
-                        updateEntry(entry.id, { grade: e.target.value.toUpperCase() })
-                      }
-                    >
-                      {GRADE_LETTERS.map((l) => (
-                        <option key={l} value={l}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
-                    <Input
-                      placeholder="Notes"
-                      defaultValue={entry.notes ?? ''}
-                      className="h-7 border-white/10 bg-white/5 text-xs"
-                      onBlur={(e) => updateEntry(entry.id, { notes: e.target.value })}
+                <label className="block text-sm">
+                  Assignment name
+                  <input
+                    required
+                    disabled={busy}
+                    maxLength={200}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    className={`${fieldClass} mt-2`}
+                  />
+                </label>
+                <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-3">
+                  <label className="text-sm">
+                    Grade
+                    <SubjectSelect
+                      label="Entry grade"
+                      value={grade}
+                      disabled={busy}
+                      onValueChange={setGrade}
+                      className="mt-2"
+                      options={GRADE_LETTERS.map((letter) => ({ value: letter, label: letter }))}
                     />
-                    <button className="text-primary text-[10px]" onClick={() => setEditingId(null)}>
-                      Done
+                  </label>
+                  <label className="min-w-0 text-sm">
+                    Date
+                    <input
+                      required
+                      type="date"
+                      disabled={busy}
+                      value={date}
+                      onChange={(event) => setDate(event.target.value)}
+                      className={`${fieldClass} mt-2 min-w-0`}
+                    />
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  className="subject-action w-full"
+                  disabled={busy || !title.trim()}
+                >
+                  <Save className="size-4" /> Save entry
+                </button>
+              </form>
+            </AnimatedPanel>
+            <AnimatedPanel open={showSettings}>
+              <div className="border-border mt-5 space-y-4 border-t pt-5">
+                <label className="block text-sm">
+                  Goal grade
+                  <SubjectSelect
+                    label="Goal grade"
+                    className="mt-2"
+                    value={tracker.settings.targetGrade}
+                    disabled={busy}
+                    onValueChange={(value) =>
+                      void persist({
+                        settings: {
+                          ...tracker.settings,
+                          targetGrade: value as GradeTrackerDoc['settings']['targetGrade'],
+                        },
+                      })
+                    }
+                    options={GRADE_LETTERS.map((letter) => ({ value: letter, label: letter }))}
+                  />
+                </label>
+                <label className="block text-sm">
+                  Weighting
+                  <SubjectSelect
+                    label="Weighting"
+                    className="mt-2"
+                    value={tracker.settings.weightMode}
+                    disabled={busy}
+                    onValueChange={(value) =>
+                      void persist({
+                        settings: { ...tracker.settings, weightMode: value as 'equal' | 'recent' },
+                      })
+                    }
+                    options={[
+                      { value: 'equal', label: 'All results equally' },
+                      { value: 'recent', label: 'Recent results count more' },
+                    ]}
+                  />
+                </label>
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={tracker.settings.includeManual}
+                    disabled={busy}
+                    onChange={(event) =>
+                      void persist({
+                        settings: { ...tracker.settings, includeManual: event.target.checked },
+                      })
+                    }
+                  />
+                  Include manual entries
+                </label>
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={tracker.settings.showEstimated}
+                    disabled={busy}
+                    onChange={(event) =>
+                      void persist({
+                        settings: { ...tracker.settings, showEstimated: event.target.checked },
+                      })
+                    }
+                  />
+                  Show estimates on entries
+                </label>
+              </div>
+            </AnimatedPanel>
+          </div>
+          <div className="border-border border-t">
+            <h3 className="flex items-center gap-2 px-5 pt-4 text-sm font-medium">
+              <ListChecks className="subject-accent size-4" /> Tracked results{' '}
+              <span className="text-muted-foreground font-normal">{tracker.entries.length}</span>
+            </h3>
+            {tracker.entries.length === 0 ? (
+              <p className="text-muted-foreground p-5 text-sm leading-relaxed">
+                Import published results or add your first grade to start tracking progress.
+              </p>
+            ) : (
+              (showAll ? tracker.entries : tracker.entries.slice(0, 4)).map((entry) => (
+                <AnimatedDisclosure
+                  key={entry.id}
+                  className="border-border border-b last:border-0"
+                  title={
+                    <span className="inline-flex w-full items-start justify-between gap-3 align-top">
+                      <span className="min-w-0">
+                        <span className="block leading-relaxed font-medium">{entry.title}</span>
+                        <span className="text-muted-foreground mt-1 block text-xs">
+                          {subjectDate(entry.endDate)} /{' '}
+                          {entry.excluded
+                            ? 'Excluded'
+                            : entry.source === 'manual'
+                              ? 'Manual'
+                              : entry.confidence === 'estimated'
+                                ? 'Estimated'
+                                : 'Imported'}
+                          {entry.totalPoints ? ` / ${entry.totalPoints} points` : ''}
+                        </span>
+                      </span>
+                      <span
+                        className={`text-lg font-medium tabular-nums ${entry.excluded ? 'text-muted-foreground line-through' : ''}`}
+                      >
+                        {entry.grade}
+                      </span>
+                    </span>
+                  }
+                >
+                  <div className="space-y-3 px-5 pb-5">
+                    {entry.assignmentId && (
+                      <Link
+                        className="inline-flex min-h-11 items-center text-sm underline"
+                        href={`/subjects/${subjectId}/${entry.assignmentId}?type=assignment`}
+                      >
+                        Open assignment
+                      </Link>
+                    )}
+                    <label className="block text-sm">
+                      Correct grade
+                      <SubjectSelect
+                        label={`Correct grade for ${entry.title}`}
+                        className="mt-2"
+                        disabled={busy}
+                        value={entry.grade}
+                        onValueChange={(value) => void updateEntry(entry, { grade: value })}
+                        options={Array.from(new Set([entry.grade, ...GRADE_LETTERS])).map(
+                          (letter) => ({ value: letter, label: letter })
+                        )}
+                      />
+                    </label>
+                    {tracker.settings.showEstimated &&
+                      entry.estimatedGrade &&
+                      entry.estimatedGrade !== entry.grade && (
+                        <p className="text-muted-foreground text-xs">
+                          Original estimate: {entry.estimatedGrade}
+                        </p>
+                      )}
+                    <button
+                      className="subject-action w-full"
+                      disabled={busy}
+                      onClick={() => void updateEntry(entry, { excluded: !entry.excluded })}
+                    >
+                      {entry.excluded ? 'Include in average' : 'Exclude from average'}
                     </button>
                   </div>
-                ) : (
-                  <div className="flex items-start gap-2">
-                    <GradeBadge grade={g} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      {href ? (
-                        <Link
-                          href={href}
-                          className="hover:text-primary line-clamp-1 text-xs font-medium"
-                        >
-                          {entry.title}
-                        </Link>
-                      ) : (
-                        <p className="line-clamp-1 text-xs font-medium">{entry.title}</p>
-                      )}
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        {entry.source === 'manual' && (
-                          <Badge className="h-3.5 bg-white/8 px-1 text-[8px]">Manual</Badge>
-                        )}
-                        {entry.estimatedGrade &&
-                          entry.estimatedGrade !== entry.grade &&
-                          tracker.settings.showEstimated && (
-                            <span className="text-muted-foreground text-[9px]">
-                              est. {entry.estimatedGrade}
-                            </span>
-                          )}
-                        {entry.totalPoints && (
-                          <span className="text-muted-foreground text-[9px]">
-                            {entry.totalPoints}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col gap-0.5">
-                      <button
-                        className="text-muted-foreground rounded p-1 hover:bg-white/8"
-                        onClick={() => setEditingId(entry.id)}
-                        title="Edit"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="text-muted-foreground rounded p-1 hover:bg-white/8"
-                        onClick={() => updateEntry(entry.id, { excluded: !entry.excluded })}
-                        title={entry.excluded ? 'Include' : 'Exclude'}
-                      >
-                        {entry.excluded ? (
-                          <Eye className="h-3 w-3" />
-                        ) : (
-                          <EyeOff className="h-3 w-3" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {analytics.bestEntry && (
-        <div className="text-muted-foreground mt-3 flex items-center gap-2 border-t border-white/6 pt-3 text-[10px]">
-          <Target className="h-3 w-3 shrink-0" style={{ color: subjectColor }} />
-          <span>
-            Best:{' '}
-            <span
-              style={{ color: OVERALL_GRADE_STYLE[analytics.bestEntry.grade.charAt(0)]?.color }}
-            >
-              {analytics.bestEntry.grade}
-            </span>
-            {' · '}
-            {analytics.worstEntry && (
-              <>
-                Lowest:{' '}
-                <span
-                  style={{
-                    color: OVERALL_GRADE_STYLE[analytics.worstEntry.grade.charAt(0)]?.color,
-                  }}
-                >
-                  {analytics.worstEntry.grade}
-                </span>
-              </>
+                </AnimatedDisclosure>
+              ))
             )}
-          </span>
-        </div>
-      )}
-    </>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="bg-card mb-4 overflow-hidden rounded-xl border border-white/7">
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/3"
-        >
-          <div className="flex items-center gap-2.5">
-            <BarChart3 className="text-primary h-4 w-4" />
-            <span className="text-sm font-semibold">Grade tracker</span>
-            {analytics.count > 0 && <GradeBadge grade={analytics.averageGrade} size="sm" />}
+            {tracker.entries.length > 4 && (
+              <button
+                className="subject-action m-5 mt-3"
+                aria-expanded={showAll}
+                onClick={() => setShowAll((value) => !value)}
+              >
+                {showAll ? 'Show fewer' : `All ${tracker.entries.length} results`}
+              </button>
+            )}
           </div>
-          <motion.div animate={{ rotate: expanded ? 0 : -90 }} transition={{ duration: 0.2 }}>
-            <ChevronDown className="text-muted-foreground h-4 w-4" />
-          </motion.div>
-        </button>
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              style={{ overflow: 'hidden' }}
+          {analytics.count > 0 && (
+            <AnimatedDisclosure
+              className="border-border border-t"
+              icon={ChartNoAxesCombined}
+              title={<span className="font-medium">Explore your progress</span>}
+              onOpenChange={(open) => {
+                if (open) setShowCharts(true);
+              }}
             >
-              <div className="px-4 pb-4">{inner}</div>
-            </motion.div>
+              {showCharts && (
+                <div className="p-5">
+                  <TrackerCharts
+                    analytics={analytics}
+                    snapshots={tracker.snapshots}
+                    subjectColor="var(--subject-data)"
+                  />
+                </div>
+              )}
+            </AnimatedDisclosure>
           )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-card overflow-hidden rounded-xl border border-white/7 lg:sticky lg:top-6">
-      <div
-        className="flex items-center gap-2 border-b border-white/6 px-4 py-3"
-        style={{ borderTop: `2px solid ${subjectColor}55` }}
-      >
-        <BarChart3 className="h-4 w-4" style={{ color: subjectColor }} />
-        <span className="flex-1 text-sm font-semibold">Grade tracker</span>
-        {saving && <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />}
-      </div>
-      <div className="p-4">{inner}</div>
-    </div>
+        </>
+      )}
+    </section>
   );
 }

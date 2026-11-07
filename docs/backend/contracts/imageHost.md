@@ -2,7 +2,7 @@
 
 [Implementation](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/lib/imageHost.ts#L1) | [Contract index](README.md) | [Architecture](../architecture.md)
 
-Source SHA-256: `8f34ae900445e18ab4056115999ef04359688f4078931e3c24fde6a7a0613b24`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
+Source SHA-256: `93cb86fda15bdf1b257b6c51e4b4f20c8917b1a85471e1c93637fc8ce62aa5af`. These are source-derived declarations, not a claim that TypeScript types alone validate runtime data. Read the domain guides for semantics and side effects. Non-ASCII text is escaped in excerpts.
 
 ## IMAGE_TYPES
 
