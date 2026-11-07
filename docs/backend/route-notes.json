@@ -43,18 +43,28 @@
   "/api/assignment/[id]": {
     "guide": "schoolsoft-data",
     "summary": "Aggregate one SchoolSoft assignment or the first part of a planning. Assignment mode normalizes the view, fetches sections/plannings/assessment/columns, then conditionally fetches selected criteria. Only type=planning switches branches. Optional fetches absorb 403/404, while other upstream failures can fail the request. No assignment data is persisted.",
-    "examples": { "GET": { "query": "type=assignment" } }
+    "examples": {
+      "GET": {
+        "query": "type=assignment"
+      }
+    }
   },
   "/api/assignments/week": {
     "guide": "schoolsoft-data",
     "summary": "Fetch a week's SchoolSoft assignment start-page data, preserving the upstream payload inside data. Both week and year are required and common numeric-range validation applies. Successful fetches increment the assignment counter.",
-    "examples": { "GET": { "query": "week=44&year=2026" } }
+    "examples": {
+      "GET": {
+        "query": "week=44&year=2026"
+      }
+    }
   },
   "/api/auth/login": {
     "guide": "authentication",
     "summary": "GET creates a stateless mobile PKCE URL, verifier, and state for the app to retain. POST performs password-to-code-to-SchoolSoft-token exchange and returns raw SchoolSoft token fields, despite older comments describing an SSP JWT. Neither method installs browser cookies. Actual paths are /api/auth/*, not the old /api/mobile/* comment paths.",
     "examples": {
-      "GET": { "query": "school=engelska&orgid=18" },
+      "GET": {
+        "query": "school=engelska&orgid=18"
+      },
       "POST": {
         "body": {
           "username": "student.example",
@@ -65,12 +75,86 @@
       }
     }
   },
+  "/api/auth/passkey/authenticate/begin": {
+    "guide": "authentication",
+    "summary": "Public entry point for discoverable passkeys. Generate authentication options without an allowlist, require user verification, save a five-minute single-use challenge, and set the authentication challenge cookie. No account name or school is needed.",
+    "examples": {
+      "POST": {}
+    }
+  },
+  "/api/auth/passkey/authenticate/complete": {
+    "guide": "authentication",
+    "summary": "Consume the challenge, locate the credential by supplied handle or flat index, verify assertion and counter, rotate encrypted refresh material, verify the refreshed SchoolSoft account, migrate, and install AuthV2 cookies. Return redirectTo for the client to navigate. Refresh rejection carries REFRESH_EXPIRED. Placeholder WebAuthn payloads in examples are structural only, not valid assertions.",
+    "examples": {
+      "POST": {
+        "body": {
+          "response": {
+            "id": "EXAMPLE_CREDENTIAL_ID",
+            "rawId": "EXAMPLE_CREDENTIAL_ID",
+            "type": "public-key",
+            "response": {
+              "clientDataJSON": "GENERATED_BY_AUTHENTICATOR",
+              "authenticatorData": "GENERATED_BY_AUTHENTICATOR",
+              "signature": "GENERATED_BY_AUTHENTICATOR",
+              "userHandle": "GENERATED_BY_AUTHENTICATOR"
+            },
+            "clientExtensionResults": {}
+          }
+        }
+      }
+    }
+  },
+  "/api/auth/passkey/credentials": {
+    "guide": "authentication",
+    "summary": "List the current verified account's credentials newest first, projecting only IDs, device metadata, backup flag, and creation/last-use times in milliseconds. Public key and encrypted token material are omitted.",
+    "examples": {
+      "GET": {}
+    }
+  },
+  "/api/auth/passkey/credentials/[id]": {
+    "guide": "authentication",
+    "summary": "Delete a credential only under the current verified user handle. Remove its flat index in the same batch, count remaining credentials, and delete the parent passkey user record when none remain. Missing/foreign credentials are 404.",
+    "examples": {
+      "DELETE": {}
+    }
+  },
+  "/api/auth/passkey/register/begin": {
+    "guide": "authentication",
+    "summary": "For a verified account, generate discoverable WebAuthn registration options with user verification required and existing credential IDs excluded. Save a five-minute registration challenge bound to userId@school and set its HttpOnly cookie. AuthV2 refresh material is enforced at completion, not begin.",
+    "examples": {
+      "POST": {}
+    }
+  },
+  "/api/auth/passkey/register/complete": {
+    "guide": "authentication",
+    "summary": "Consume the registration challenge, check its account binding and WebAuthn response, encrypt the current AuthV2 refresh token, and store credential/public-key/device metadata plus the flat index. Requires verified cookies and an AuthV2 refresh cookie. A failed verification consumes the challenge; begin again. See the authentication guide for a real browser ceremony.",
+    "examples": {
+      "POST": {
+        "body": {
+          "response": {
+            "id": "EXAMPLE_CREDENTIAL_ID",
+            "rawId": "EXAMPLE_CREDENTIAL_ID",
+            "type": "public-key",
+            "response": {
+              "clientDataJSON": "GENERATED_BY_AUTHENTICATOR",
+              "attestationObject": "GENERATED_BY_AUTHENTICATOR"
+            },
+            "clientExtensionResults": {}
+          },
+          "deviceName": "My laptop"
+        }
+      }
+    }
+  },
   "/api/auth/refresh": {
     "guide": "authentication",
     "summary": "Exchange caller-supplied SchoolSoft refresh-token material for fresh provider token fields. School is selected from body, x-school, or engelska. This is not browser-cookie refresh and does not authenticate the caller through requireSession. Non-200 upstream refresh is 401; transport failure is 502.",
     "examples": {
       "POST": {
-        "body": { "refreshToken": "EXAMPLE_SCHOOLSOFT_REFRESH_TOKEN", "school": "engelska" }
+        "body": {
+          "refreshToken": "EXAMPLE_SCHOOLSOFT_REFRESH_TOKEN",
+          "school": "engelska"
+        }
       }
     }
   },
@@ -101,25 +185,32 @@
       }
     }
   },
+  "/api/auth/v2/callback": {
+    "guide": "authentication",
+    "summary": "Validate callback state against the PKCE cookie, exchange code, verify identity, migrate the account, synchronize passkey token material, attempt browser-session creation, and redirect to /dashboard?init with cookies. Expected OAuth failures redirect to login with authv2_error. No referral credit is performed here. The example requires a genuine pending initiation cookie.",
+    "examples": {
+      "GET": {
+        "query": "code=EXAMPLE_CODE&state=EXAMPLE_STATE"
+      }
+    }
+  },
   "/api/auth/v2/initiate": {
     "guide": "authentication",
     "summary": "Start browser OAuth PKCE with client eApp. Set a ten-minute HttpOnly verifier/state cookie and redirect to SchoolSoft's student login. Callback base comes from NEXT_PUBLIC_APP_URL or request host/protocol. Defaults school engelska and organization 18.",
-    "examples": { "GET": { "query": "school=engelska&orgid=18" } }
+    "examples": {
+      "GET": {
+        "query": "school=engelska&orgid=18"
+      }
+    }
   },
   "/api/auth/v2/initiate/external": {
     "guide": "authentication",
     "summary": "Start the same browser PKCE flow through SchoolSoft SAML, constructing RelayState and the ten-minute PKCE cookie. It shares the normal AuthV2 callback rather than implementing a separate callback handler.",
-    "examples": { "GET": { "query": "school=engelska&orgid=18" } }
-  },
-  "/api/auth/v2/callback": {
-    "guide": "authentication",
-    "summary": "Validate callback state against the PKCE cookie, exchange code, verify identity, migrate the account, synchronize passkey token material, attempt browser-session creation, and redirect to /dashboard?init with cookies. Expected OAuth failures redirect to login with authv2_error. No referral credit is performed here. The example requires a genuine pending initiation cookie.",
-    "examples": { "GET": { "query": "code=EXAMPLE_CODE&state=EXAMPLE_STATE" } }
-  },
-  "/api/auth/v2/token-refresh": {
-    "guide": "authentication",
-    "summary": "Use the HttpOnly refresh-token cookie to refresh and verify an AuthV2 account, update session cookies, migrate identity, and synchronize any stored passkey token. No JSON body is read. Browser-session creation is optional after account verification. Return access expiry in Unix seconds, or 401 when refresh is unavailable/expired.",
-    "examples": { "POST": {} }
+    "examples": {
+      "GET": {
+        "query": "school=engelska&orgid=18"
+      }
+    }
   },
   "/api/auth/v2/refresh-token-login": {
     "guide": "authentication",
@@ -134,88 +225,55 @@
       }
     }
   },
-  "/api/auth/passkey/register/begin": {
+  "/api/auth/v2/token-refresh": {
     "guide": "authentication",
-    "summary": "For a verified account, generate discoverable WebAuthn registration options with user verification required and existing credential IDs excluded. Save a five-minute registration challenge bound to userId@school and set its HttpOnly cookie. AuthV2 refresh material is enforced at completion, not begin.",
-    "examples": { "POST": {} }
-  },
-  "/api/auth/passkey/register/complete": {
-    "guide": "authentication",
-    "summary": "Consume the registration challenge, check its account binding and WebAuthn response, encrypt the current AuthV2 refresh token, and store credential/public-key/device metadata plus the flat index. Requires verified cookies and an AuthV2 refresh cookie. A failed verification consumes the challenge; begin again. See the authentication guide for a real browser ceremony.",
+    "summary": "Use the HttpOnly refresh-token cookie to refresh and verify an AuthV2 account, update session cookies, migrate identity, and synchronize any stored passkey token. No JSON body is read. Browser-session creation is optional after account verification. Return access expiry in Unix seconds, or 401 when refresh is unavailable/expired.",
     "examples": {
-      "POST": {
-        "body": {
-          "response": {
-            "id": "EXAMPLE_CREDENTIAL_ID",
-            "rawId": "EXAMPLE_CREDENTIAL_ID",
-            "type": "public-key",
-            "response": {
-              "clientDataJSON": "GENERATED_BY_AUTHENTICATOR",
-              "attestationObject": "GENERATED_BY_AUTHENTICATOR"
-            },
-            "clientExtensionResults": {}
-          },
-          "deviceName": "My laptop"
-        }
-      }
+      "POST": {}
     }
-  },
-  "/api/auth/passkey/authenticate/begin": {
-    "guide": "authentication",
-    "summary": "Public entry point for discoverable passkeys. Generate authentication options without an allowlist, require user verification, save a five-minute single-use challenge, and set the authentication challenge cookie. No account name or school is needed.",
-    "examples": { "POST": {} }
-  },
-  "/api/auth/passkey/authenticate/complete": {
-    "guide": "authentication",
-    "summary": "Consume the challenge, locate the credential by supplied handle or flat index, verify assertion and counter, rotate encrypted refresh material, verify the refreshed SchoolSoft account, migrate, and install AuthV2 cookies. Return redirectTo for the client to navigate. Refresh rejection carries REFRESH_EXPIRED. Placeholder WebAuthn payloads in examples are structural only, not valid assertions.",
-    "examples": {
-      "POST": {
-        "body": {
-          "response": {
-            "id": "EXAMPLE_CREDENTIAL_ID",
-            "rawId": "EXAMPLE_CREDENTIAL_ID",
-            "type": "public-key",
-            "response": {
-              "clientDataJSON": "GENERATED_BY_AUTHENTICATOR",
-              "authenticatorData": "GENERATED_BY_AUTHENTICATOR",
-              "signature": "GENERATED_BY_AUTHENTICATOR",
-              "userHandle": "GENERATED_BY_AUTHENTICATOR"
-            },
-            "clientExtensionResults": {}
-          }
-        }
-      }
-    }
-  },
-  "/api/auth/passkey/credentials": {
-    "guide": "authentication",
-    "summary": "List the current verified account's credentials newest first, projecting only IDs, device metadata, backup flag, and creation/last-use times in milliseconds. Public key and encrypted token material are omitted.",
-    "examples": { "GET": {} }
-  },
-  "/api/auth/passkey/credentials/[id]": {
-    "guide": "authentication",
-    "summary": "Delete a credential only under the current verified user handle. Remove its flat index in the same batch, count remaining credentials, and delete the parent passkey user record when none remain. Missing/foreign credentials are 404.",
-    "examples": { "DELETE": {} }
   },
   "/api/conversations": {
     "guide": "social",
     "summary": "GET lists the latest fifty member conversations. POST reopens/creates a DM or creates a group with profile snapshots. New DMs require friendship; existing DMs can reopen after unfriending. Groups require another existing member, cap membership at fifty, and make the creator admin. The stored dmPrivacy field is not checked by this route.",
-    "examples": { "GET": {}, "POST": { "body": { "type": "dm", "targetUsername": "12346" } } }
+    "examples": {
+      "GET": {},
+      "POST": {
+        "body": {
+          "type": "dm",
+          "targetUsername": "12346"
+        }
+      }
+    }
   },
   "/api/conversations/[conversationId]": {
     "guide": "social",
     "summary": "Membership-gated message read/send and group actions. GET returns latest sixty messages, or all nondeleted pinned messages. POST rebuilds reply/share metadata on the server and transactionally updates the conversation preview; text is truncated to 2,000 characters. PATCH handles mark_read, rename, add/remove member, leave, and admin transfer. Read the social guide for action-specific privileges and share-card behavior.",
     "examples": {
-      "GET": { "query": "pinned=false" },
-      "POST": { "body": { "content": "Shall we revise chapter 4?" } },
-      "PATCH": { "body": { "action": "mark_read" } }
+      "GET": {
+        "query": "pinned=false"
+      },
+      "POST": {
+        "body": {
+          "content": "Shall we revise chapter 4?"
+        }
+      },
+      "PATCH": {
+        "body": {
+          "action": "mark_read"
+        }
+      }
     }
   },
   "/api/conversations/[conversationId]/[messageId]": {
     "guide": "social",
     "summary": "PATCH edits sender-owned text, pins/unpins for any member, or toggles a member reaction. DELETE soft-deletes for the sender or group admin. Transactions verify live conversation membership, matching conversation ID, and nondeleted message. Editing/deleting does not recompute the conversation preview.",
     "examples": {
-      "PATCH": { "body": { "action": "edit", "content": "Revised message text" } },
+      "PATCH": {
+        "body": {
+          "action": "edit",
+          "content": "Revised message text"
+        }
+      },
       "DELETE": {}
     }
   },
@@ -225,26 +283,59 @@
     "examples": {
       "GET": {},
       "POST": {
-        "body": { "title": "Biology exam", "targetDate": 1796112000000, "category": "exam" }
+        "body": {
+          "title": "Biology exam",
+          "targetDate": 1796112000000,
+          "category": "exam"
+        }
       },
-      "PATCH": { "query": "id=example-countdown-id", "body": { "pinned": true } },
-      "DELETE": { "query": "id=example-countdown-id" }
+      "PATCH": {
+        "query": "id=example-countdown-id",
+        "body": {
+          "pinned": true
+        }
+      },
+      "DELETE": {
+        "query": "id=example-countdown-id"
+      }
     }
   },
   "/api/custom": {
     "guide": "schoolsoft-data",
     "summary": "Proxy an allowed relative SchoolSoft rest-api/ or eva/api/ path from x-url using the verified account's school and browser cookies. GET/POST/PUT/DELETE are exported; PATCH is not. Non-GET bodies use bounded JSON-object parsing. Return upstream success status with a success/data wrapper; no SchoolSoft Bearer header is added automatically.",
     "examples": {
-      "GET": { "headers": { "x-url": "rest-api/student/ps/subjectroom/all" } },
-      "POST": { "headers": { "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH" }, "body": {} },
-      "PUT": { "headers": { "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH" }, "body": {} },
-      "DELETE": { "headers": { "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH" } }
+      "GET": {
+        "headers": {
+          "x-url": "rest-api/student/ps/subjectroom/all"
+        }
+      },
+      "POST": {
+        "headers": {
+          "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH"
+        },
+        "body": {}
+      },
+      "PUT": {
+        "headers": {
+          "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH"
+        },
+        "body": {}
+      },
+      "DELETE": {
+        "headers": {
+          "x-url": "rest-api/REPLACE_WITH_SUPPORTED_PATH"
+        }
+      }
     }
   },
   "/api/file": {
     "guide": "schoolsoft-data",
     "summary": "Resolve an AuthV2 attachment to an HTTPS Location from SchoolSoft's 303 resource response. responseType=url returns the destination; all other values stream downloaded bytes with restrictive headers. Only the same SchoolSoft school path receives the access token. The type query is unused. Non-raster data is forced to attachment disposition.",
-    "examples": { "GET": { "query": "id=12345&responseType=url" } }
+    "examples": {
+      "GET": {
+        "query": "id=12345&responseType=url"
+      }
+    }
   },
   "/api/final-grades": {
     "guide": "study-tools",
@@ -256,7 +347,12 @@
           "subjects": [
             {
               "subject": "Mathematics",
-              "grades": [{ "period": "Autumn 2026", "grade": "B" }],
+              "grades": [
+                {
+                  "period": "Autumn 2026",
+                  "grade": "B"
+                }
+              ],
               "manual": true
             }
           ]
@@ -267,20 +363,38 @@
   "/api/firebase-token": {
     "guide": "data-and-realtime",
     "summary": "Mint a Firebase custom token after live SchoolSoft session verification and migration. UID is the canonical user ID, with identityVersion=2. Return the token and userId for Firebase signInWithCustomToken. This is not a SchoolSoft token or universal HTTP Bearer credential.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/flashcards": {
     "guide": "study-tools",
     "summary": "List owned decks newest-updated first or create an empty deck from validated metadata. Creation requires nonblank title and returns 201 with cardCount zero. This route does not create cards; use the child cards route after retaining the returned deck ID.",
     "examples": {
       "GET": {},
-      "POST": { "body": { "title": "Biology", "color": "emerald", "tags": ["cells"] } }
+      "POST": {
+        "body": {
+          "title": "Biology",
+          "color": "emerald",
+          "tags": [
+            "cells"
+          ]
+        }
+      }
     }
   },
   "/api/flashcards/[deckId]": {
     "guide": "study-tools",
     "summary": "GET returns an owned deck and its cards oldest-created first. PATCH updates supported deck metadata and skips equal changes. DELETE removes cards and parent in transactions of up to four hundred cards; it is not globally atomic across chunks. Foreign/missing deck IDs return 404.",
-    "examples": { "GET": {}, "PATCH": { "body": { "title": "Biology revision" } }, "DELETE": {} }
+    "examples": {
+      "GET": {},
+      "PATCH": {
+        "body": {
+          "title": "Biology revision"
+        }
+      },
+      "DELETE": {}
+    }
   },
   "/api/flashcards/[deckId]/cards": {
     "guide": "study-tools",
@@ -304,7 +418,12 @@
     "summary": "Update card text/tags and client-calculated review state, or delete a card and decrement its parent count. Verify both deck ownership and the card's actual deck/owner in a transaction. PATCH requires a supported field, but unlike creation does not require a nonblank side. No scheduling algorithm is run by the handler.",
     "examples": {
       "PATCH": {
-        "body": { "repetitions": 1, "easeFactor": 2.5, "interval": 1, "nextReview": 1793404800000 }
+        "body": {
+          "repetitions": 1,
+          "easeFactor": 2.5,
+          "interval": 1,
+          "nextReview": 1793404800000
+        }
       },
       "DELETE": {}
     }
@@ -314,7 +433,10 @@
     "summary": "Copy an owned source deck, or one backed by a live deck-share message whose conversation includes the requester and author resolves to source owner. Clone current cards and metadata with fresh IDs/review state. Thrown copy errors attempt cleanup; the overall import is not one atomic operation. Unavailable or unauthorized shares return 404.",
     "examples": {
       "POST": {
-        "body": { "deckId": "example-source-deck-id", "messageId": "example-share-message-id" }
+        "body": {
+          "deckId": "example-source-deck-id",
+          "messageId": "example-share-message-id"
+        }
       }
     }
   },
@@ -323,20 +445,41 @@
     "summary": "List accepted and pending relationships with profile enrichment. POST sends a request, returns a same-direction pending request unchanged, or accepts a reciprocal request. PATCH answers a pending request and defaults accept to true. DELETE removes a relationship idempotently. Compatibility username inputs resolve to known canonical IDs.",
     "examples": {
       "GET": {},
-      "POST": { "body": { "targetUsername": "12346" } },
-      "PATCH": { "body": { "fromUsername": "12346", "accept": true } },
-      "DELETE": { "body": { "targetUsername": "12346" } }
+      "POST": {
+        "body": {
+          "targetUsername": "12346"
+        }
+      },
+      "PATCH": {
+        "body": {
+          "fromUsername": "12346",
+          "accept": true
+        }
+      },
+      "DELETE": {
+        "body": {
+          "targetUsername": "12346"
+        }
+      }
     }
   },
   "/api/gif": {
     "guide": "integrations",
     "summary": "Search Giphy or return trending when q is empty. Require authenticated cookies, configured API key, and limit 1-30 (default twenty). Request PG results and return slim URL/dimension metadata, filtering entries without usable previews/full URLs. Provider failures are 502.",
-    "examples": { "GET": { "query": "q=cats&limit=10" } }
+    "examples": {
+      "GET": {
+        "query": "q=cats&limit=10"
+      }
+    }
   },
   "/api/github/issues": {
     "guide": "integrations",
     "summary": "Public repository issue listing with state/label/page/per_page validation, newest-created sorting, optional server token, and sixty-second upstream revalidation. Filter pull requests after GitHub pagination and derive hasNext from Link. Return issues/hasNext without a success flag.",
-    "examples": { "GET": { "query": "state=open&page=1&per_page=25" } }
+    "examples": {
+      "GET": {
+        "query": "state=open&page=1&per_page=25"
+      }
+    }
   },
   "/api/github/issues/create": {
     "guide": "integrations",
@@ -359,7 +502,9 @@
       "PUT": {
         "body": {
           "subjectName": "Mathematics",
-          "settings": { "targetGrade": "B" },
+          "settings": {
+            "targetGrade": "B"
+          },
           "addSnapshot": false
         }
       }
@@ -371,9 +516,17 @@
     "examples": {
       "GET": {},
       "POST": {
-        "body": { "conversationId": "example-conversation-id", "targetUsername": "12346" }
+        "body": {
+          "conversationId": "example-conversation-id",
+          "targetUsername": "12346"
+        }
       },
-      "PATCH": { "body": { "inviteId": "example-invite-id", "accept": true } }
+      "PATCH": {
+        "body": {
+          "inviteId": "example-invite-id",
+          "accept": true
+        }
+      }
     }
   },
   "/api/layout": {
@@ -385,7 +538,13 @@
         "body": {
           "layout": {
             "version": 1,
-            "widgets": [{ "instanceId": "schedule-main", "widgetId": "schedule", "size": "2x2" }]
+            "widgets": [
+              {
+                "instanceId": "schedule-main",
+                "widgetId": "schedule",
+                "size": "2x2"
+              }
+            ]
           }
         }
       }
@@ -396,45 +555,74 @@
     "summary": "Classic browser login: post credentials to SchoolSoft JSP, require 302 and JSESSIONID/hash, verify canonical account through session REST, migrate, record login, optionally credit a first-login referral, set seven-day classic cookies, and clear old AuthV2/referral cookies. Return canonical userId. x-school selects the school.",
     "examples": {
       "POST": {
-        "headers": { "x-school": "engelska" },
-        "body": { "username": "student.example", "password": "example-password", "usertype": "1" }
+        "headers": {
+          "x-school": "engelska"
+        },
+        "body": {
+          "username": "student.example",
+          "password": "example-password",
+          "usertype": "1"
+        }
       }
     }
   },
   "/api/logout": {
     "guide": "authentication",
     "summary": "Expire SSP classic/AuthV2/PKCE/passkey challenge cookies and return success without requiring a session or body. It does not revoke SchoolSoft tokens, delete passkeys, clear the referral cookie, or perform Firebase client sign-out.",
-    "examples": { "POST": {} }
+    "examples": {
+      "POST": {}
+    }
   },
   "/api/lunch": {
     "guide": "schoolsoft-data",
     "summary": "Require a week query, fetch the current verified school's SchoolSoft lunch menu, wrap raw provider data in success/data, and increment the lunch-fetch metric. No local menu persistence or normalization is performed.",
-    "examples": { "GET": { "query": "week=44" } }
+    "examples": {
+      "GET": {
+        "query": "week=44"
+      }
+    }
   },
   "/api/msg-upload": {
     "guide": "integrations",
     "summary": "Upload authenticated JPEG, PNG, or static WebP images to img.e4044.com. Return 202 with pending/id/state until scanning approves publication, then 200 with a public WebP URL. Poll authenticated GET on the same route with ?id=. Requires IMAGE_HOST_API_TOKEN with images:read and images:write. The profile route limits files to five MiB; messages to ten MiB. Saving a profile URL is a separate PUT /api/profile.",
-    "examples": { "POST": { "form": true }, "GET": { "query": "id=image-id" } }
+    "examples": {
+      "POST": {
+        "form": true
+      },
+      "GET": {
+        "query": "id=image-id"
+      }
+    }
   },
   "/api/news": {
     "guide": "schoolsoft-data",
     "summary": "Require a verified session plus SchoolSoft access token and fetch EVA news for the verified user and selected/default organization. Return upstream JSON directly, usually an array; list descriptions are not sanitized here. Classic callers must explicitly use the legacy endpoint.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/news/[id]": {
     "guide": "schoolsoft-data",
     "summary": "Fetch AuthV2 EVA news detail, normalize supported square-bracket markup, sanitize HTML/style classes and links, and rewrite only matching attached image IDs through /api/file. Return upstream fields with description and descriptionHtml set to sanitized HTML, without a success wrapper.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/news/legacy": {
     "guide": "schoolsoft-data",
     "summary": "Parse title/preview/requestid from legacy SchoolSoft start-page HTML with classic cookies. Return success/data and increment the legacy news counter. Markup changes can yield an empty successful array. It is not automatically selected by the modern route.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/news/pfp": {
     "guide": "schoolsoft-data",
     "summary": "Read a teacher picture using digits-only query id and verified SchoolSoft cookies. Return bytes with upstream content type/cache policy, using JPEG and private/no-store fallbacks. This is a query URL, not the malformed path shown in an old comment.",
-    "examples": { "GET": { "query": "id=3020" } }
+    "examples": {
+      "GET": {
+        "query": "id=3020"
+      }
+    }
   },
   "/api/notes": {
     "guide": "study-tools",
@@ -455,41 +643,68 @@
     "summary": "Read, partially update through PUT, or delete an owned note. Updates validate supported fields and skip identical writes; at least one supported field is required. Foreign and absent IDs are both 404. Public sharing uses the separate share routes.",
     "examples": {
       "GET": {},
-      "PUT": { "body": { "title": "Cell biology revision", "status": "published" } },
+      "PUT": {
+        "body": {
+          "title": "Cell biology revision",
+          "status": "published"
+        }
+      },
       "DELETE": {}
     }
   },
   "/api/notes/[id]/share": {
     "guide": "study-tools",
     "summary": "Issue a fresh forty-character random hex token or revoke the current token after transactional ownership verification. Issuing replaces the previous token. Neither action changes note status or requires a body. Revoking does not erase message snapshots of the note.",
-    "examples": { "POST": {}, "DELETE": {} }
+    "examples": {
+      "POST": {},
+      "DELETE": {}
+    }
   },
   "/api/notes/shared/[token]": {
     "guide": "study-tools",
     "summary": "Public read by exact forty-character lowercase hex share token. Return only note ID/title/content/status/timestamps, excluding owner and token. Token existence controls access regardless of draft/published/archived status. Revoked/unknown tokens return 404.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/people/class": {
     "guide": "schoolsoft-data",
     "summary": "Decode the legacy class JSP as ISO-8859-1 and parse students from left/right cells in the first content table. Return name plus nullable email/address, preserving address line breaks. No data is saved; selector mismatches may return an empty list.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/people/staff": {
     "guide": "schoolsoft-data",
     "summary": "Parse the legacy staff JSP into section lists plus a flat list deduplicated by email or name. Normalize first/surname ordering, split roles on line breaks, collect phone/email/contact/picture metadata, and prefix relative pictures with the school's base URL.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/pfp-upload": {
     "guide": "integrations",
     "summary": "Upload authenticated JPEG, PNG, or static WebP images to img.e4044.com. Return 202 with pending/id/state until scanning approves publication, then 200 with a public WebP URL. Poll authenticated GET on the same route with ?id=. Requires IMAGE_HOST_API_TOKEN with images:read and images:write. The profile route limits files to five MiB; messages to ten MiB. Saving a profile URL is a separate PUT /api/profile.",
-    "examples": { "POST": { "form": true }, "GET": { "query": "id=image-id" } }
+    "examples": {
+      "POST": {
+        "form": true
+      },
+      "GET": {
+        "query": "id=image-id"
+      }
+    }
   },
   "/api/presence": {
     "guide": "social",
     "summary": "GET resolves and reads the first hundred deduplicated requested account references, returning derived status under original keys. PATCH requests the caller's status, with persisted fifteen-second all-change and 110-second same-status throttles. The echoed response can differ from persistence if throttled. Status ages to idle at three minutes and offline at fifteen.",
     "examples": {
-      "GET": { "query": "users=12345,12346" },
-      "PATCH": { "body": { "status": "online" } }
+      "GET": {
+        "query": "users=12345,12346"
+      },
+      "PATCH": {
+        "body": {
+          "status": "online"
+        }
+      }
     }
   },
   "/api/profile": {
@@ -498,98 +713,159 @@
     "examples": {
       "GET": {},
       "PUT": {
-        "body": { "displayName": "Alex", "bio": "Learning biology", "accentColor": "#337755" }
+        "body": {
+          "displayName": "Alex",
+          "bio": "Learning biology",
+          "accentColor": "#337755"
+        }
       }
     }
   },
   "/api/profile/[username]": {
     "guide": "social",
     "summary": "For any authenticated account, resolve another user's ID/legacy reference and return their profile without email. Other fields are retained. This API projection does not restrict the separate Firestore rule that permits full authenticated profile reads.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/referrals": {
     "guide": "integrations",
     "summary": "Get or transactionally reserve the current user's eight-character referral code, then enrich referred account IDs with profile display data. GET can create database records. Reservation retries code collisions up to ten times; identity and referral timestamps remain separate.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/referrals/leaderboard": {
     "guide": "integrations",
     "summary": "Public top-referrer list with integer limit 1-50, default twenty. Query only positive totals descending, assign sequential ranks, and enrich display/picture/school fields. Missing profiles use ID/empty fallbacks; DB failures are 500.",
-    "examples": { "GET": { "query": "limit=20" } }
+    "examples": {
+      "GET": {
+        "query": "limit=20"
+      }
+    }
   },
   "/api/referrals/set-ref": {
     "guide": "integrations",
     "summary": "Public code lookup followed by an HttpOnly thirty-day referral cookie. Require a 6-12-character alphanumeric code that already exists. This prepares possible future classic-login credit; it does not immediately award a referral.",
-    "examples": { "POST": { "body": { "code": "ABCD2345" } } }
+    "examples": {
+      "POST": {
+        "body": {
+          "code": "ABCD2345"
+        }
+      }
+    }
   },
   "/api/referrals/validate/[code]": {
     "guide": "integrations",
     "summary": "Public uppercase-normalized code lookup with format validation. Return minimal referrer identity/display data or 404. The helper checks existence, not a date-based expiration, despite invalid-or-expired wording in the response.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/schedule": {
     "guide": "schoolsoft-data",
     "summary": "Fetch lessons for an explicit or current server ISO week. Normalize object/array responses, drop entries without eventId/startDate, deduplicate by start/end dates, sort chronologically, and increment schedule views. There is no independent year parameter in the upstream lesson URL.",
-    "examples": { "GET": { "query": "week=44" } }
+    "examples": {
+      "GET": {
+        "query": "week=44"
+      }
+    }
   },
   "/api/schools": {
     "guide": "schoolsoft-data",
     "summary": "Public SchoolSoft school-list discovery. Extract slugs from evaUrl, trim/sort names with Swedish locale, cache for one hour per process, and supply explicit public response caching on fresh success. A failed upstream fetch can return stale process data with stale=true; no cache means 502.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/session": {
     "guide": "authentication",
     "summary": "Return live SchoolSoft session data enriched with school, canonical username, and userId after verification/migration. Apply any recovered AuthV2 cookies. This reads SSP cookies, unlike /api/auth/session, which takes a SchoolSoft token header and returns credential material.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/startpage": {
     "guide": "schoolsoft-data",
     "summary": "Parse homework and test summaries from the legacy start-page JSP. Homework contains dateAndSubject/title/content paragraphs; tests contain title/description/source link. Return success/data without persisting or converting it into the modern assignment model.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/stats": {
     "guide": "integrations",
     "summary": "Public projection of stats/loginStats counters and histogram maps with zero/empty defaults. Missing/read-failed stats is 500. Instrumentation is selective; totalApiCalls is not every HTTP request and the output excludes the old per-user stats array.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/stats/firebase": {
     "guide": "integrations",
     "summary": "Public status from externally maintained service_status/firestore, not a live Monitoring API query. Missing/read-failed document is 503. A stored outage or RESOURCE_EXHAUSTED returns operational=false with HTTP 200. Missing usage maps default to zero and operational defaults true.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/subjects": {
     "guide": "schoolsoft-data",
-    "summary": "Fetch all subject rooms then enrich each activity with entities, unread count, and teachers. Per-subject enrichment failure falls back to empty details without failing the whole list. Entity type is inferred from planningId truthiness; initial list failures use the upstream error mapper.",
-    "examples": { "GET": {} }
+    "summary": "The catalog view returns subject identities after one upstream read. The directory view adds teachers and unread counts with at most three subject workers; default requests retain entity enrichment. Reads are cached per school and session cookies for sixty seconds. refresh=1 bypasses fresh cache entries. Initial list failures use the upstream error mapper; per-subject enrichment failures retain that subject.",
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/subjects/[id]": {
     "guide": "schoolsoft-data",
-    "summary": "Fetch a room view, examinations, submissions, and assignment table rows concurrently. Return subject, overview, and assignments with upstream payload shapes. A failure of any component fails this aggregate; it does not use the list route's per-subject fallback.",
-    "examples": { "GET": {} }
+    "summary": "The coursework view fetches only room metadata and assignment rows; assignments view fetches only rows. assessment-link separately resolves holistic metadata using shared cached reads. Legacy default and includeAssessment=true remain supported. Session-scoped cache lasts sixty seconds for core reads and two minutes for holistic rows; refresh=1 bypasses it. Discovery errors never block the new coursework view, and authentication remains required.",
+    "examples": {
+      "GET": {}
+    }
+  },
+  "/api/subjects/[id]/assessment": {
+    "guide": "schoolsoft-data",
+    "summary": "Fetch attendance, assessed assignments, grading criteria, criteria overview, and subject warnings using browser-cookie authentication. A section query returns just that resource independently; without it the legacy aggregate remains supported. Validated reads are cached per session for two minutes, and refresh=1 bypasses them. The required holisticId query identifies a separate assessment record, not the room ID. Each optional resource has available/unavailable/error status; upstream authentication errors propagate. Warning reads use section=warning and /subject_warning. Inactive or unpublished warnings and non-authentication warning failures are unavailable, without blocking other sections. HTML is sanitized before display. The room endpoint discovers the holistic ID when includeAssessment=true; see docs/subject-assessment-api.md.",
+    "examples": {
+      "GET": {
+        "query": "holisticId=294143"
+      }
+    }
   },
   "/api/subjects/[id]/grades": {
     "guide": "schoolsoft-data",
     "summary": "Scan reported and expired candidate assignment assessments in batches of four. Explicit review grades take precedence over estimated criteria/points grades. Skip inaccessible or unusable items and return scanned/total/skipped/grades. It does not persist the tracker; a separate PUT is needed.",
-    "examples": { "POST": {} }
+    "examples": {
+      "POST": {}
+    }
   },
   "/api/subjects/results_all": {
     "guide": "schoolsoft-data",
     "summary": "Fetch SchoolSoft's all-results grid rows and return them in a success/rows wrapper. No local grade inference, tracker write, or result normalization occurs in this route.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/users/search": {
     "guide": "social",
     "summary": "Authenticated prefix search of loginUsername and document ID, capped at fifteen results per query and deduplicated, excluding the caller. Trim query to one hundred characters; fewer than two returns an empty list. It does not search display-name substrings.",
-    "examples": { "GET": { "query": "q=student" } }
+    "examples": {
+      "GET": {
+        "query": "q=student"
+      }
+    }
   },
   "/api/version": {
     "guide": "integrations",
     "summary": "Public source-defined version response from APP_VERSION. Return version without a success flag. It is not dynamically derived from package.json and inherits private/no-store response caching.",
-    "examples": { "GET": {} }
+    "examples": {
+      "GET": {}
+    }
   },
   "/api/weather": {
     "guide": "integrations",
     "summary": "Public current weather by city or numeric lat/lon. Coordinates win when both are supplied, but supplied city is still validated. Use Open-Meteo geocoding/forecast, optional Nominatim reverse lookup, rounded weather metrics, WMO condition mapping, and Unix-second times. Reverse lookup failure falls back to Your location; forecast/geocode failures return 502.",
-    "examples": { "GET": { "query": "city=Halmstad" } }
+    "examples": {
+      "GET": {
+        "query": "city=Halmstad"
+      }
+    }
   }
 }

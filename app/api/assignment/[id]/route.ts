@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/lib/apiError';
 import { withValidation } from '@/app/api/lib/routeValidation';
 import { createSchoolsoftClient, requireSession } from '@/app/api/lib/schoolsoft';
+import { cachedSchoolsoftGet } from '@/app/api/lib/schoolsoftReadCache';
+import { cleanSubjectContent, cleanSubjectHtml } from '@/app/api/lib/subjectHtml';
 
 // ---------------------------------------------------------------------------
 // GET /api/assignment/[id]?type=assignment|planning
@@ -20,13 +22,11 @@ const BASE = '/rest-api/student/ps';
 async function safeFetch(
   api: ReturnType<typeof createSchoolsoftClient>,
   url: string,
-  cookies: string
+  cookies: string,
+  force = false
 ): Promise<unknown> {
   try {
-    const res = await api.get(url, {
-      headers: { Cookie: cookies },
-      responseType: 'json',
-    });
+    const res = await cachedSchoolsoftGet(api, cookies, url, { maxAge: 30_000, force });
     return res.data ?? null;
   } catch (err) {
     const status = (err as { response?: { status: number } }).response?.status;
@@ -55,9 +55,11 @@ function normalizeAssessment(raw: unknown): {
   const r = raw as Record<string, unknown>;
   return {
     review: (r.review as string) ?? '',
-    teacherComment: (r.teacherComment as string) ?? '',
+    teacherComment: cleanSubjectHtml(typeof r.teacherComment === 'string' ? r.teacherComment : ''),
     studentComment: (r.studentComment as string) ?? '',
-    assessedCriteriaTabs: Array.isArray(r.assessedCriteriaTabs) ? r.assessedCriteriaTabs : [],
+    assessedCriteriaTabs: Array.isArray(r.assessedCriteriaTabs)
+      ? cleanSubjectContent(r.assessedCriteriaTabs)
+      : [],
     partialMoments: Array.isArray(r.assessmentPartialMoments) ? r.assessmentPartialMoments : [],
   };
 }
@@ -68,7 +70,8 @@ function normalizeAssignmentView(raw: Record<string, unknown>, id: string) {
     id: Number(id),
     title: (raw.title as string) ?? '',
     subTitle: (raw.subTitle as string) ?? null,
-    description: (raw.description as string) ?? null,
+    description: typeof raw.description === 'string' ? cleanSubjectHtml(raw.description) : null,
+    type: (raw.type as string) ?? 'Assignment',
     status: (raw.status as string) ?? '',
     endDate: (raw.endDate as string) ?? null,
     endTime: (raw.endTime as string) ?? null,
@@ -97,23 +100,22 @@ export const GET = withValidation(async function GET(
   const { cookieString: cookies, school } = sess;
 
   const api = createSchoolsoftClient(school);
+  const read = (url: string) =>
+    safeFetch(api, url, cookies, req.nextUrl.searchParams.get('refresh') === '1');
 
   try {
     // -------------------------------------------------------------------------
     // PLANNING
     // -------------------------------------------------------------------------
     if (type === 'planning') {
-      const tabs = (await safeFetch(
-        api,
-        `${BASE}/plannings/${id}/planning_parts/tabs`,
-        cookies
-      )) as { id: string }[] | null;
+      const tabs = (await read(`${BASE}/plannings/${id}/planning_parts/tabs`)) as
+        { id: string }[] | null;
       if (!tabs?.length) {
         return NextResponse.json({ success: false, error: 'Planning not found.' }, { status: 404 });
       }
 
       const partId = tabs[0].id;
-      const view = await safeFetch(api, `${BASE}/planning_parts/${partId}/view`, cookies);
+      const view = await read(`${BASE}/planning_parts/${partId}/view`);
       if (!view) {
         return NextResponse.json(
           { success: false, error: 'Planning view not found.' },
@@ -121,13 +123,13 @@ export const GET = withValidation(async function GET(
         );
       }
 
-      const sections = await safeFetch(api, `${BASE}/planning_parts/${partId}/sections`, cookies);
+      const sections = await read(`${BASE}/planning_parts/${partId}/sections`);
 
       return NextResponse.json({
         success: true,
         type: 'planning',
-        assignment: view,
-        sections: Array.isArray(sections) ? sections : [],
+        assignment: cleanSubjectContent(view),
+        sections: Array.isArray(sections) ? cleanSubjectContent(sections) : [],
         connectedPlannings: [],
         assessment: normalizeAssessment(null),
         grading: { availableColumns: [], selectedCriteria: [] },
@@ -137,7 +139,7 @@ export const GET = withValidation(async function GET(
     // -------------------------------------------------------------------------
     // ASSIGNMENT
     // -------------------------------------------------------------------------
-    const viewRaw = (await safeFetch(api, `${BASE}/assignments/${id}/view`, cookies)) as Record<
+    const viewRaw = (await read(`${BASE}/assignments/${id}/view`)) as Record<
       string,
       unknown
     > | null;
@@ -150,10 +152,10 @@ export const GET = withValidation(async function GET(
     // Fetch everything that can be fetched in parallel
     const [sectionsRaw, connectedPlanningsRaw, assessmentRaw, availableColumnsRaw] =
       await Promise.all([
-        safeFetch(api, `${BASE}/assignments/${id}/sections`, cookies),
-        safeFetch(api, `${BASE}/assignments/${id}/connected_plannings`, cookies),
-        safeFetch(api, `${BASE}/assignment/${id}/assessment`, cookies),
-        safeFetch(api, `${BASE}/assignment/${id}/assessment/grid/available-columns`, cookies),
+        read(`${BASE}/assignments/${id}/sections`),
+        read(`${BASE}/assignments/${id}/connected_plannings`),
+        read(`${BASE}/assignment/${id}/assessment`),
+        read(`${BASE}/assignment/${id}/assessment/grid/available-columns`),
       ]);
 
     const sections: unknown[] = Array.isArray(sectionsRaw) ? sectionsRaw : [];
@@ -173,11 +175,7 @@ export const GET = withValidation(async function GET(
     if (gradeCriteriaSections.length > 0) {
       const criteriaResults = await Promise.all(
         gradeCriteriaSections.map((s) =>
-          safeFetch(
-            api,
-            `${BASE}/grade_subject/${s.typeId ?? s.id}/grade_criteria/${s.id}/selected`,
-            cookies
-          )
+          read(`${BASE}/grade_subject/${s.typeId ?? s.id}/grade_criteria/${s.id}/selected`)
         )
       );
       criteriaResults.forEach((r) => {
@@ -189,12 +187,12 @@ export const GET = withValidation(async function GET(
       success: true,
       type: 'assignment',
       assignment,
-      sections,
+      sections: cleanSubjectContent(sections),
       connectedPlannings,
       assessment: normalizeAssessment(assessmentRaw),
       grading: {
         availableColumns,
-        selectedCriteria,
+        selectedCriteria: cleanSubjectContent(selectedCriteria),
       },
     });
   } catch (error) {

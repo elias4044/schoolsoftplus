@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { handleApiError } from '@/app/api/lib/apiError';
-import { withValidation } from '@/app/api/lib/routeValidation';
+import { InputError, withValidation } from '@/app/api/lib/routeValidation';
 import {
   applySessionCookieUpdates,
   createSchoolsoftClient,
   requireSession,
 } from '@/app/api/lib/schoolsoft';
+import { cachedSchoolsoftGet } from '@/app/api/lib/schoolsoftReadCache';
 
 type SubjectEntity = {
   planningId?: string;
@@ -24,50 +25,67 @@ export const GET = withValidation(async function GET(req: NextRequest) {
   const { cookieString: cookies, school } = sess;
 
   const api = createSchoolsoftClient(school);
-
-  try {
-    const { data: subjects } = await api.get('/rest-api/student/ps/subjectroom/all', {
-      headers: { Cookie: cookies },
-      responseType: 'json',
+  const view = req.nextUrl.searchParams.get('view');
+  if (view && !['catalog', 'directory'].includes(view))
+    throw new InputError('Invalid subjects view');
+  const get = (path: string) =>
+    cachedSchoolsoftGet(api, cookies, path, {
+      maxAge: 60_000,
+      force: req.nextUrl.searchParams.get('refresh') === '1',
     });
 
-    const enriched = await Promise.all(
-      (subjects as { activityId: string }[]).map(async (subject) => {
-        const id = subject.activityId;
-        try {
-          const [entitiesRes, unreadRes, teachersRes] = await Promise.all([
-            api.get(`/rest-api/student/ps/subjectroom/${id}/entities`, {
-              headers: { Cookie: cookies },
-              responseType: 'json',
-            }),
-            api.get(`/rest-api/student/ps/subjectroom/${id}/unread_entities`, {
-              headers: { Cookie: cookies },
-              responseType: 'json',
-            }),
-            api.get(`/rest-api/student/ps/subjectroom/${id}/teachers`, {
-              headers: { Cookie: cookies },
-              responseType: 'json',
-            }),
-          ]);
+  try {
+    const { data: subjects } = await get('/rest-api/student/ps/subjectroom/all');
+    if (view === 'catalog') {
+      return NextResponse.json({
+        success: true,
+        subjects: (subjects as { activityId: string }[]).map((subject) => ({
+          ...subject,
+          id: subject.activityId,
+          teachers: [],
+        })),
+      });
+    }
 
-          const entities = (entitiesRes.data as SubjectEntity[]).map((e) => ({
-            ...e,
-            entityType: e.planningId ? 'PLANNING' : 'ASSIGNMENT',
-          }));
+    const enrichSubject = async (subject: { activityId: string }) => {
+      const id = subject.activityId;
+      try {
+        const [entitiesRes, unreadRes, teachersRes] = await Promise.all([
+          view === 'directory'
+            ? Promise.resolve({ data: [] })
+            : get(`/rest-api/student/ps/subjectroom/${id}/entities`),
+          get(`/rest-api/student/ps/subjectroom/${id}/unread_entities`),
+          get(`/rest-api/student/ps/subjectroom/${id}/teachers`),
+        ]);
 
-          return {
-            ...subject,
-            id,
-            entities,
-            unreadEntities: parseInt(String(unreadRes.data), 10),
-            teachers: teachersRes.data,
-          };
-        } catch (err) {
-          console.error(
-            `[subjects] Failed to fetch details for subject ${id}:`,
-            (err as Error).message
-          );
-          return { ...subject, id, entities: [], unreadEntities: 0, teachers: [] };
+        const entities = (entitiesRes.data as SubjectEntity[]).map((e) => ({
+          ...e,
+          entityType: e.planningId ? 'PLANNING' : 'ASSIGNMENT',
+        }));
+
+        return {
+          ...subject,
+          id,
+          entities,
+          unreadEntities: parseInt(String(unreadRes.data), 10),
+          teachers: teachersRes.data,
+        };
+      } catch (err) {
+        console.error(
+          `[subjects] Failed to fetch details for subject ${id}:`,
+          (err as Error).message
+        );
+        return { ...subject, id, entities: [], unreadEntities: 0, teachers: [] };
+      }
+    };
+    const rows = subjects as { activityId: string }[];
+    const enriched: unknown[] = new Array(rows.length);
+    let nextIndex = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(3, rows.length) }, async () => {
+        while (nextIndex < rows.length) {
+          const index = nextIndex++;
+          enriched[index] = await enrichSubject(rows[index]);
         }
       })
     );

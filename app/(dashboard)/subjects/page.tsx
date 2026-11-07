@@ -1,11 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   BookOpen,
-  CalendarClock,
   CheckCheck,
   CheckSquare,
   ChevronRight,
@@ -20,7 +18,6 @@ import {
   X,
 } from 'lucide-react';
 
-import { fadeUp, staggerContainer } from '@/lib/animations';
 import { useCachedResource, useIsoLayoutEffect } from '@/lib/cache';
 import {
   buildInsight,
@@ -28,6 +25,7 @@ import {
   daysUntil,
   fetchCompleted,
   fetchSubjectAssignments,
+  fetchSubjectDirectory,
   fetchSubjects,
   readCachedInsight,
   SUBJECTS_KEY,
@@ -37,6 +35,12 @@ import {
   type Subject,
   type Teacher,
 } from '@/lib/cache/subjects';
+import { ResultPublishedBadge } from '@/components/subjects/ResultPublishedBadge';
+import { SubjectLink as Link } from '@/components/subjects/SubjectNavigation';
+import { SubjectSelect } from '@/components/subjects/SubjectSelect';
+
+const fadeUp = { hidden: {}, show: {} };
+const staggerContainer = { hidden: {}, show: {} };
 
 /* 
    Types
@@ -52,7 +56,7 @@ type CompletedSort = 'newest' | 'oldest' | 'title';
  */
 const PINS_KEY = 'subjects:pins';
 const PREFS_KEY = 'subjects:prefs';
-const FALLBACK_COLOR = '#7c6cf0';
+const FALLBACK_COLOR = '#56b8c4';
 const PAGE_SIZE = 40;
 
 const SORT_LABELS: Record<SortMode, string> = {
@@ -77,7 +81,7 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 
 const URGENT = 'oklch(0.70 0.19 25)';
 const SOON = 'oklch(0.80 0.14 80)';
-const CALM = 'oklch(0.75 0.15 278)';
+const CALM = 'var(--subject-data)';
 
 function patchPrefs(next: Record<string, unknown>) {
   try {
@@ -100,12 +104,6 @@ function useSettled(key: string) {
     return () => clearTimeout(t);
   }, [key]);
   return done === key;
-}
-
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.trim().slice(0, 2).toUpperCase();
 }
 
 function personInitials(name?: string): string {
@@ -166,11 +164,11 @@ function UnreadBadge({ count }: { count?: number }) {
   if (!count || count <= 0) return null;
   return (
     <span
-      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums"
+      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums"
       style={{
-        background: 'oklch(0.65 0.22 278 / 20%)',
-        color: 'oklch(0.78 0.15 278)',
-        border: '1px solid oklch(0.65 0.22 278 / 30%)',
+        background: 'var(--secondary)',
+        color: 'var(--foreground)',
+        border: '1px solid var(--border)',
       }}
       title={`${count} unread`}
     >
@@ -191,10 +189,8 @@ function PinButton({ pinned, onToggle }: { pinned: boolean; onToggle: () => void
       aria-label={pinned ? 'Unpin subject' : 'Pin subject'}
       aria-pressed={pinned}
       className={[
-        'relative z-10 rounded-md p-1 transition-all',
-        pinned
-          ? 'text-amber-300 opacity-100'
-          : 'text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+        'relative z-10 flex size-11 items-center justify-center rounded-lg transition-colors',
+        pinned ? 'text-amber-300 opacity-100' : 'text-muted-foreground hover:text-foreground',
       ].join(' ')}
     >
       <Star className="h-3.5 w-3.5" fill={pinned ? 'currentColor' : 'none'} />
@@ -206,7 +202,7 @@ function DueChip({ item }: { item: DueItem }) {
   const info = dueInfo(item.endDate);
   return (
     <span
-      className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tabular-nums"
+      className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums"
       style={{
         color: info.color,
         background: `color-mix(in oklch, ${info.color} 14%, transparent)`,
@@ -215,39 +211,6 @@ function DueChip({ item }: { item: DueItem }) {
     >
       {info.label}
     </span>
-  );
-}
-
-function StatTile({
-  label,
-  value,
-  icon: Icon,
-  accent,
-}: {
-  label: string;
-  value: number | null;
-  icon: React.ElementType;
-  accent: string;
-}) {
-  return (
-    <div className="bg-card flex items-center gap-3 rounded-xl border border-white/7 px-4 py-3">
-      <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: `color-mix(in oklch, ${accent} 15%, transparent)`, color: accent }}
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-lg leading-none font-bold tabular-nums">
-          {value === null ? (
-            <span className="inline-block h-4 w-5 animate-pulse rounded bg-white/8" />
-          ) : (
-            value
-          )}
-        </p>
-        <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">{label}</p>
-      </div>
-    </div>
   );
 }
 
@@ -273,18 +236,18 @@ function SearchBox({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="bg-card placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-primary/15 h-10 w-full rounded-xl border border-white/7 pr-16 pl-9 text-sm transition focus:ring-2 focus:outline-none"
+        className="bg-card placeholder:text-muted-foreground/60 focus:border-primary/40 focus:ring-primary/15 h-11 w-full rounded-[12px] border border-white/7 pr-16 pl-9 text-sm transition focus:ring-2 focus:outline-none"
       />
       {value ? (
         <button
           onClick={() => onChange('')}
           aria-label="Clear search"
-          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1 hover:bg-white/5"
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-md hover:bg-white/5"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       ) : (
-        <kbd className="text-muted-foreground/70 absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-white/10 px-1.5 py-0.5 text-[10px] sm:block">
+        <kbd className="text-muted-foreground/70 absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-white/10 px-1.5 py-0.5 text-xs sm:block">
           /
         </kbd>
       )}
@@ -295,9 +258,7 @@ function SearchBox({
 /** Small "Updating" hint shown while a background refresh runs on top of cached data. */
 function UpdatingHint({ show }: { show: boolean }) {
   if (!show) return null;
-  return (
-    <span className="text-muted-foreground/70 ml-2 animate-pulse text-[11px]">· Updating</span>
-  );
+  return <span className="text-muted-foreground/70 ml-2 animate-pulse text-xs">· Updating</span>;
 }
 
 /** "/" focuses the search box, Escape clears it. Only listens while the tab is active. */
@@ -341,38 +302,37 @@ function SubjectCard({
   onTogglePin: () => void;
   instant: boolean;
 }) {
-  const color = subject.color || FALLBACK_COLOR;
   const teacher = teacherName(subject.teachers?.[0]);
   const extraTeachers = Math.max((subject.teachers?.length ?? 0) - 1, 0);
   const loaded = insight?.ok;
 
   return (
     <motion.div
+      id={`subject-${subject.id}`}
       variants={fadeUp}
       initial={instant ? false : undefined}
-      className="group bg-card relative overflow-hidden rounded-xl border border-white/7 transition-colors hover:border-white/15"
+      className="group bg-card border-border hover:border-border-strong relative overflow-hidden rounded-[12px] border transition-colors"
     >
-      <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
-
       {/* Stretched link covers the whole card */}
       <Link
         href={`/subjects/${subject.id}`}
-        className="focus-visible:outline-primary absolute inset-0 z-0 rounded-xl focus-visible:outline-2"
+        className="focus-visible:outline-primary absolute inset-0 z-0 rounded-[12px] focus-visible:outline-2"
         aria-label={`Open ${subject.subject}`}
       />
 
       <div className="pointer-events-none relative px-4 pt-4 pb-3 pl-5">
         <div className="flex items-start gap-3">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
-            style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
+            className="flex w-3 shrink-0 items-center justify-center pt-2"
+            style={{ color: 'var(--muted-foreground)' }}
           >
-            {initials(subject.subject)}
+            <span
+              className="size-2.5 rounded-full"
+              style={{ background: subject.color || FALLBACK_COLOR }}
+            />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="group-hover:text-primary truncate text-sm leading-snug font-semibold transition-colors">
-              {subject.subject}
-            </p>
+            <p className="text-lg leading-snug font-semibold">{subject.subject}</p>
             {teacher && (
               <p className="text-muted-foreground mt-0.5 truncate text-xs">
                 {teacher}
@@ -386,17 +346,22 @@ function SubjectCard({
           </div>
         </div>
 
+        {insight?.upcoming[0] && (
+          <p className="text-muted-foreground mt-2 text-sm sm:hidden">
+            Next due: {dueInfo(insight.upcoming[0].endDate).label}
+          </p>
+        )}
         {/* Inline info */}
-        <div className="mt-3.5 min-h-[58px] border-t border-white/5 pt-3">
+        <div className="mt-3.5 hidden min-h-[58px] border-t border-white/5 pt-3 sm:block">
           {!insight ? (
             <div className="space-y-2">
               <div className="h-3 w-3/4 animate-pulse rounded bg-white/6" />
               <div className="h-3 w-1/2 animate-pulse rounded bg-white/6" />
             </div>
           ) : !loaded ? (
-            <p className="text-muted-foreground/70 text-[11px]">Couldn&apos;t load details</p>
+            <p className="text-muted-foreground/70 text-xs">Couldn&apos;t load details</p>
           ) : insight.upcoming.length === 0 ? (
-            <p className="text-muted-foreground/80 flex items-center gap-1.5 text-[11px]">
+            <p className="text-muted-foreground/80 flex items-center gap-1.5 text-xs">
               <ClipboardList className="h-3 w-3" /> Nothing due
             </p>
           ) : (
@@ -433,43 +398,43 @@ function SubjectRow({
   onTogglePin: () => void;
   instant: boolean;
 }) {
-  const color = subject.color || FALLBACK_COLOR;
   const teacher = teacherName(subject.teachers?.[0]);
   const next = insight?.ok ? insight.upcoming[0] : undefined;
 
   return (
     <motion.div
+      id={`subject-${subject.id}`}
       variants={fadeUp}
       initial={instant ? false : undefined}
-      className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/7 py-2.5 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
+      className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-[12px] border border-white/7 py-2.5 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
     >
-      <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
       <Link
         href={`/subjects/${subject.id}`}
         className="absolute inset-0 z-0"
         aria-label={`Open ${subject.subject}`}
       />
       <div
-        className="pointer-events-none relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold"
-        style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
+        className="pointer-events-none relative flex w-3 shrink-0 items-center justify-center"
+        style={{ color: 'var(--muted-foreground)' }}
       >
-        {initials(subject.subject)}
+        <span
+          className="size-2.5 rounded-full"
+          style={{ background: subject.color || FALLBACK_COLOR }}
+        />
       </div>
       <div className="pointer-events-none relative min-w-0 flex-1">
-        <p className="group-hover:text-primary truncate text-sm font-medium transition-colors">
-          {subject.subject}
-        </p>
-        {teacher && <p className="text-muted-foreground truncate text-[11px]">{teacher}</p>}
+        <p className="text-lg leading-snug font-semibold">{subject.subject}</p>
+        {teacher && <p className="text-muted-foreground truncate text-xs">{teacher}</p>}
       </div>
 
-      <div className="pointer-events-none relative hidden max-w-[40%] min-w-0 items-center gap-2 sm:flex">
+      <div className="pointer-events-none relative hidden max-w-[34%] min-w-0 items-center gap-2 sm:flex">
         {next ? (
           <>
             <span className="text-foreground/75 truncate text-xs">{next.title}</span>
             <DueChip item={next} />
           </>
         ) : insight?.ok ? (
-          <span className="text-muted-foreground/70 text-[11px]">Nothing due</span>
+          <span className="text-muted-foreground/70 text-xs">Nothing due</span>
         ) : !insight ? (
           <span className="h-3 w-24 animate-pulse rounded bg-white/6" />
         ) : null}
@@ -493,8 +458,17 @@ function SubjectsView({ active }: { active: boolean }) {
     data: subjectsData,
     loading,
     refreshing,
+    error: subjectsFailed,
+    refresh: refreshSubjects,
   } = useCachedResource(SUBJECTS_KEY, fetchSubjects);
-  const subjects = useMemo(() => subjectsData ?? [], [subjectsData]);
+  const { data: directory } = useCachedResource('subjects:directory', fetchSubjectDirectory);
+  const subjects = useMemo(() => {
+    const details = new Map((directory ?? []).map((subject) => [String(subject.id), subject]));
+    return (subjectsData ?? []).map((subject) => ({
+      ...subject,
+      ...details.get(String(subject.id)),
+    }));
+  }, [subjectsData, directory]);
 
   const [insights, setInsights] = useState<Record<string, Insight>>({});
 
@@ -509,7 +483,7 @@ function SubjectsView({ active }: { active: boolean }) {
   useSearchShortcuts(active, searchRef, clearQuery);
 
   /* Restore prefs + pins */
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null');
       if (p?.view === 'grid' || p?.view === 'list') setView(p.view);
@@ -584,23 +558,6 @@ function SubjectsView({ active }: { active: boolean }) {
   const settled = useSettled(`${view}-${loading}`);
 
   /* Stats */
-  const allLoaded = subjects.length > 0 && subjects.every((s) => insights[String(s.id)]);
-  const totalUnread = subjects.reduce((n, s) => n + (s.unreadEntities ?? 0), 0);
-  const totalActive = allLoaded
-    ? subjects.reduce((n, s) => n + (insights[String(s.id)]?.active ?? 0), 0)
-    : null;
-  const dueSoon = allLoaded
-    ? subjects.reduce(
-        (n, s) =>
-          n +
-          (insights[String(s.id)]?.upcoming ?? []).filter((u) => {
-            const d = daysUntil(u.endDate);
-            return d !== null && d <= 3;
-          }).length,
-        0
-      )
-    : null;
-
   /* Filtered + sorted */
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -641,7 +598,7 @@ function SubjectsView({ active }: { active: boolean }) {
   const FILTERS: { id: FilterMode; label: string; count?: number }[] = [
     { id: 'all', label: 'All', count: subjects.length },
     { id: 'unread', label: 'Unread', count: unreadSubjects },
-    { id: 'active', label: 'Has open tasks' },
+    { id: 'active', label: 'Open' },
   ];
 
   return (
@@ -655,28 +612,9 @@ function SubjectsView({ active }: { active: boolean }) {
         <UpdatingHint show={refreshing && !loading} />
       </p>
 
-      {/* Summary strip */}
-      {!loading && subjects.length > 0 && (
-        <div className="mb-5 grid grid-cols-3 gap-3">
-          <StatTile
-            label="Unread"
-            value={totalUnread}
-            icon={BookOpen}
-            accent="oklch(0.75 0.15 278)"
-          />
-          <StatTile
-            label="Open tasks"
-            value={totalActive}
-            icon={ClipboardList}
-            accent="oklch(0.70 0.18 148)"
-          />
-          <StatTile label="Due in 3 days" value={dueSoon} icon={CalendarClock} accent={SOON} />
-        </div>
-      )}
-
       {/* Toolbar */}
       {!loading && subjects.length > 0 && (
-        <div className="bg-background/70 sticky top-0 z-20 -mx-2 mb-4 space-y-2.5 px-2 py-2 backdrop-blur-md">
+        <div className="bg-background sticky top-0 z-20 mb-5 space-y-3 py-2">
           <div className="flex items-center gap-2">
             <SearchBox
               inputRef={searchRef}
@@ -687,7 +625,7 @@ function SubjectsView({ active }: { active: boolean }) {
             />
 
             {/* View toggle */}
-            <div className="bg-card flex shrink-0 rounded-xl border border-white/7 p-0.5">
+            <div className="bg-card flex shrink-0 rounded-[12px] border border-white/7 p-0.5">
               {(
                 [
                   { id: 'grid', icon: LayoutGrid, label: 'Grid view' },
@@ -703,7 +641,7 @@ function SubjectsView({ active }: { active: boolean }) {
                   aria-label={v.label}
                   aria-pressed={view === v.id}
                   className={[
-                    'flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors',
+                    'flex size-11 items-center justify-center rounded-lg transition-colors',
                     view === v.id
                       ? 'text-foreground bg-white/10'
                       : 'text-muted-foreground hover:text-foreground',
@@ -725,7 +663,7 @@ function SubjectsView({ active }: { active: boolean }) {
                     onClick={() => setFilter(f.id)}
                     aria-pressed={on}
                     className={[
-                      'flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
+                      'flex min-h-11 items-center gap-1.5 rounded-full border px-2 text-sm font-medium transition-colors',
                       on
                         ? 'bg-primary/15 border-primary/40 text-primary'
                         : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
@@ -738,7 +676,21 @@ function SubjectsView({ active }: { active: boolean }) {
               })}
             </div>
 
-            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <div className="max-w-28 sm:hidden">
+              <SubjectSelect
+                label="Sort subjects"
+                value={sort}
+                onValueChange={(value) => {
+                  setSort(value as SortMode);
+                  patchPrefs({ sort: value });
+                }}
+                options={(Object.keys(SORT_LABELS) as SortMode[]).map((option) => ({
+                  value: option,
+                  label: SORT_LABELS[option],
+                }))}
+              />
+            </div>
+            <div className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:flex">
               <span>Sort</span>
               <div className="bg-card flex rounded-lg border border-white/7 p-0.5">
                 {(Object.keys(SORT_LABELS) as SortMode[]).map((s) => (
@@ -750,7 +702,7 @@ function SubjectsView({ active }: { active: boolean }) {
                     }}
                     aria-pressed={sort === s}
                     className={[
-                      'h-6 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                      'min-h-11 rounded-md px-2.5 text-xs font-medium transition-colors',
                       sort === s ? 'text-foreground bg-white/10' : 'hover:text-foreground',
                     ].join(' ')}
                   >
@@ -763,12 +715,55 @@ function SubjectsView({ active }: { active: boolean }) {
         </div>
       )}
 
+      {!loading && visible.length > 0 && sort === 'name' && (
+        <nav
+          aria-label="Jump to subject letter"
+          className="mb-4 flex items-center gap-1 overflow-x-auto whitespace-nowrap"
+        >
+          <span className="text-muted-foreground mr-2 shrink-0 text-sm">Jump to</span>
+          {Array.from(
+            new Map(
+              [...visible]
+                .sort((a, b) => a.subject.localeCompare(b.subject, 'sv'))
+                .filter(
+                  (subject, index, list) =>
+                    index === 0 ||
+                    subject.subject.trim().charAt(0).toLocaleUpperCase('sv-SE') !==
+                      list[index - 1].subject.trim().charAt(0).toLocaleUpperCase('sv-SE')
+                )
+                .map((subject) => [
+                  subject.subject.trim().charAt(0).toLocaleUpperCase('sv-SE'),
+                  subject,
+                ])
+            ).entries()
+          ).map(([letter, subject]) => (
+            <a
+              key={letter}
+              href={`#subject-${subject.id}`}
+              className="subject-action min-w-11 shrink-0"
+              aria-label={`Jump to ${letter}`}
+            >
+              {letter}
+            </a>
+          ))}
+        </nav>
+      )}
       {/* Content */}
       {loading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-card h-36 animate-pulse rounded-xl border border-white/7" />
+            <div
+              key={i}
+              className="bg-card h-36 animate-pulse rounded-[12px] border border-white/7"
+            />
           ))}
+        </div>
+      ) : subjectsFailed && subjects.length === 0 ? (
+        <div role="alert" className="text-muted-foreground py-16 text-center">
+          <p className="text-sm">Could not load your subjects.</p>
+          <button className="subject-action mt-4" onClick={() => refreshSubjects()}>
+            Try again
+          </button>
         </div>
       ) : subjects.length === 0 ? (
         <div className="text-muted-foreground py-20 text-center">
@@ -835,26 +830,24 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
     <motion.div variants={fadeUp} initial={instant ? false : undefined}>
       <Link
         href={`/subjects/${row.activityId}/${row.assignmentId}?type=assignment`}
-        className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/7 py-3 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
+        className="group bg-card relative flex items-center gap-3 overflow-hidden rounded-[12px] border border-white/7 py-3 pr-3 pl-4 transition-colors hover:border-white/15 hover:bg-white/3"
       >
-        <div className="absolute inset-y-0 left-0 w-0.75" style={{ background: color }} />
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: `${color}22`, color, border: `1px solid ${color}40` }}
+          style={{ color: 'var(--muted-foreground)' }}
         >
           <Icon className="h-4 w-4" />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <p className="group-hover:text-primary truncate text-sm font-medium transition-colors">
-              {row.title.trim()}
-            </p>
+            <p className="text-lg leading-snug font-semibold">{row.title.trim()}</p>
             {!row.read && (
               <span className="bg-primary h-1.5 w-1.5 shrink-0 rounded-full" title="Unread" />
             )}
           </div>
-          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <ResultPublishedBadge />
             {first && (
               <span
                 className="rounded-md px-1.5 py-0.5 font-medium"
@@ -876,7 +869,7 @@ function CompletedRowItem({ row, instant }: { row: CompletedRow; instant: boolea
           </div>
         </div>
 
-        <span className="text-muted-foreground hidden shrink-0 text-[11px] tabular-nums sm:block">
+        <span className="text-muted-foreground hidden shrink-0 text-xs tabular-nums sm:block">
           {formatResultDate(row.publishDate)}
         </span>
         <ChevronRight className="text-muted-foreground group-hover:text-primary h-4 w-4 shrink-0 transition-colors" />
@@ -904,15 +897,13 @@ function CompletedView({ active }: { active: boolean }) {
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [sort, setSort] = useState<CompletedSort>('newest');
-  const [limit, setLimit] = useState(PAGE_SIZE);
+  const filterKey = JSON.stringify([query, subjectFilter, typeFilter, unreadOnly, sort]);
+  const [pagination, setPagination] = useState({ key: filterKey, limit: PAGE_SIZE });
+  const limit = pagination.key === filterKey ? pagination.limit : PAGE_SIZE;
   const searchRef = useRef<HTMLInputElement>(null);
 
   const clearQuery = useCallback(() => setQuery(''), []);
   useSearchShortcuts(active, searchRef, clearQuery);
-
-  useEffect(() => {
-    setLimit(PAGE_SIZE);
-  }, [query, subjectFilter, typeFilter, unreadOnly, sort]);
 
   const settled = useSettled(`completed-${loading}`);
 
@@ -994,9 +985,12 @@ function CompletedView({ active }: { active: boolean }) {
 
       {loading ? (
         <div className="space-y-2">
-          <div className="bg-card h-10 animate-pulse rounded-xl border border-white/7" />
+          <div className="bg-card h-10 animate-pulse rounded-[12px] border border-white/7" />
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-card h-16 animate-pulse rounded-xl border border-white/7" />
+            <div
+              key={i}
+              className="bg-card h-16 animate-pulse rounded-[12px] border border-white/7"
+            />
           ))}
         </div>
       ) : error ? (
@@ -1012,7 +1006,7 @@ function CompletedView({ active }: { active: boolean }) {
       ) : (
         <>
           {/* Toolbar */}
-          <div className="bg-background/70 sticky top-0 z-20 -mx-2 mb-4 space-y-2.5 px-2 py-2 backdrop-blur-md">
+          <div className="bg-background sticky top-0 z-20 mb-5 space-y-3 py-2">
             <div className="flex">
               <SearchBox
                 inputRef={searchRef}
@@ -1029,7 +1023,7 @@ function CompletedView({ active }: { active: boolean }) {
                 onClick={() => setSubjectFilter(null)}
                 aria-pressed={subjectFilter === null}
                 className={[
-                  'h-7 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors',
+                  'min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors',
                   subjectFilter === null
                     ? 'bg-primary/15 border-primary/40 text-primary'
                     : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
@@ -1044,7 +1038,7 @@ function CompletedView({ active }: { active: boolean }) {
                     key={s.name}
                     onClick={() => setSubjectFilter(on ? null : s.name)}
                     aria-pressed={on}
-                    className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors"
+                    className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors"
                     style={
                       on
                         ? {
@@ -1073,7 +1067,7 @@ function CompletedView({ active }: { active: boolean }) {
                       onClick={() => setTypeFilter(on ? null : type)}
                       aria-pressed={on}
                       className={[
-                        'flex h-6 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition-colors',
+                        'flex min-h-11 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors',
                         on
                           ? 'text-foreground border-white/25 bg-white/10'
                           : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
@@ -1089,7 +1083,7 @@ function CompletedView({ active }: { active: boolean }) {
                     onClick={() => setUnreadOnly((u) => !u)}
                     aria-pressed={unreadOnly}
                     className={[
-                      'flex h-6 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition-colors',
+                      'flex min-h-11 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors',
                       unreadOnly
                         ? 'bg-primary/15 border-primary/40 text-primary'
                         : 'text-muted-foreground hover:text-foreground border-white/8 hover:border-white/20',
@@ -1110,7 +1104,7 @@ function CompletedView({ active }: { active: boolean }) {
                       onClick={() => setSort(s)}
                       aria-pressed={sort === s}
                       className={[
-                        'h-6 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                        'min-h-11 rounded-md px-2.5 text-xs font-medium transition-colors',
                         sort === s ? 'text-foreground bg-white/10' : 'hover:text-foreground',
                       ].join(' ')}
                     >
@@ -1139,7 +1133,7 @@ function CompletedView({ active }: { active: boolean }) {
               {groups.map((g) => (
                 <section key={g.label || 'all'}>
                   {g.label && (
-                    <h2 className="text-muted-foreground mb-2 flex items-center gap-2 px-1 text-[10px] tracking-widest uppercase">
+                    <h2 className="text-muted-foreground mb-2 flex items-center gap-2 px-1 text-xs">
                       {g.label}
                       <span className="tabular-nums opacity-60">{g.items.length}</span>
                     </h2>
@@ -1164,8 +1158,8 @@ function CompletedView({ active }: { active: boolean }) {
               {filtered.length > shown.length && (
                 <div className="flex justify-center pt-2">
                   <button
-                    onClick={() => setLimit((l) => l + PAGE_SIZE)}
-                    className="bg-card text-muted-foreground hover:text-foreground h-9 rounded-xl border border-white/10 px-5 text-xs font-medium transition-colors hover:border-white/20"
+                    onClick={() => setPagination({ key: filterKey, limit: limit + PAGE_SIZE })}
+                    className="bg-card text-muted-foreground hover:text-foreground min-h-11 rounded-lg border border-white/10 px-5 text-xs font-medium transition-colors hover:border-white/20"
                   >
                     Show more ({filtered.length - shown.length} left)
                   </button>
@@ -1186,7 +1180,7 @@ export default function SubjectsPage() {
   const [tab, setTab] = useState<Tab>('subjects');
   const [completedVisited, setCompletedVisited] = useState(false);
 
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null');
       if (p?.tab === 'completed') {
@@ -1210,36 +1204,38 @@ export default function SubjectsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-7xl p-4 md:p-6">
       <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={false}
         className="mb-5 flex flex-wrap items-center justify-between gap-4"
       >
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           {tab === 'subjects' ? (
-            <BookOpen className="text-primary h-6 w-6" />
+            <BookOpen className="text-muted-foreground h-5 w-5" />
           ) : (
-            <CheckCheck className="text-primary h-6 w-6" />
+            <CheckCheck className="text-muted-foreground h-5 w-5" />
           )}
           {tab === 'subjects' ? 'Subjects' : 'Completed'}
         </h1>
 
-        <div role="tablist" className="bg-card inline-flex rounded-xl border border-white/7 p-0.5">
+        <div
+          role="group"
+          aria-label="Subject views"
+          className="bg-card inline-flex rounded-[12px] border border-white/7 p-0.5"
+        >
           {TABS.map((t) => (
             <button
               key={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
+              aria-pressed={tab === t.id}
               onClick={() => switchTab(t.id)}
               className={[
-                'flex h-8 items-center gap-1.5 rounded-[10px] px-3.5 text-xs font-medium transition-colors',
+                'flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs transition-colors sm:px-4 sm:text-sm',
                 tab === t.id
                   ? 'text-foreground bg-white/10'
                   : 'text-muted-foreground hover:text-foreground',
               ].join(' ')}
             >
-              <t.icon className="h-3.5 w-3.5" />
+              <t.icon className="hidden h-3.5 w-3.5 sm:block" />
               {t.label}
             </button>
           ))}

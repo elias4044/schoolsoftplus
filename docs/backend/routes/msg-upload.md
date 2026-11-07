@@ -4,7 +4,7 @@ Upload authenticated JPEG, PNG, or static WebP images to img.e4044.com. Return 2
 
 [Domain guide](../integrations.md) | [Common validation and errors](../architecture.md) | [All routes](README.md)
 
-Implementation: [app/api/msg-upload/route.ts](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/msg-upload/route.ts#L1). Source SHA-256: `ef7935f078c461949512b02376d605b4c829837884236efb30fa563c3b5a2591`.
+Implementation: [app/api/msg-upload/route.ts](https://github.com/elias4044/schoolsoftplus/blob/main/app/api/msg-upload/route.ts#L1). Source SHA-256: `c20cd97cf582d96d4487f13483f9308ae1f999da2e629201e969df882ee775fe`.
 
 The following expressions are extracted from executable source. They are not example response values. Conditional branches, local variables, and upstream payloads retain their source names; consult the guide for their meaning. Shared wrapper errors and validation apply in addition to the branches shown here. Non-ASCII characters in excerpts are escaped. Source links follow main and can move after this snapshot.
 

@@ -76,6 +76,11 @@ export function numericToGrade(n: number): string {
 export function parseGradeFromReview(review: string): string | null {
   const t = review.trim();
   if (/^[A-F]$/i.test(t)) return t.toUpperCase();
-  const m = t.match(/\b([A-F])\b/i);
+  const m =
+    t.match(
+      /\b(?:grade|betyg(?:et)?|result|resultat|bed\u00f6mning)\s*(?:(?:is|of|\u00e4r)\s+)?[:=-]?\s*([A-F])\b/i
+    ) ??
+    t.match(/^([A-F])(?=\s*[-:.\u2013\u2014(])/i) ??
+    t.match(/(?:[-:\u2013\u2014]\s*|\()([A-F])\)?\s*$/i);
   return m ? m[1].toUpperCase() : null;
 }

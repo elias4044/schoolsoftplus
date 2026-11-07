@@ -13,6 +13,7 @@ export interface CacheEntry<T> {
 
 const memory = new Map<string, CacheEntry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
+let generation = 0;
 
 export const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
@@ -45,6 +46,8 @@ export function writeCache<T>(key: string, data: T): void {
 
 /** Remove cached entries whose key starts with `keyPrefix` (everything when omitted). */
 export function clearCache(keyPrefix = ''): void {
+  generation++;
+  for (const key of inflight.keys()) if (key.startsWith(keyPrefix)) inflight.delete(key);
   for (const k of [...memory.keys()]) if (k.startsWith(keyPrefix)) memory.delete(k);
   if (typeof window === 'undefined') return;
   try {
@@ -62,9 +65,27 @@ export function clearCache(keyPrefix = ''): void {
 export function dedupe<T>(key: string, run: () => Promise<T>): Promise<T> {
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
-  const p = run().finally(() => inflight.delete(key));
+  const p = run().finally(() => {
+    if (inflight.get(key) === p) inflight.delete(key);
+  });
   inflight.set(key, p);
   return p;
+}
+
+export function fetchCached<T>(
+  key: string,
+  maxAge: number,
+  run: () => Promise<T>,
+  force = false
+): Promise<T> {
+  const cached = readCache<T>(key);
+  if (!force && cached && Date.now() - cached.savedAt < maxAge) return Promise.resolve(cached.data);
+  const startedAtGeneration = generation;
+  return dedupe(key, async () => {
+    const data = await run();
+    if (generation === startedAtGeneration) writeCache(key, data);
+    return data;
+  });
 }
 
 function sameJson(a: unknown, b: unknown): boolean {
@@ -80,24 +101,26 @@ function sameJson(a: unknown, b: unknown): boolean {
  * `fetcher` is responsible for writing the cache (the shared fetch functions already do).
  * If the revalidation fails, the cached data stays on screen.
  */
-export function useCachedResource<T>(key: string, fetcher: () => Promise<T>) {
+export function useCachedResource<T>(key: string, fetcher: (force?: boolean) => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [refreshing, setRefreshing] = useState(true);
   const [error, setError] = useState(false);
   const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+  useIsoLayoutEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
   useIsoLayoutEffect(() => {
     const cached = readCache<T>(key);
     setData(cached ? cached.data : null);
   }, [key]);
 
-  const refresh = useCallback(() => {
+  const revalidate = useCallback((force: boolean) => {
     let cancelled = false;
     setRefreshing(true);
     setError(false);
     fetcherRef
-      .current()
+      .current(force)
       .then((fresh) => {
         if (cancelled) return;
         // Keep the old reference when nothing changed so dependants don't re-run.
@@ -114,7 +137,18 @@ export function useCachedResource<T>(key: string, fetcher: () => Promise<T>) {
     };
   }, []);
 
-  useEffect(() => refresh(), [key, refresh]);
+  const refresh = useCallback(() => revalidate(true), [revalidate]);
+  useEffect(() => {
+    let cancelled = false;
+    let stop: (() => void) | undefined;
+    Promise.resolve().then(() => {
+      if (!cancelled) stop = revalidate(false);
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [key, revalidate]);
 
   return {
     data,
