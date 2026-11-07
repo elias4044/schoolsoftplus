@@ -249,21 +249,32 @@
   text-align: center;
 }
 .grade-cinema-mark {
-  margin-top: 24px;
+  position: relative;
+}
+.grade-cinema-maximum {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%);
 }
 .grade-cinema-building {
   z-index: 4;
 }
 .grade-cinema-buildup-ring {
   position: absolute;
+  top: 50%;
+  left: 50%;
   width: 180px;
   height: 180px;
+  translate: -50% -50%;
   border: 1px solid var(--brand-strong);
   border-radius: 50%;
   pointer-events: none;
 }
 .grade-cinema-value {
   position: relative;
+  padding-inline-end: 0.06em;
   color: var(--brand-strong);
   font-size: clamp(112px, 16vw, 180px);
   font-weight: 600;
@@ -272,6 +283,7 @@
 }
 .grade-cinema-word {
   font-size: clamp(32px, 6vw, 64px);
+  padding-inline-end: 0.03em;
   letter-spacing: -0.03em;
 }
 .grade-cinema-rings {
@@ -283,8 +295,10 @@
 }
 .grade-cinema-ring {
   position: absolute;
+  inset: 0;
   width: min(240px, 60vw);
   aspect-ratio: 1;
+  margin: auto;
   border: 1px solid var(--brand-strong);
   border-radius: 50%;
 }

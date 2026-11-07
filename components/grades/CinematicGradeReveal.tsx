@@ -87,7 +87,6 @@ export function CinematicGradeReveal({
               strokeWidth={1.25}
               aria-hidden="true"
             />
-            <h2 className="text-muted-foreground mt-5 text-sm font-medium">Opening your result</h2>
           </>
         ) : (
           <>
@@ -112,7 +111,7 @@ export function CinematicGradeReveal({
                 {value}
               </motion.p>
               {maximum != null && (
-                <p className="text-muted-foreground mt-2 text-lg tabular-nums">
+                <p className="grade-cinema-maximum text-muted-foreground mt-2 text-lg tabular-nums">
                   / {maximum} points
                 </p>
               )}
