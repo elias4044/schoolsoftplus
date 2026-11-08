@@ -1,0 +1,1074 @@
+.page,
+.selectContent {
+  --grade-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+.page {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 32px;
+  color: var(--foreground);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.page h1 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.page h2 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.page h3 {
+  font-size: 14px;
+  font-weight: 550;
+}
+.page p {
+  line-height: 1.6;
+}
+.header,
+.sectionHeader,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.header {
+  margin-bottom: 28px;
+  align-items: flex-start;
+}
+.header p,
+.sectionHeader p {
+  color: var(--muted-foreground);
+  margin-top: 5px;
+}
+.actions {
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.button,
+.primaryButton,
+.iconButton,
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 550;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 160ms var(--grade-ease-out);
+}
+.primaryButton {
+  background: var(--foreground);
+  color: var(--background);
+}
+.iconButton {
+  padding: 10px;
+  background: transparent;
+}
+.textButton {
+  background: transparent;
+  padding: 4px 0;
+  min-height: 44px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.page button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.page button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.page :is(button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--brand-strong);
+  outline-offset: 3px;
+}
+.page input,
+.page textarea,
+.page select {
+  color: var(--foreground);
+  accent-color: var(--brand-strong);
+  caret-color: var(--brand-strong);
+}
+.page input::placeholder,
+.page textarea::placeholder {
+  color: var(--muted-foreground);
+}
+.page select {
+  background: var(--surface-2);
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.page option {
+  background: var(--popover);
+  color: var(--foreground);
+}
+.notice,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  margin-bottom: 20px;
+}
+.error {
+  color: var(--destructive);
+}
+.summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1.2fr;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 22px 0;
+}
+.summary > div {
+  padding: 0 24px;
+  border-right: 1px solid var(--border);
+}
+.summary > div:last-child {
+  border: 0;
+}
+.summary p,
+.summary span {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.summary strong {
+  display: block;
+  margin-block: 6px;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.summary > div:first-child strong {
+  font-size: 34px;
+}
+.summary small,
+.projected small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 400;
+}
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--background);
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  border-bottom: 1px solid var(--border);
+  margin: 22px 0 24px;
+}
+.tabs button {
+  color: var(--muted-foreground);
+  padding: 14px 0;
+  min-height: 48px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tabs button[aria-current] {
+  color: var(--foreground);
+}
+.tabIndicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--foreground);
+  transform-origin: left;
+}
+.selectTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 76px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.selectTrigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selectTrigger svg {
+  width: 14px;
+  height: 14px;
+}
+.selectTrigger[data-failing='true'] {
+  color: var(--destructive);
+}
+.selectContent {
+  z-index: 60;
+  min-width: var(--radix-select-trigger-width);
+  max-width: calc(100vw - 24px);
+  max-height: min(320px, var(--radix-select-content-available-height));
+  overflow: hidden;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 18%);
+  transform-origin: var(--radix-select-content-transform-origin);
+}
+.selectContent[data-state='open']:not([data-keyboard='true']) {
+  animation: gradeDropdownIn 180ms var(--grade-ease-out);
+}
+.selectContent[data-state='closed']:not([data-keyboard='true']) {
+  animation: gradeDropdownOut 120ms var(--grade-ease-out);
+}
+.selectItem {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: default;
+  outline: none;
+}
+.selectItem[data-highlighted] {
+  background: var(--surface-3);
+}
+.selectItem svg {
+  width: 14px;
+  height: 14px;
+}
+@keyframes gradeDropdownIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes gradeDropdownOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+.importModes {
+  display: flex;
+  gap: 8px;
+  margin-block: 20px;
+}
+.importModes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.importModes button[aria-pressed='true'] {
+  background: var(--surface-3);
+  color: var(--foreground);
+}
+.importPanel fieldset {
+  min-width: 0;
+}
+.importPanel fieldset > label {
+  display: block;
+  margin-block: 16px 8px;
+}
+.importError {
+  color: var(--destructive) !important;
+  margin-block: 12px;
+}
+.importPreview {
+  border-block: 1px solid var(--border);
+  padding-block: 18px;
+  margin-block: 16px;
+}
+.previewRows {
+  margin-block: 12px;
+}
+.previewRows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding-block: 8px;
+}
+.previewRows strong {
+  font-weight: 500;
+}
+.previewRows span {
+  color: var(--muted-foreground);
+  text-align: right;
+}
+.importPreview li {
+  font-size: 12px;
+  color: var(--warning);
+  margin-block: 6px;
+}
+.editStatus {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-left: auto;
+}
+/* Two equal columns share a 20px gutter and the same outer edges. */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.panel,
+.planResult {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 22px 24px;
+  min-width: 0;
+}
+.panel .sectionHeader {
+  min-height: 28px;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+.small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.meritEquation {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 24px;
+}
+.meritEquation > span {
+  font-size: 30px;
+  font-weight: 450;
+  line-height: 1.3;
+}
+.meritEquation small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.meritEquation .operator {
+  font-size: 18px;
+  color: var(--muted-foreground);
+  padding-top: 6px;
+}
+.meritTrack {
+  display: flex;
+  height: 10px;
+  background: var(--surface-3);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.meritTrack span {
+  background: var(--brand-strong);
+}
+.meritTrack span + span {
+  background: var(--foreground);
+  border-left: 2px solid var(--card);
+}
+.scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 10px;
+}
+.explainer {
+  margin-top: 18px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.explainer summary {
+  cursor: pointer;
+  min-height: 36px;
+  align-content: center;
+  color: var(--foreground);
+}
+.explainer p {
+  margin-block: 10px;
+}
+.explainer li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 4px;
+}
+.distribution {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 12px;
+  margin-bottom: 18px;
+}
+.distribution > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.barWell {
+  height: 104px;
+  width: 100%;
+  position: relative;
+  background: var(--surface-2);
+}
+.barWell > span {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: var(--brand-strong);
+  transform-origin: bottom;
+  transition: transform 250ms var(--grade-ease-out);
+}
+.barWell > span[data-failing='true'] {
+  background: var(--destructive);
+}
+.barCount {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.distribution strong {
+  font-weight: 550;
+}
+.historyChart {
+  width: 100%;
+  height: 180px;
+  margin-top: 12px;
+  overflow: visible;
+}
+.historyChart line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.historyChart text {
+  fill: var(--muted-foreground);
+  font-size: 11px;
+}
+.historyChart polyline {
+  stroke: var(--brand-strong);
+  stroke-width: 2;
+  fill: none;
+  stroke-linejoin: round;
+}
+.historyChart circle {
+  fill: var(--brand-strong);
+}
+.termLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.termLabels > span:last-child {
+  text-align: right;
+}
+.termLabels strong {
+  display: block;
+  font-weight: 450;
+  color: var(--foreground);
+  margin-top: 3px;
+}
+.insightList {
+  margin-block: 10px 16px;
+}
+.insightList > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding-block: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.insightList strong {
+  font-weight: 500;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.insightList > div > div > span {
+  display: block;
+  margin-top: 3px;
+}
+.gain {
+  color: var(--brand-strong);
+  font-size: 18px;
+  text-align: right;
+  white-space: nowrap;
+}
+.gain small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.positive,
+.negative {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.positive {
+  color: var(--success);
+}
+.negative {
+  color: var(--destructive);
+}
+.positive svg,
+.negative svg {
+  width: 14px;
+  height: 14px;
+}
+.changeSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-block: 10px;
+}
+.changeSummary > :is(button, div) {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 6px;
+  text-align: left;
+  align-items: center;
+  padding-block: 8px;
+}
+.changeSummary button {
+  cursor: pointer;
+  border-radius: 6px;
+}
+.changeSummary svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+.changeSummary strong {
+  font-size: 24px;
+  font-weight: 450;
+}
+.changeSummary span {
+  grid-column: 2;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.attentionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.attentionRow p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 5px;
+}
+.attentionRow + p {
+  margin-top: 16px;
+}
+.footer {
+  padding-top: 28px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+.importPanel {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 24px;
+  margin-block: 20px;
+}
+.importPanel p {
+  color: var(--muted-foreground);
+  max-width: 72ch;
+  font-size: 12px;
+}
+.importPanel > label {
+  display: block;
+  margin: 18px 0 8px;
+}
+.importPanel textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.empty {
+  text-align: center;
+  padding: 64px 20px;
+  background: var(--card);
+  border-radius: 14px;
+}
+.empty h2 {
+  font-size: 22px;
+}
+.empty > p {
+  max-width: 52ch;
+  margin: 14px auto 24px;
+  color: var(--muted-foreground);
+}
+.empty .actions {
+  justify-content: center;
+}
+.emptyGrades {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.emptyGrades span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 56px;
+  border-radius: 8px;
+  background: var(--surface-3);
+  font-size: 24px;
+}
+.emptyInline {
+  padding: 32px 0;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+.emptyInline p {
+  margin-block: 8px;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 14px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  margin-right: auto;
+}
+.search svg {
+  width: 16px;
+  color: var(--muted-foreground);
+}
+.search input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  outline: none;
+}
+.search:focus-within {
+  outline: 2px solid var(--brand-strong);
+  outline-offset: 3px;
+}
+.records {
+  border: 0;
+  min-width: 0;
+  margin-top: 16px;
+}
+.subjectRow {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 1.5fr) 66px 44px;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.subjectIdentity {
+  min-width: 0;
+}
+.subjectName {
+  width: 100%;
+  min-height: 44px;
+  font-weight: 550;
+  background: transparent;
+  border-bottom: 1px solid var(--input);
+}
+.subjectIdentity > span {
+  display: block;
+  margin-top: 6px;
+}
+.gradeCells {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 3px;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.gradeCells label {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 6px;
+  min-width: 88px;
+}
+.gradeCells label > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.gradeCells select {
+  text-align: center;
+}
+.gradeCells select[data-failing='true'] {
+  color: var(--destructive);
+}
+.subjectPoints {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+.subjectPoints strong {
+  font-size: 18px;
+  font-weight: 500;
+}
+.comment {
+  grid-row: 2;
+  grid-column: 1 / -2;
+}
+.comment input {
+  width: 100%;
+  min-height: 36px;
+  background: transparent;
+  font-size: 12px;
+}
+.subjectRow > button {
+  grid-column: 4;
+  grid-row: 1;
+}
+.plannerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+  align-items: start;
+}
+.targetRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.targetRow > div {
+  flex: 1;
+  min-width: 0;
+}
+.targetRow label {
+  overflow-wrap: anywhere;
+}
+.targetRow .small {
+  display: block;
+  margin-top: 4px;
+}
+.targetRow select {
+  flex-shrink: 0;
+}
+.targetRow .selectTrigger {
+  width: 110px;
+  flex-shrink: 0;
+}
+.planResult {
+  position: sticky;
+  top: 72px;
+}
+.projected {
+  display: block;
+  font-size: 38px;
+  margin: 14px 0;
+  font-weight: 450;
+}
+.track {
+  height: 8px;
+  background: var(--surface-3);
+  overflow: hidden;
+  border-radius: 4px;
+  margin: 22px 0 12px;
+}
+.track > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--brand-strong);
+  transform-origin: left;
+  transition: transform 250ms var(--grade-ease-out);
+}
+.goal {
+  display: block;
+  margin-top: 24px;
+}
+.goal input {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--input);
+  border-radius: 8px;
+}
+.goalMessage {
+  margin-top: 12px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 36px;
+  color: var(--muted-foreground);
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:active:not(:focus-visible),
+  .primaryButton:active:not(:focus-visible),
+  .iconButton:active:not(:focus-visible) {
+    transform: scale(0.97);
+  }
+  .selectTrigger:hover {
+    background: var(--surface-3);
+  }
+  .button:hover,
+  .iconButton:hover {
+    background: var(--surface-3);
+  }
+  .primaryButton:hover {
+    opacity: 0.9;
+  }
+  .textButton:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .changeSummary button:hover {
+    background: var(--surface-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .selectContent[data-state][data-keyboard] {
+    animation: none;
+  }
+  .page *,
+  .page *::before,
+  .page *::after {
+    transition-duration: 0ms;
+  }
+  .page .track > span,
+  .page .barWell > span {
+    transition: none;
+  }
+}
+@media (max-width: 1100px) {
+  .plannerGrid {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .plannerGrid > * {
+    width: 100%;
+  }
+  .planResult {
+    position: static;
+  }
+  .page {
+    padding: 24px;
+  }
+  .summary > div {
+    padding-inline: 18px;
+  }
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0;
+  }
+  .summary > div {
+    padding: 18px;
+  }
+  .summary > div:nth-child(2) {
+    border-right: 0;
+  }
+  .summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+  .editStatus {
+    display: none;
+  }
+  .header {
+    flex-direction: column;
+  }
+  .overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .distribution .barWell {
+    height: 120px;
+  }
+}
+@media (max-width: 600px) {
+  .page {
+    padding: 22px 16px;
+  }
+  .page h1 {
+    font-size: 24px;
+  }
+  .header {
+    gap: 18px;
+    margin-bottom: 22px;
+  }
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0;
+  }
+  .summary > div {
+    padding: 18px 14px;
+  }
+  .summary > div:nth-child(2) {
+    border: 0;
+  }
+  .summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+  .summary strong {
+    font-size: 24px;
+  }
+  .summary > div:first-child strong {
+    font-size: 30px;
+  }
+  .summary small {
+    font-size: 12px;
+  }
+  .summary span {
+    font-size: 11px;
+  }
+  .tabs {
+    gap: 24px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .editStatus {
+    display: none;
+  }
+  .panel,
+  .planResult {
+    padding: 18px;
+  }
+  .sectionHeader {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .panel .sectionHeader {
+    align-items: center;
+  }
+  .meritEquation {
+    gap: 8px;
+  }
+  .meritEquation > span {
+    font-size: 25px;
+  }
+  .meritEquation small {
+    font-size: 11px;
+  }
+  .distribution {
+    gap: 12px;
+  }
+  .plannerGrid {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .plannerGrid > * {
+    width: 100%;
+  }
+  .planResult {
+    position: static;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .search {
+    width: 100%;
+  }
+  .toolbar > label:not(.search) {
+    flex: 1;
+    min-width: 0;
+  }
+  .toolbar select {
+    width: 100%;
+    padding-inline: 8px;
+  }
+  .subjectRow {
+    grid-template-columns: minmax(0, 1fr) 60px 36px;
+    gap: 12px;
+  }
+  .subjectPoints {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .subjectRow > button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .gradeCells {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .comment {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .empty {
+    padding: 36px 18px;
+  }
+  .empty h2 {
+    font-size: 20px;
+  }
+}
