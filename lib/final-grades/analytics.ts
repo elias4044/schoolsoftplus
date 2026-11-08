@@ -1,5 +1,5 @@
+import { parseSchoolSoftGrades } from './schoolsoft-import';
 import type {
-  FinalGradeCell,
   FinalGradeLetter,
   FinalGradesInsights,
   FinalGradeSubject,
@@ -25,117 +25,12 @@ const NEXT_GRADE: Partial<Record<FinalGradeLetter, FinalGradeLetter>> = {
   B: 'A',
 };
 
-function normalizeGrade(value: string): {
-  grade: FinalGradeLetter | null;
-  isPreviousTerm: boolean;
-} {
-  const trimmed = value.trim();
-  const match = trimmed.match(/^\(?\s*([A-F])\s*\)?$/i);
-  if (!match) return { grade: null, isPreviousTerm: false };
-  return {
-    grade: match[1].toUpperCase() as FinalGradeLetter,
-    isPreviousTerm: trimmed.startsWith('(') && trimmed.endsWith(')'),
-  };
-}
-
-function makeSubjectId(subject: string): string {
-  return (
-    subject
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9åäö]+/gi, '-')
-      .replace(/^-+|-+$/g, '') || crypto.randomUUID()
-  );
-}
-
-function splitLine(line: string): string[] {
-  if (line.includes('\t')) return line.split('\t').map((cell) => cell.trim());
-  return line.split(/\s{2,}/).map((cell) => cell.trim());
-}
-
-function buildPeriods(headerLines: string[][]): string[] {
-  const flatHeader = headerLines
-    .flat()
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (flatHeader.length > headerLines[0].length) {
-    const tokens = flatHeader
-      .filter((token) => !/^subject$/i.test(token))
-      .filter((token) => !/^comments?$/i.test(token));
-    const periods: string[] = [];
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-      const next = tokens[i + 1];
-      if (/^\d{2}\/\d{2}$/.test(token) && next && !/^\d{2}\/\d{2}$/.test(next)) {
-        periods.push(`${token} ${next}`);
-        i++;
-      } else {
-        periods.push(token);
-      }
-    }
-
-    return periods;
-  }
-
-  const periodCount = Math.max(...headerLines.map((line) => Math.max(0, line.length - 2)), 0);
-  const periods: string[] = [];
-
-  for (let i = 0; i < periodCount; i++) {
-    const parts = headerLines
-      .map((line) => line[i + 1])
-      .filter(Boolean)
-      .filter((part) => !/^comments?$/i.test(part));
-    periods.push(parts.join(' ').trim() || `Period ${i + 1}`);
-  }
-
-  return periods;
-}
-
 export function parseFinalGradesPaste(input: string): FinalGradeSubject[] {
-  const lines = input
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim().length > 0);
-
-  if (!lines.length) return [];
-
-  const rows = lines.map(splitLine);
-  const firstSubjectIndex = rows.findIndex((row, index) => {
-    if (index === 0) return false;
-    return row.length >= 2 && row.slice(1).some((cell) => normalizeGrade(cell).grade != null);
-  });
-
-  const headerRows = firstSubjectIndex > 0 ? rows.slice(0, firstSubjectIndex) : [rows[0]];
-  const periods = buildPeriods(headerRows);
-  const subjectRows = firstSubjectIndex >= 0 ? rows.slice(firstSubjectIndex) : rows.slice(1);
-
-  return subjectRows
-    .map((row) => {
-      const subject = row[0]?.trim();
-      if (!subject) return null;
-
-      const gradeCells = row.slice(1, 1 + periods.length);
-      const grades: FinalGradeCell[] = periods.map((period, index) => {
-        const raw = gradeCells[index] ?? '';
-        const parsed = normalizeGrade(raw);
-        return { period, raw, grade: parsed.grade, isPreviousTerm: parsed.isPreviousTerm };
-      });
-
-      const comment = row
-        .slice(1 + periods.length)
-        .join(' ')
-        .trim();
-      return {
-        id: makeSubjectId(subject),
-        subject,
-        grades,
-        comment,
-        manual: false,
-      };
-    })
-    .filter((subject): subject is FinalGradeSubject => subject != null);
+  try {
+    return parseSchoolSoftGrades(input).subjects;
+  } catch {
+    return [];
+  }
 }
 
 export function currentGrade(subject: FinalGradeSubject): {
@@ -172,6 +67,13 @@ function previousSetGrade(
 }
 
 export function computeFinalGradesInsights(subjects: FinalGradeSubject[]): FinalGradesInsights {
+  return computeInsights(subjects, true);
+}
+
+function computeInsights(
+  subjects: FinalGradeSubject[],
+  includeCandidates: boolean
+): FinalGradesInsights {
   const distribution = Object.fromEntries(
     FINAL_GRADE_LETTERS.map((letter) => [letter, 0])
   ) as Record<FinalGradeLetter, number>;
@@ -215,25 +117,36 @@ export function computeFinalGradesInsights(subjects: FinalGradeSubject[]): Final
     (subject) => subject.currentGrade && subject.currentGrade !== 'F'
   ).length;
   const failingCount = meritSubjects.filter((subject) => subject.currentGrade === 'F').length;
-  const averagePoints = meritSubjects.length
-    ? meritSubjects.reduce((sum, subject) => sum + subject.meritPoints, 0) / meritSubjects.length
+  const gradedCount = approvedCount + failingCount;
+  const averagePoints = gradedCount
+    ? meritSubjects.reduce((sum, subject) => sum + subject.meritPoints, 0) / gradedCount
     : 0;
 
-  const improvementCandidates = meritSubjects
+  const improvementCandidates = (includeCandidates ? meritSubjects : [])
     .filter((subject) => subject.currentGrade && subject.currentGrade !== 'A')
     .map((subject) => {
       const current = subject.currentGrade as FinalGradeLetter;
       const nextGrade = NEXT_GRADE[current] as FinalGradeLetter;
-      const meritGain = FINAL_GRADE_POINTS[nextGrade] - FINAL_GRADE_POINTS[current];
+      const projected = subjects.map((item) =>
+        item.id === subject.id
+          ? {
+              ...item,
+              grades: item.grades.map((cell) =>
+                cell.period === subject.currentPeriod ? { ...cell, grade: nextGrade } : cell
+              ),
+            }
+          : item
+      );
+      const meritGain = computeInsights(projected, false).merit - merit;
       return {
         subject: subject.subject,
         currentGrade: current,
         nextGrade,
         meritGain,
         reason:
-          subject.includedInBaseMerit || subject.countsAsLanguageBonus
+          meritGain > 0
             ? `Raises your merit by ${meritGain} points.`
-            : 'Could enter your best 16 if it overtakes a stronger subject.',
+            : 'This step does not change your counted merit.',
       };
     })
     .sort((a, b) => b.meritGain - a.meritGain || a.currentGrade.localeCompare(b.currentGrade))

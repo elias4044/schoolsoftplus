@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ssp.elias4044.com/schemas/final-grades.v1.schema.json",
+  "title": "SchoolSoftPlus final grades, version 1",
+  "type": "object",
+  "required": ["format", "version", "periods", "subjects"],
+  "properties": {
+    "format": { "const": "schoolsoftplus.final-grades" },
+    "version": { "const": 1 },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+    },
+    "periods": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/period" }
+    },
+    "subjects": { "type": "array", "maxItems": 80, "items": { "$ref": "#/$defs/subject" } }
+  },
+  "$defs": {
+    "period": { "type": "string", "minLength": 1, "maxLength": 60, "pattern": "\\S" },
+    "cell": {
+      "type": "object",
+      "required": ["period", "grade"],
+      "properties": {
+        "period": { "$ref": "#/$defs/period" },
+        "grade": { "enum": ["A", "B", "C", "D", "E", "F", null] },
+        "isPreviousTerm": { "type": "boolean", "default": false },
+        "raw": { "type": "string", "maxLength": 20 }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "required": ["id", "subject", "grades"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 140, "pattern": "\\S" },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "\\S" },
+        "comment": { "type": "string", "maxLength": 1000, "default": "" },
+        "manual": { "type": "boolean", "default": false },
+        "grades": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/cell" } }
+      }
+    }
+  }
+}

@@ -8,6 +8,7 @@ This doc explains all of the backend of SchoolSoft+ as of October 29 2026.
 - [Authentication](backend/authentication.md): classic cookies, mobile token exchange, AuthV2, refresh, and passkeys.
 - [SchoolSoft data](backend/schoolsoft-data.md): assignments, subjects, schedule, news, people, and files.
 - [Study tools](backend/study-tools.md): notes and sharing, flashcards, countdowns, layouts, and grades.
+- [Grade exchange format and SchoolSoft importer](final-grades-format.md): versioned JSON, schema, validation, exports, and integration examples.
 - [Social features](backend/social.md): profiles, friends, conversations, messages, invites, and presence.
 - [Integrations](backend/integrations.md): AI, uploads, GIFs, GitHub, referrals, and public statistics.
 - [Data and realtime](backend/data-and-realtime.md): Firestore collections, migration, rules, client listeners, and call signaling.
