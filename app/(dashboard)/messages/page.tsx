@@ -1265,6 +1265,7 @@ export default function MessagesPage() {
   const { conversations, loading: convoLoading } = useConversations(username);
   const { markRead, setCurrentConversation } = useUnread();
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
+  const activeConvoIdRef = useRef<string | null>(null);
   const { messages, loading: msgLoading } = useMessages(
     activeConvo?.id ?? null,
     activeConvo?.participantAliases
@@ -1272,6 +1273,7 @@ export default function MessagesPage() {
 
   // Update unread context when active conversation changes
   useEffect(() => {
+    activeConvoIdRef.current = activeConvo?.id ?? null;
     setCurrentConversation(activeConvo?.id ?? null);
   }, [activeConvo?.id, setCurrentConversation]);
 
@@ -1901,6 +1903,11 @@ export default function MessagesPage() {
     const isEncrypted = activeConvo.encrypted;
     const charLimit = isEncrypted ? E2EE_MAX_CHARS : MAX_CHARS;
     if (draft.trim().length > charLimit) return;
+    const key = isEncrypted ? encKeysRef.current.get(activeConvo.id) : undefined;
+    if (isEncrypted && !key) return;
+    const originalDraft = draft;
+    const originalReply = replyingTo;
+    const originalImage = imagePreview;
     setSending(true);
     let content: string;
     if (hasImage && !draft.trim()) {
@@ -1942,19 +1949,31 @@ export default function MessagesPage() {
     setOptimisticMsgs((prev) => [...prev, optMsg]);
     try {
       // Encrypt if E2EE group
-      if (isEncrypted) {
-        const key = encKeysRef.current.get(activeConvo.id);
-        if (!key) {
-          setSending(false);
-          return;
-        } // not unlocked
+      if (key) {
         content = await encryptMessage(key, content);
       }
-      await fetch(`/api/conversations/${activeConvo.id}`, {
+      const res = await fetch(`/api/conversations/${activeConvo.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, replyTo: reply }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.message) {
+        throw new Error(data.error || 'Could not send message. Please try again.');
+      }
+      setOptimisticMsgs((prev) =>
+        prev.map((message) =>
+          message.id === optMsg.id ? { ...data.message, sending: false, isNew: true } : message
+        )
+      );
+    } catch (error) {
+      setOptimisticMsgs((prev) => prev.filter((message) => message.id !== optMsg.id));
+      if (activeConvoIdRef.current === optMsg.conversationId) {
+        setDraft((current) => (current ? `${originalDraft}\n${current}` : originalDraft));
+        setReplyingTo((current) => current ?? originalReply);
+        setImagePreview((current) => current ?? originalImage);
+      }
+      alert(error instanceof Error ? error.message : 'Could not send message. Please try again.');
     } finally {
       setSending(false);
       // Use rAF to refocus after React re-render
@@ -2027,18 +2046,13 @@ export default function MessagesPage() {
     return c.participantIds.find((p) => p !== username) ?? '';
   };
 
-  // Deduplicate optimistic messages against real ones in the same render to avoid double-show.
-  // When a real message from the current user arrives with a timestamp close to an optimistic
-  // one, that optimistic is considered confirmed and excluded.
+  // Keep acknowledged messages visible until their exact IDs arrive in the live snapshot.
   const visibleMessages = (() => {
     const real = messages.filter((m) => m.deletedAt === null);
-    if (optimisticMsgs.length === 0) return real;
-    const oldestOptTime = optimisticMsgs[0].createdAt - 10_000;
-    const confirmedCount = Math.min(
-      real.filter((m) => m.senderUserId === username && m.createdAt >= oldestOptTime).length,
-      optimisticMsgs.length
+    const realIds = new Set(messages.map((message) => message.id));
+    return [...real, ...optimisticMsgs.filter((message) => !realIds.has(message.id))].sort(
+      (a, b) => a.createdAt - b.createdAt
     );
-    return [...real, ...optimisticMsgs.slice(confirmedCount)];
   })();
   const grouped: { date: string; msgs: Message[] }[] = [];
   for (const msg of visibleMessages) {

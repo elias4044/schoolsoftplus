@@ -329,6 +329,58 @@ function loadRoute(route, authenticated = true, overrides = {}) {
   })(`app/api/${route}/route.ts`);
 }
 
+test('message sends accept null or omitted replies and validate reply IDs before writing', async () => {
+  const writes = [];
+  const route = createLoader({
+    '@/app/api/lib/schoolsoft': {
+      requireSession: async () => ({ userId: '123456', school: 'engelska', cookieString: '' }),
+      getRequestSession: () => null,
+    },
+    '@/app/api/lib/messagingDb': {
+      getConversation: async () => ({ participantIds: ['123456', '654321'], encrypted: false }),
+      getReplyMessage: async (id) => ({ id, content: 'Original', senderDisplayName: 'Other' }),
+      createMessage: async (...args) => {
+        writes.push(args);
+        return { id: `sent-${writes.length}`, content: args[3], replyTo: args[4] };
+      },
+    },
+    '@/app/api/lib/notesDb': {},
+    '@/app/api/lib/flashcardsDb': {},
+    '@/app/api/lib/profileDb': { getProfile: async () => ({ displayName: 'Sender' }) },
+    '@/app/api/lib/statsHelper': { trackMessageSent: () => {} },
+    './accountRegistry': { isAccountReference: () => true },
+  })('app/api/conversations/[conversationId]/route.ts');
+  for (const body of [
+    { content: 'Hello', replyTo: null },
+    { content: 'Hello' },
+    { content: 'Hello', replyTo: { messageId: 'original' } },
+  ]) {
+    const response = await route.POST(
+      new NextRequest('http://localhost/api/conversations/conversation', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ conversationId: 'conversation' }) }
+    );
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).success, true);
+  }
+  assert.equal(writes[0][4], null);
+  assert.equal(writes[1][4], null);
+  assert.equal(writes[2][4].messageId, 'original');
+  for (const replyTo of [{}, { messageId: 'bad/path' }, 'original', []]) {
+    const response = await route.POST(
+      new NextRequest('http://localhost/api/conversations/conversation', {
+        method: 'POST',
+        body: JSON.stringify({ content: 'Hello', replyTo }),
+      }),
+      { params: Promise.resolve({ conversationId: 'conversation' }) }
+    );
+    assert.equal(response.status, 400);
+  }
+  assert.equal(writes.length, 3);
+});
+
 test('every private handler rejects missing authentication', async () => {
   for (const route of routePaths.filter((name) => !name.includes('shared/'))) {
     for (const [method, handler] of Object.entries(loadRoute(route, false))) {
