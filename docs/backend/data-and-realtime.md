@@ -6,38 +6,38 @@ Firestore Admin initializes from base64-encoded service-account JSON in `FIREBAS
 
 Times below are Unix milliseconds unless identified as Firestore Timestamp. See the [source contracts](contracts/README.md) for full interface fields and converters. Conversion defaults can hide missing historical fields; they are not a database schema migration by themselves.
 
-| Collection / document | Key and contents | Main access path |
-| --- | --- | --- |
-| notes_v2 | Random ID; userId, title, Markdown content, status, nullable shareToken, createdAt/updatedAt | Notes API and verified share cards |
-| countdowns_v1 | UUID; owner, targetDate, category/theme/icon, pin/archive flags, times | Countdown API |
-| flashcard_decks_v1 | Random ID; owner, title/description/color/icon, optional subject, tags, cardCount, times | Flashcard API |
-| flashcard_cards_v1 | Random ID; deckId, owner, front/back/hint/tags, review fields, times | Flashcard API |
-| grade_tracker_v1 | `userId_subjectId`; settings, entries, latest fifty snapshots, updatedAt | Grade tracker API |
-| final_grades_v1 | userId; full subjects array, updatedAt | Final-grade API |
-| dashboard_layouts | userId; version, widgets, owner, updatedAt | Layout API |
-| profiles_v1 | userId; editable profile and verified identity snapshot, joinedAt/updatedAt | Profile API and direct client reads |
-| conversations_v1 | Existing preserved ID; new DM `dm-sortedId-sortedId`, group random; participants/maps/admin/encrypted/last-message/read markers | Social API and realtime listeners |
-| messages_v1 | Random ID; conversation, sender, text, reply/share card, edit/pin/delete/reactions, times | Social API and realtime listeners |
-| friendships_v1 | New `sortedId_sortedId`, migrated IDs preserved; two user IDs, requester, status, times | Friends API and listeners |
-| group_invites_v1 | New `conversationId_invitedUserId`, existing IDs reusable; participants, status, invite/update times | Invite API and listeners |
-| presence_v1 | userId; status, lastSeen, updatedAt | Presence API; authenticated client reads allowed |
-| referrals_v1 | userId; code, totals, referred ID/time array, creation/update times | Referral API |
-| referral_codes_v1 | Uppercase code; owner userId and createdAt | Referral lookup/reservation |
-| login_users | userId; school/method/loginCount and first/last times | Transactional recordLogin |
-| stats/loginStats | Counters and UTC histogram maps | Metrics helpers and public stats projection |
-| service_status/firestore | Externally maintained operational/usage/limit fields | Public status API |
-| passkey_users | base64url of `userId@school`; encrypted refresh token/IV, account context, lastTokenUpdate Timestamp | Passkey/AuthV2 helpers |
-| passkey_users/{handle}/credentials | Credential ID; public COSE key, signCount, device metadata, created/last-use Timestamps | Passkey API |
-| passkey_credential_index | Credential ID to userHandle | Discoverable credential fallback |
-| passkey_challenges | Random challenge ID; type, challenge, userHandle, createdAt Timestamp | Five-minute, single-use WebAuthn ceremonies |
-| account_aliases | Lowercase legacy username to userId/school, claim/completion/version | Verified migration and reference resolution |
-| account_migration_conflicts | base64url of old source path; source/target paths, preserved old data, savedAt | Private conflict recovery |
-| legacy_user_data | userId; archived legacy statistics user entries | Migration recovery |
-| calls_v1 | Random ID; caller/callee IDs, offer/answer, status, timing | Direct client WebRTC signaling |
-| calls_v1/{id}/callerCandidates, calleeCandidates | ICE candidate docs | Direct call parties |
-| group_calls_v2 | Random ID; conversationId, startedByUserId, participants, status/timing | Direct group-call signaling |
-| group_calls_v2/{id}/connections/{key} | Initiator/responder IDs and offer/answer | Pairwise group-call connection |
-| connections/{key}/fromInitiator, fromResponder | ICE candidate docs under the connection | Direct connection parties |
+| Collection / document                            | Key and contents                                                                                                                | Main access path                                 |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| notes_v2                                         | Random ID; userId, title, Markdown content, status, nullable shareToken, createdAt/updatedAt                                    | Notes API and verified share cards               |
+| countdowns_v1                                    | UUID; owner, targetDate, category/theme/icon, pin/archive flags, times                                                          | Countdown API                                    |
+| flashcard_decks_v1                               | Random ID; owner, title/description/color/icon, optional subject, tags, cardCount, times                                        | Flashcard API                                    |
+| flashcard_cards_v1                               | Random ID; deckId, owner, front/back/hint/tags, review fields, times                                                            | Flashcard API                                    |
+| grade_tracker_v1                                 | `userId_subjectId`; settings, entries, latest fifty snapshots, updatedAt                                                        | Grade tracker API                                |
+| final_grades_v1                                  | userId; full subjects array, updatedAt                                                                                          | Final-grade API                                  |
+| dashboard_layouts                                | userId; version, widgets, owner, updatedAt                                                                                      | Layout API                                       |
+| profiles_v1                                      | userId; editable profile and verified identity snapshot, joinedAt/updatedAt                                                     | Profile API and direct client reads              |
+| conversations_v1                                 | Existing preserved ID; new DM `dm-sortedId-sortedId`, group random; participants/maps/admin/encrypted/last-message/read markers | Social API and realtime listeners                |
+| messages_v1                                      | Random ID; conversation, sender, text, reply/share card, edit/pin/delete/reactions, times                                       | Social API and realtime listeners                |
+| friendships_v1                                   | New `sortedId_sortedId`, migrated IDs preserved; two user IDs, requester, status, times                                         | Friends API and listeners                        |
+| group_invites_v1                                 | New `conversationId_invitedUserId`, existing IDs reusable; participants, status, invite/update times                            | Invite API and listeners                         |
+| presence_v1                                      | userId; status, lastSeen, updatedAt                                                                                             | Presence API; authenticated client reads allowed |
+| referrals_v1                                     | userId; code, totals, referred ID/time array, creation/update times                                                             | Referral API                                     |
+| referral_codes_v1                                | Uppercase code; owner userId and createdAt                                                                                      | Referral lookup/reservation                      |
+| login_users                                      | userId; school/method/loginCount and first/last times                                                                           | Transactional recordLogin                        |
+| stats/loginStats                                 | Counters and UTC histogram maps                                                                                                 | Metrics helpers and public stats projection      |
+| service_status/firestore                         | Externally maintained operational/usage/limit fields                                                                            | Public status API                                |
+| passkey_users                                    | base64url of `userId@school`; encrypted refresh token/IV, account context, lastTokenUpdate Timestamp                            | Passkey/AuthV2 helpers                           |
+| passkey_users/{handle}/credentials               | Credential ID; public COSE key, signCount, device metadata, created/last-use Timestamps                                         | Passkey API                                      |
+| passkey_credential_index                         | Credential ID to userHandle                                                                                                     | Discoverable credential fallback                 |
+| passkey_challenges                               | Random challenge ID; type, challenge, userHandle, createdAt Timestamp                                                           | Five-minute, single-use WebAuthn ceremonies      |
+| account_aliases                                  | Lowercase legacy username to userId/school, claim/completion/version                                                            | Verified migration and reference resolution      |
+| account_migration_conflicts                      | base64url of old source path; source/target paths, preserved old data, savedAt                                                  | Private conflict recovery                        |
+| legacy_user_data                                 | userId; archived legacy statistics user entries                                                                                 | Migration recovery                               |
+| calls_v1                                         | Random ID; caller/callee IDs, offer/answer, status, timing                                                                      | Direct client WebRTC signaling                   |
+| calls_v1/{id}/callerCandidates, calleeCandidates | ICE candidate docs                                                                                                              | Direct call parties                              |
+| group_calls_v2                                   | Random ID; conversationId, startedByUserId, participants, status/timing                                                         | Direct group-call signaling                      |
+| group_calls_v2/{id}/connections/{key}            | Initiator/responder IDs and offer/answer                                                                                        | Pairwise group-call connection                   |
+| connections/{key}/fromInitiator, fromResponder   | ICE candidate docs under the connection                                                                                         | Direct connection parties                        |
 
 ## Canonical identity and compatibility
 
@@ -74,18 +74,18 @@ Operations still span boundaries: profile propagation, migration, large deck cre
 
 The source rules require a signed-in numeric UID and identityVersion 2. Admin routes bypass these rules and rely on their own checks.
 
-| Data | Client permission in the source rules |
-| --- | --- |
-| Profiles, presence | Authenticated reads; no writes |
-| Conversations | Participant reads; only caller's lastReadAt key may be changed directly |
-| Messages | Conversation-participant reads; no writes |
-| Friendships | Either party reads; no writes |
-| Invites | Invitee or inviter reads; no writes |
-| Direct calls | Parties read/delete/update with caller/callee identity fields immutable; caller can create |
-| Direct ICE candidates | Call parties read/create/delete in recognized candidate collections |
-| Group calls | Conversation participants read; creator starts as sole participant; updates restricted to own participant membership and status/endedAt |
-| Group connection/candidates | Group/connection parties under the rule predicates; participant identity fields immutable on update |
-| Everything else | Denied to the client SDK |
+| Data                        | Client permission in the source rules                                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Profiles, presence          | Authenticated reads; no writes                                                                                                          |
+| Conversations               | Participant reads; only caller's lastReadAt key may be changed directly                                                                 |
+| Messages                    | Conversation-participant reads; no writes                                                                                               |
+| Friendships                 | Either party reads; no writes                                                                                                           |
+| Invites                     | Invitee or inviter reads; no writes                                                                                                     |
+| Direct calls                | Parties read/delete/update with caller/callee identity fields immutable; caller can create                                              |
+| Direct ICE candidates       | Call parties read/create/delete in recognized candidate collections                                                                     |
+| Group calls                 | Conversation participants read; creator starts as sole participant; updates restricted to own participant membership and status/endedAt |
+| Group connection/candidates | Group/connection parties under the rule predicates; participant identity fields immutable on update                                     |
+| Everything else             | Denied to the client SDK                                                                                                                |
 
 The profile API's email omission is not a database-wide privacy filter. The rules permit authenticated reads of entire profile documents. These descriptions report the current predicates, not a security assessment or a claim of stronger schema validation than the rules implement.
 

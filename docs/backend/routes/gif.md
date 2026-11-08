@@ -30,16 +30,13 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('q')
+req.nextUrl.searchParams.get('q');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('limit')
+req.nextUrl.searchParams.get('limit');
 ```
-
 
 #### Parsed body and local type
 
@@ -47,42 +44,29 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'GIF search not configured.' },
-      { status: 503 }
-    )
+NextResponse.json({ success: false, error: 'GIF search not configured.' }, { status: 503 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Invalid limit.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid limit.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'GIF service unavailable.' },
-      { status: 502 }
-    )
+NextResponse.json({ success: false, error: 'GIF service unavailable.' }, { status: 502 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'GIF search failed.' }, { status: 502 })
+NextResponse.json({ success: false, error: 'GIF search failed.' }, { status: 502 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, gifs })
+NextResponse.json({ success: true, gifs });
 ```
-
 
 #### Cookie writes
 
@@ -90,8 +74,6 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
-fetch(url, { signal: AbortSignal.timeout(8_000) })
+fetch(url, { signal: AbortSignal.timeout(8_000) });
 ```
-

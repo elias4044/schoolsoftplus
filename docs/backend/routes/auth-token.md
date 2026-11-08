@@ -34,71 +34,57 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 ```ts
-req.headers.get('x-school')
+req.headers.get('x-school');
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    code?: string;
-    verifier?: string;
-    school?: string;
-    orgid?: string;
-  };
+  code?: string;
+  verifier?: string;
+  school?: string;
+  orgid?: string;
+};
 ```
-
 
 #### Response branches
 
+```ts
+NextResponse.json({ success: false, error: 'code and verifier are required.' }, { status: 400 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'code and verifier are required.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Token exchange failed. The code may have expired.' },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Token exchange failed. The code may have expired.' },
-      { status: 401 }
-    )
+  { success: false, error: 'Token exchange failed \u2014 no access_token returned.' },
+  { status: 401 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Token exchange failed \u2014 no access_token returned.' },
-      { status: 401 }
-    )
+NextResponse.json({ error: 'Account verification failed.' }, { status: 401 });
 ```
-
-
-```ts
-NextResponse.json({ error: 'Account verification failed.' }, { status: 401 })
-```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    token,
-    tokenType: 'Bearer',
-    expiresIn: 30 * 24 * 60 * 60,
-  })
+  success: true,
+  token,
+  tokenType: 'Bearer',
+  expiresIn: 30 * 24 * 60 * 60,
+});
 ```
-
 
 #### Cookie writes
 

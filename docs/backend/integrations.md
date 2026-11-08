@@ -6,11 +6,11 @@ External-service credentials stay in server environment variables except explici
 
 All three AI routes require a verified session, use `GEMINI_API_KEY`, call `gemini-3.1-flash-lite`, and set a thirty-second provider timeout. A missing key is 503. Their per-user rate windows are in memory per server instance, not a distributed quota. Rate checks occur before body parsing and provider-configuration checks, so invalid requests can consume a window slot.
 
-| Route | Limit per sixty seconds | Input and output |
-| --- | --- | --- |
-| `POST /api/ai/note` | 20 | `{action,content?,selection?,title?}` to `{success,result,action}` |
-| `POST /api/ai/flashcards` | 8 | `{text,count?,language?}` to `{success,cards}` |
-| `POST /api/ai/insight` | 12 | `{systemPrompt,fetchAssignments?,fetchSchedule?,fetchLunch?,fetchNews?,week?,year?}` to `{success,data}` |
+| Route                     | Limit per sixty seconds | Input and output                                                                                         |
+| ------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `POST /api/ai/note`       | 20                      | `{action,content?,selection?,title?}` to `{success,result,action}`                                       |
+| `POST /api/ai/flashcards` | 8                       | `{text,count?,language?}` to `{success,cards}`                                                           |
+| `POST /api/ai/insight`    | 12                      | `{systemPrompt,fetchAssignments?,fetchSchedule?,fetchLunch?,fetchNews?,week?,year?}` to `{success,data}` |
 
 Note actions are improve, summarize, grammar, continue, title, formal, casual, bullets, expand, shorten, explain. Content and selection each allow 100,000 characters and title 500. At least content or selection must be truthy. Selection is used by improve/grammar/formal/casual/bullets/expand/shorten/explain; summarize, continue, and title use full content. Providing only selection for those latter actions passes the initial guard but does not make their prompts use the selection. Title generation asks for at most eight words, continuation for one to three paragraphs, and summary for two to four sentences; these are prompts, not output validators. The handler returns the first text part and treats empty text as 500. It does not save a note.
 
@@ -20,9 +20,14 @@ Insight accepts a nonblank systemPrompt up to 100,000. Flags select parallel dat
 
 ```js
 const result = await fetch('/api/ai/flashcards', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ text: 'The nucleus contains DNA and controls many activities of the cell.', count: 5, language: 'English' })
-}).then(r => r.json());
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    text: 'The nucleus contains DNA and controls many activities of the cell.',
+    count: 5,
+    language: 'English',
+  }),
+}).then((r) => r.json());
 // Persist result.cards separately with the deck cards endpoint.
 ```
 
@@ -38,11 +43,12 @@ An approved image returns HTTP 200 with `{success:true,pending:false,url}`. An u
 
 After approval, save profile URLs with `PUT /api/profile`; this propagates avatars to conversation snapshots. Other API clients must also handle HTTP 202 and poll before saving the URL.
 
-
 ```js
 const form = new FormData();
 form.append('image', file);
-const uploaded = await fetch('/api/pfp-upload', { method: 'POST', body: form }).then(r => r.json());
+const uploaded = await fetch('/api/pfp-upload', { method: 'POST', body: form }).then((r) =>
+  r.json()
+);
 // Do not manually set multipart Content-Type; the browser supplies its boundary.
 ```
 
@@ -57,7 +63,11 @@ const uploaded = await fetch('/api/pfp-upload', { method: 'POST', body: form }).
 `POST /api/github/issues/create` requires a session and `GITHUB_TOKEN`, with a limit of three attempts per user per minute per instance. Input: nonblank title up to 256, body up to 20,000, type bug/feature/question (default question). It appends the verified login username and school to the issue body. This publishes that attribution with the issue. Labels are bug; enhancement plus feature request; or question. The server token's account creates the issue. Success is `{success,number,html_url}`; provider rejection is 502, missing token 503. This is a real external write, not a draft endpoint.
 
 ```json
-{"title":"Schedule shows a duplicate lesson","body":"Steps and expected result...","type":"bug"}
+{
+  "title": "Schedule shows a duplicate lesson",
+  "body": "Steps and expected result...",
+  "type": "bug"
+}
 ```
 
 ## Referrals

@@ -35,58 +35,48 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    systemPrompt?: string;
-    fetchAssignments?: boolean;
-    fetchSchedule?: boolean;
-    fetchLunch?: boolean;
-    fetchNews?: boolean;
-    week?: string;
-    year?: string;
-  };
+  systemPrompt?: string;
+  fetchAssignments?: boolean;
+  fetchSchedule?: boolean;
+  fetchLunch?: boolean;
+  fetchNews?: boolean;
+  week?: string;
+  year?: string;
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 })
+NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, message: 'Missing systemPrompt.' }, { status: 400 })
+NextResponse.json({ success: false, message: 'Missing systemPrompt.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data: text })
+NextResponse.json({ success: true, data: text });
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, message: 'AI request failed.', error: (err as Error).message },
-      { status: 500 }
-    )
+  { success: false, message: 'AI request failed.', error: (err as Error).message },
+  { status: 500 }
+);
 ```
-
 
 #### Cookie writes
 
@@ -94,16 +84,14 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 genAI.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-      config: {
-        systemInstruction:
-          body.systemPrompt +
-          ' Be concise. Use markdown bullet points where appropriate. Do not include preambles.',
-      },
-    })
+  model: 'gemini-3.1-flash-lite',
+  contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+  config: {
+    systemInstruction:
+      body.systemPrompt +
+      ' Be concise. Use markdown bullet points where appropriate. Do not include preambles.',
+  },
+});
 ```
-

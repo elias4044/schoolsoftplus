@@ -30,26 +30,21 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-req.cookies.get('ssp_ss_refresh_token')
+req.cookies.get('ssp_ss_refresh_token');
 ```
 
-
 ```ts
-req.cookies.get('ssp_school')
+req.cookies.get('ssp_school');
 ```
 
-
 ```ts
-req.cookies.get('ssp_ss_orgid')
+req.cookies.get('ssp_ss_orgid');
 ```
 
-
 ```ts
-req.cookies.get('ssp_username')
+req.cookies.get('ssp_username');
 ```
-
 
 #### Parsed body and local type
 
@@ -57,32 +52,27 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
+```ts
+NextResponse.json(
+  { success: false, error: 'No refresh token available. Please log in again.' },
+  { status: 401 }
+);
+```
+
+```ts
+NextResponse.json({ success: true, expiresAt: session.ssTokenExpiresAt });
+```
+
+```ts
+NextResponse.json({ success: false, error: error.message }, { status: error.status });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'No refresh token available. Please log in again.' },
-      { status: 401 }
-    )
+  { success: false, error: 'Could not refresh the SchoolSoft session.' },
+  { status: 500 }
+);
 ```
-
-
-```ts
-NextResponse.json({ success: true, expiresAt: session.ssTokenExpiresAt })
-```
-
-
-```ts
-NextResponse.json({ success: false, error: error.message }, { status: error.status })
-```
-
-
-```ts
-NextResponse.json(
-      { success: false, error: 'Could not refresh the SchoolSoft session.' },
-      { status: 500 }
-    )
-```
-
 
 #### Cookie writes
 

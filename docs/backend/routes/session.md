@@ -38,24 +38,21 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    session: {
-      ...session.sessionData,
-      school: session.school,
-      username: session.username,
-      userId: session.userId,
-    },
-  })
+  success: true,
+  session: {
+    ...session.sessionData,
+    school: session.school,
+    username: session.username,
+    userId: session.userId,
+  },
+});
 ```
-
 
 #### Cookie writes
 

@@ -37,84 +37,67 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 
-
 ```ts
-res.cookies.set('ssp_jsessionid', '', expired)
+res.cookies.set('ssp_jsessionid', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_hash', '', expired)
+res.cookies.set('ssp_hash', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_usertype', '', expired)
+res.cookies.set('ssp_usertype', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_userid', '', expired)
+res.cookies.set('ssp_userid', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_pk_challenge_id', '', expired)
+res.cookies.set('ssp_pk_challenge_id', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_pk_auth_challenge_id', '', expired)
+res.cookies.set('ssp_pk_auth_challenge_id', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_school', '', { ...expired, httpOnly: false })
+res.cookies.set('ssp_school', '', { ...expired, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_username', '', { ...expired, httpOnly: false })
+res.cookies.set('ssp_username', '', { ...expired, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_token', '', expired)
+res.cookies.set('ssp_ss_token', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_refresh_token', '', expired)
+res.cookies.set('ssp_ss_refresh_token', '', expired);
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_token_expires', '', { ...expired, httpOnly: false })
+res.cookies.set('ssp_ss_token_expires', '', { ...expired, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_auth_type', '', { ...expired, httpOnly: false })
+res.cookies.set('ssp_auth_type', '', { ...expired, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_orgid', '', { ...expired, httpOnly: false })
+res.cookies.set('ssp_ss_orgid', '', { ...expired, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_v2_pkce', '', expired)
+res.cookies.set('ssp_v2_pkce', '', expired);
 ```
-
 
 #### Direct upstream calls
 

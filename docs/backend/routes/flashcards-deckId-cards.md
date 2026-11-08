@@ -34,42 +34,33 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = await readJsonObject(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Deck not found' }, { status: 404 })
+NextResponse.json({ error: 'Deck not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, cards }, { status: 201 })
+NextResponse.json({ success: true, cards }, { status: 201 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, card }, { status: 201 })
+NextResponse.json({ success: true, card }, { status: 201 });
 ```
-
 
 #### Cookie writes
 

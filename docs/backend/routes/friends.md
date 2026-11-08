@@ -41,16 +41,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, friends, received, sent, profileMap })
+NextResponse.json({ success: true, friends, received, sent, profileMap });
 ```
-
 
 #### Cookie writes
 
@@ -79,47 +76,37 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { targetUsername?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, friendship })
+NextResponse.json({ success: true, friendship });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: message }, { status: 400 })
+NextResponse.json({ success: false, error: message }, { status: 400 });
 ```
-
 
 #### Cookie writes
 
@@ -148,37 +135,29 @@ curl -i -b cookies.txt -c cookies.txt -X DELETE \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { targetUsername?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid target.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid target.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 
@@ -207,42 +186,33 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { fromUsername?: string; accept?: boolean };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing fromUsername.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Missing fromUsername.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Request not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Request not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, friendship: friendship ?? existing })
+NextResponse.json({ success: true, friendship: friendship ?? existing });
 ```
-
 
 #### Cookie writes
 

@@ -38,11 +38,9 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ version: APP_VERSION })
+NextResponse.json({ version: APP_VERSION });
 ```
-
 
 #### Cookie writes
 

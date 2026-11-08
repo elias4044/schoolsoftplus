@@ -40,21 +40,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, note })
+NextResponse.json({ success: true, note });
 ```
-
 
 #### Cookie writes
 
@@ -83,37 +79,29 @@ curl -i -b cookies.txt -c cookies.txt -X PUT \
 
 #### Request reads
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readJsonObject(req)) as { title?: string; content?: string; status?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, note })
+NextResponse.json({ success: true, note });
 ```
-
 
 #### Cookie writes
 
@@ -148,21 +136,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 

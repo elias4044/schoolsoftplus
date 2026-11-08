@@ -35,60 +35,45 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { action?: string; content?: string; emoji?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Content required.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Content required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Not found or forbidden.' },
-        { status: 403 }
-      )
+NextResponse.json({ success: false, error: 'Not found or forbidden.' }, { status: 403 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, message: msg })
+NextResponse.json({ success: true, message: msg });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Emoji required.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Emoji required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Unknown action.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Unknown action.' }, { status: 400 });
 ```
-
 
 #### Cookie writes
 
@@ -123,26 +108,21 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found or forbidden.' }, { status: 403 })
+NextResponse.json({ success: false, error: 'Not found or forbidden.' }, { status: 403 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 

@@ -32,11 +32,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('week')
+searchParams.get('week');
 ```
-
 
 #### Parsed body and local type
 
@@ -44,24 +42,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'week query parameter is required.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: false, error: 'week query parameter is required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data: response.data })
+NextResponse.json({ success: true, data: response.data });
 ```
-
 
 #### Cookie writes
 
@@ -69,11 +60,9 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 api.get(`/rest-api/lunchmenu/week/${week}`, {
-      headers: { Cookie: cookies },
-      responseType: 'json',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'json',
+});
 ```
-

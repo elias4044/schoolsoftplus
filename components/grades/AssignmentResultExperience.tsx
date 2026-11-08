@@ -266,9 +266,7 @@ export function AssignmentResultExperience({
                 )}
                 {estimate && (
                   <div className="mt-4 text-xs leading-relaxed">
-                    <p className="text-muted-foreground">
-                      SchoolSoft+ estimate.
-                    </p>
+                    <p className="text-muted-foreground">SchoolSoft+ estimate.</p>
                   </div>
                 )}
                 {review && review.trim().toUpperCase() !== grade && (

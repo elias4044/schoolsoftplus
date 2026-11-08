@@ -39,16 +39,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, rows: data })
+NextResponse.json({ success: true, rows: data });
 ```
-
 
 #### Cookie writes
 
@@ -56,11 +53,9 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 api.get('/rest-api/student/ps/subjectroom/results/grid/rows', {
-      headers: { Cookie: cookies },
-      responseType: 'json',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'json',
+});
 ```
-

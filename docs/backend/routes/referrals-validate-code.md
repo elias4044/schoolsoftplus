@@ -39,45 +39,33 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing code.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Missing code.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid code.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid code.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Invalid or expired code.' },
-        { status: 404 }
-      )
+NextResponse.json({ success: false, error: 'Invalid or expired code.' }, { status: 404 });
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      referrer: {
-        username,
-        displayName: profile?.displayName || username,
-        pfpUrl: profile?.pfpUrl || '',
-        schoolName: profile?.schoolName || '',
-      },
-    })
+  success: true,
+  referrer: {
+    username,
+    displayName: profile?.displayName || username,
+    pfpUrl: profile?.pfpUrl || '',
+    schoolName: profile?.schoolName || '',
+  },
+});
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Failed to validate code.' },
-      { status: 500 }
-    )
+NextResponse.json({ success: false, error: 'Failed to validate code.' }, { status: 500 });
 ```
-
 
 #### Cookie writes
 

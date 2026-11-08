@@ -32,21 +32,17 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('holisticId')
+req.nextUrl.searchParams.get('holisticId');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('section')
+req.nextUrl.searchParams.get('section');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('refresh')
+req.nextUrl.searchParams.get('refresh');
 ```
-
 
 #### Parsed body and local type
 
@@ -54,21 +50,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, resource })
+NextResponse.json({ success: true, resource });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, assessment })
+NextResponse.json({ success: true, assessment });
 ```
-
 
 #### Cookie writes
 

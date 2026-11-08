@@ -30,16 +30,13 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('id')
+req.nextUrl.searchParams.get('id');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('responseType')
+req.nextUrl.searchParams.get('responseType');
 ```
-
 
 #### Parsed body and local type
 
@@ -47,31 +44,25 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'AuthV2 is required.' }, { status: 401 })
+NextResponse.json({ error: 'AuthV2 is required.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Resource not found.' }, { status: 404 })
+NextResponse.json({ error: 'Resource not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ url: location.href })
+NextResponse.json({ url: location.href });
 ```
 
-
 ```ts
-new NextResponse(download.body, { headers })
+new NextResponse(download.body, { headers });
 ```
-
 
 #### Cookie writes
 
@@ -79,27 +70,24 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 createSchoolsoftClient(session.school).get(
-    `/eva/api/v1/resource/attachment/${encodeURIComponent(id)}`,
-    {
-      headers: { Authorization: `Bearer ${session.token}` },
-      validateStatus: () => true,
-    }
-  )
+  `/eva/api/v1/resource/attachment/${encodeURIComponent(id)}`,
+  {
+    headers: { Authorization: `Bearer ${session.token}` },
+    validateStatus: () => true,
+  }
+);
 ```
-
 
 ```ts
 fetch(location.href, {
-    signal: AbortSignal.timeout(10_000),
-    redirect: 'error',
-    headers:
-      location.origin === 'https://sms.schoolsoft.se' &&
-      location.pathname.startsWith(`/${session.school}/`)
-        ? { Authorization: `Bearer ${session.token}` }
-        : {},
-  })
+  signal: AbortSignal.timeout(10_000),
+  redirect: 'error',
+  headers:
+    location.origin === 'https://sms.schoolsoft.se' &&
+    location.pathname.startsWith(`/${session.school}/`)
+      ? { Authorization: `Bearer ${session.token}` }
+      : {},
+});
 ```
-

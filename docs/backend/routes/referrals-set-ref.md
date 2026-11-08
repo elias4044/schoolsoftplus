@@ -33,51 +33,41 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { code?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid code.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid code.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Code not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Code not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 
-
 ```ts
 res.cookies.set('ssp_ref', code, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  })
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 60 * 60 * 24 * 30,
+});
 ```
-
 
 #### Direct upstream calls
 

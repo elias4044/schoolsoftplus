@@ -40,30 +40,23 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      data: {
-        ...data,
-        referredUsers: enriched,
-      },
-    })
+  success: true,
+  data: {
+    ...data,
+    referredUsers: enriched,
+  },
+});
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Failed to load referral data.' },
-      { status: 500 }
-    )
+NextResponse.json({ success: false, error: 'Failed to load referral data.' }, { status: 500 });
 ```
-
 
 #### Cookie writes
 

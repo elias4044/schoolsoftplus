@@ -41,16 +41,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, profile })
+NextResponse.json({ success: true, profile });
 ```
-
 
 #### Cookie writes
 
@@ -79,48 +76,36 @@ curl -i -b cookies.txt -c cookies.txt -X PUT \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as Record<string, unknown>;
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'website must be a valid URL.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: false, error: 'website must be a valid URL.' }, { status: 400 });
 ```
-
 
 ```ts
 NextResponse.json(
-        { success: false, error: 'ringtoneCustomUrl must be a valid URL or empty.' },
-        { status: 400 }
-      )
+  { success: false, error: 'ringtoneCustomUrl must be a valid URL or empty.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ success: true, profile })
+NextResponse.json({ success: true, profile });
 ```
-
 
 #### Cookie writes
 

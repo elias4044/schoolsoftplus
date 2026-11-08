@@ -4,23 +4,23 @@ This page describes configuration and verification for the checked-in backend. I
 
 ## Environment inventory
 
-| Variable | Consumer and purpose |
-| --- | --- |
-| FIREBASE_SERVICE_ACCOUNT_KEY | Base64 of complete service-account JSON; Firebase Admin initialization, Firestore and custom tokens |
-| GEMINI_API_KEY | AI note/flashcard/insight provider calls |
-| GITHUB_TOKEN | Optional for reading issues, required for creating them |
-| IMAGE_HOST_API_TOKEN | Both image-upload handlers |
-| GIPHY_API_KEY | GIF search/trending |
-| MOBILE_JWT_SECRET | HS256 signing/verification helpers; required for `/api/auth/token` |
-| NEXT_PUBLIC_APP_URL | Browser AuthV2 callback base; distinct from NEXT_PUBLIC_BASE_URL |
-| PASSKEY_RP_ID | WebAuthn relying-party host |
-| PASSKEY_RP_NAME | Registration display name; default SchoolSoft+ |
-| PASSKEY_ORIGIN | Expected complete origin for WebAuthn verification |
-| PASSKEY_ENCRYPTION_KEY | 64 hex characters representing 32 bytes for AES-256-GCM refresh-token encryption |
-| NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID | Each has the NEXT_PUBLIC_FIREBASE_ prefix; browser Firebase initialization |
-| NEXT_PUBLIC_GA_MEASUREMENT_ID | Browser analytics and Firebase config measurementId |
-| NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USERNAME, NEXT_PUBLIC_TURN_CREDENTIAL | Optional browser-visible WebRTC relay configuration |
-| NODE_ENV | Framework-provided production cookie Secure behavior |
+| Variable                                                                                           | Consumer and purpose                                                                                |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| FIREBASE_SERVICE_ACCOUNT_KEY                                                                       | Base64 of complete service-account JSON; Firebase Admin initialization, Firestore and custom tokens |
+| GEMINI_API_KEY                                                                                     | AI note/flashcard/insight provider calls                                                            |
+| GITHUB_TOKEN                                                                                       | Optional for reading issues, required for creating them                                             |
+| IMAGE_HOST_API_TOKEN                                                                               | Both image-upload handlers                                                                          |
+| GIPHY_API_KEY                                                                                      | GIF search/trending                                                                                 |
+| MOBILE_JWT_SECRET                                                                                  | HS256 signing/verification helpers; required for `/api/auth/token`                                  |
+| NEXT_PUBLIC_APP_URL                                                                                | Browser AuthV2 callback base; distinct from NEXT_PUBLIC_BASE_URL                                    |
+| PASSKEY_RP_ID                                                                                      | WebAuthn relying-party host                                                                         |
+| PASSKEY_RP_NAME                                                                                    | Registration display name; default SchoolSoft+                                                      |
+| PASSKEY_ORIGIN                                                                                     | Expected complete origin for WebAuthn verification                                                  |
+| PASSKEY_ENCRYPTION_KEY                                                                             | 64 hex characters representing 32 bytes for AES-256-GCM refresh-token encryption                    |
+| NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID | Each has the NEXT_PUBLIC_FIREBASE_ prefix; browser Firebase initialization                          |
+| NEXT_PUBLIC_GA_MEASUREMENT_ID                                                                      | Browser analytics and Firebase config measurementId                                                 |
+| NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USERNAME, NEXT_PUBLIC_TURN_CREDENTIAL                       | Optional browser-visible WebRTC relay configuration                                                 |
+| NODE_ENV                                                                                           | Framework-provided production cookie Secure behavior                                                |
 
 The example environment file also lists GOOGLE_CLOUD_PROJECT_ID, DISCORD_WEBHOOK_URL, and NEXT_PUBLIC_BASE_URL. The reviewed backend does not read them. In particular, the Firebase status route does not call Google Cloud Monitoring, and AuthV2 initiation reads NEXT_PUBLIC_APP_URL instead of BASE_URL. MOBILE_JWT_SECRET and APP_URL are read by the implementation even though absent from that example file.
 
@@ -28,20 +28,20 @@ Passkey encryption uses a fresh twelve-byte IV and appends a sixteen-byte GCM au
 
 ## Timeout and capacity inventory
 
-| Area | Source limit |
-| --- | --- |
-| Shared SchoolSoft Axios client | Eight seconds; zero redirects; 20,000,000 response bytes |
-| Session fallback refresh/exchange | Five seconds per network step; live shared session verification uses eight-second client |
-| Dedicated AuthV2/mobile/passkey network calls | Generally eight seconds, with five-second mobile identity bridge calls |
-| AI | Thirty seconds per provider request |
-| File destination download | Ten seconds, no redirects |
-| ImageHost | Fifteen-second upstream timeout; client polls scanning for up to two minutes |
-| Giphy, GitHub, weather/geocoding | Eight-second abort signals |
-| JSON stream | 4,000,000 bytes |
-| Upload request | File limit plus 64 KiB multipart allowance |
-| Grade tracker serialized body | 800,000 bytes in addition to stream limit |
-| In-memory rate limiter | Sixty-second fixed windows; 5,000 active keys maximum, then 503 busy |
-| Presence route | maxDuration 20; max 100 requested users |
+| Area                                          | Source limit                                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Shared SchoolSoft Axios client                | Eight seconds; zero redirects; 20,000,000 response bytes                                 |
+| Session fallback refresh/exchange             | Five seconds per network step; live shared session verification uses eight-second client |
+| Dedicated AuthV2/mobile/passkey network calls | Generally eight seconds, with five-second mobile identity bridge calls                   |
+| AI                                            | Thirty seconds per provider request                                                      |
+| File destination download                     | Ten seconds, no redirects                                                                |
+| ImageHost                                     | Fifteen-second upstream timeout; client polls scanning for up to two minutes             |
+| Giphy, GitHub, weather/geocoding              | Eight-second abort signals                                                               |
+| JSON stream                                   | 4,000,000 bytes                                                                          |
+| Upload request                                | File limit plus 64 KiB multipart allowance                                               |
+| Grade tracker serialized body                 | 800,000 bytes in addition to stream limit                                                |
+| In-memory rate limiter                        | Sixty-second fixed windows; 5,000 active keys maximum, then 503 busy                     |
+| Presence route                                | maxDuration 20; max 100 requested users                                                  |
 
 Timeouts apply to individual calls. Verification, migration, and aggregation can extend total request duration. Hosting/platform limits still apply separately. No general endpoint retry or provider circuit breaker is present.
 
@@ -71,23 +71,23 @@ At the documentation review, `identity-migration.test.cjs` could not load becaus
 
 ## Diagnose by boundary
 
-| Symptom | What to inspect |
-| --- | --- |
-| Protected route 401 despite Firebase sign-in | Browser SSP cookies and SchoolSoft session validity; Firebase auth is separate |
-| `/api/news` or `/api/file` 401 after classic login | These require a SchoolSoft access token through AuthV2 |
-| Any protected request 503 | Live SchoolSoft verification can fail before the route's own data work |
-| 409 while account starts loading | Alias ownership conflict or a stale social reference; retry only after refreshing account state, preserve conflicting data |
-| Empty successful class/staff/legacy news data | Inspect source HTML and parser selectors, not only HTTP status |
-| Grade scan skips records | Check reported/expired status, assessment availability, and inference inputs; scan is intentionally tolerant |
-| Message duplication after retry | Sending has no idempotency key; a prior transaction may have completed before the response was lost |
-| Profile updated but request failed | Conversation propagation is awaited after profile persistence |
-| Presence response says online but DB timestamp is old | Server throttle can skip persistence while echoing requested status |
-| Firebase permission denied | Numeric UID, identityVersion 2 claim, membership, correct project, deployed rules, stale pre-migration client |
-| Firebase query requires an index | Match exact fields/order to firestore.indexes.json, including client and legacy variants; inspect serving state in the intended project |
-| Health says unavailable or stale usage | `service_status/firestore` is externally maintained; check writer/freshness |
-| Stats do not equal traffic totals | Counters cover selected successful feature paths and some fire-and-forget writes |
-| Passkey REFRESH_EXPIRED or decrypt failure | AuthV2 login to renew stored token; verify encryption key continuity |
-| Mobile Bearer token fails on notes | General routes only consume browser-session cookies in this checkout |
+| Symptom                                               | What to inspect                                                                                                                         |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Protected route 401 despite Firebase sign-in          | Browser SSP cookies and SchoolSoft session validity; Firebase auth is separate                                                          |
+| `/api/news` or `/api/file` 401 after classic login    | These require a SchoolSoft access token through AuthV2                                                                                  |
+| Any protected request 503                             | Live SchoolSoft verification can fail before the route's own data work                                                                  |
+| 409 while account starts loading                      | Alias ownership conflict or a stale social reference; retry only after refreshing account state, preserve conflicting data              |
+| Empty successful class/staff/legacy news data         | Inspect source HTML and parser selectors, not only HTTP status                                                                          |
+| Grade scan skips records                              | Check reported/expired status, assessment availability, and inference inputs; scan is intentionally tolerant                            |
+| Message duplication after retry                       | Sending has no idempotency key; a prior transaction may have completed before the response was lost                                     |
+| Profile updated but request failed                    | Conversation propagation is awaited after profile persistence                                                                           |
+| Presence response says online but DB timestamp is old | Server throttle can skip persistence while echoing requested status                                                                     |
+| Firebase permission denied                            | Numeric UID, identityVersion 2 claim, membership, correct project, deployed rules, stale pre-migration client                           |
+| Firebase query requires an index                      | Match exact fields/order to firestore.indexes.json, including client and legacy variants; inspect serving state in the intended project |
+| Health says unavailable or stale usage                | `service_status/firestore` is externally maintained; check writer/freshness                                                             |
+| Stats do not equal traffic totals                     | Counters cover selected successful feature paths and some fire-and-forget writes                                                        |
+| Passkey REFRESH_EXPIRED or decrypt failure            | AuthV2 login to renew stored token; verify encryption key continuity                                                                    |
+| Mobile Bearer token fails on notes                    | General routes only consume browser-session cookies in this checkout                                                                    |
 
 ## Migration release considerations
 

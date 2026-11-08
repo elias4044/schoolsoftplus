@@ -7,9 +7,5 @@ Source SHA-256: `8e4d91ec498ad70627ef68bbe247b4480b62c7f9d32c6e8906da6af8230d577
 ## recordLogin
 
 ```ts
-export async function recordLogin(
-  userId: string,
-  school: string,
-  method: string
-): Promise<boolean>;
+export async function recordLogin(userId: string, school: string, method: string): Promise<boolean>;
 ```

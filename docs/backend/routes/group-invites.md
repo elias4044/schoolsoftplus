@@ -40,16 +40,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, invites })
+NextResponse.json({ success: true, invites });
 ```
-
 
 #### Cookie writes
 
@@ -78,49 +75,39 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { conversationId?: string; targetUsername?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing fields.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Missing fields.' }, { status: 400 });
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error:
-          'Could not send invite. Ensure you are the admin and the user is not already a member.',
-      },
-      { status: 400 }
-    )
+  {
+    success: false,
+    error: 'Could not send invite. Ensure you are the admin and the user is not already a member.',
+  },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ success: true, invite })
+NextResponse.json({ success: true, invite });
 ```
-
 
 #### Cookie writes
 
@@ -149,42 +136,33 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { inviteId?: string; accept?: boolean };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing inviteId.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Missing inviteId.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, ...result })
+NextResponse.json({ success: true, ...result });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: message }, { status: 400 })
+NextResponse.json({ success: false, error: message }, { status: 400 });
 ```
-
 
 #### Cookie writes
 

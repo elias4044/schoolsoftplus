@@ -217,10 +217,12 @@ test('SchoolSoft single-row headings work without a comments column', () => {
   assert.equal(result.subjects[0].grades[1].grade, 'C');
 });
 test('SchoolSoft ignores trailing empty header cells after Comments', () => {
-  const result = schoolsoft.parseSchoolSoftGrades('Subject\tFall\tSpring\tComments\t\nArt\tC\tB\tGood progress\t');
-  assert.equal(result.periods.length,2);
-  assert.equal(result.subjects[0].grades[1].grade,'B');
-  assert.equal(result.subjects[0].comment,'Good progress');
+  const result = schoolsoft.parseSchoolSoftGrades(
+    'Subject\tFall\tSpring\tComments\t\nArt\tC\tB\tGood progress\t'
+  );
+  assert.equal(result.periods.length, 2);
+  assert.equal(result.subjects[0].grades[1].grade, 'B');
+  assert.equal(result.subjects[0].comment, 'Good progress');
 });
 test('SchoolSoft aligned year/season headers and Swedish headings are recognized', () => {
   const result = schoolsoft.parseSchoolSoftGrades(

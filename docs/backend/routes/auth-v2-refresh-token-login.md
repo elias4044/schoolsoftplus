@@ -35,56 +35,47 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    school?: string;
-    refreshToken?: string;
-    orgid?: string;
-  };
+  school?: string;
+  refreshToken?: string;
+  orgid?: string;
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
 NextResponse.json(
-      { success: false, error: 'School and refresh token are required.' },
-      { status: 400 }
-    )
+  { success: false, error: 'School and refresh token are required.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      username: session.username,
-      expiresAt: session.ssTokenExpiresAt,
-    })
+  success: true,
+  username: session.username,
+  expiresAt: session.ssTokenExpiresAt,
+});
 ```
-
 
 ```ts
-NextResponse.json({ success: false, error: error.message }, { status: error.status })
+NextResponse.json({ success: false, error: error.message }, { status: error.status });
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Could not complete refresh token login.' },
-      { status: 500 }
-    )
+  { success: false, error: 'Could not complete refresh token login.' },
+  { status: 500 }
+);
 ```
-
 
 #### Cookie writes
 

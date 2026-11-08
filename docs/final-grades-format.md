@@ -33,22 +33,22 @@ The schema ships at `/schemas/final-grades.v1.schema.json`, with source at [publ
 
 All identifiers and grades in examples are illustrative.
 
-| Field | Contract |
-| --- | --- |
-| `format` | Required literal `schoolsoftplus.final-grades`. |
-| `version` | Required numeric integer `1`. Unknown versions fail rather than being guessed. |
-| `exportedAt` | Optional ISO 8601 UTC timestamp ending in `Z`, at most 40 characters. Export includes it. It describes the file, not the last account save. |
-| `periods` | Required unique array, oldest to newest, at most 20 nonblank names of up to 60 characters. Labels are opaque strings, not parsed dates. |
-| `subjects` | Required array, at most 80 subjects. Empty arrays are valid. |
-| `subjects[].id` | Required unique, stable, nonblank string, at most 140 characters. Opaque; UUIDs or external IDs work. |
-| `subjects[].subject` | Required nonblank display name, up to 120 characters. Subject names need not be unique; IDs must be. |
-| `subjects[].comment` | Optional text up to 1000 characters, defaults to the empty string. Unicode, line breaks and punctuation are preserved. |
-| `subjects[].manual` | Optional boolean provenance hint, defaults to `false`. It does not change merit. |
-| `subjects[].grades` | Required array of at most 20 cells, at most one cell per period per subject. Cells may be sparse. |
-| `grades[].period` | Required exact reference to one of the top-level period names. |
-| `grades[].grade` | Required uppercase `A`, `B`, `C`, `D`, `E`, `F`, or JSON `null`. `null` means ungraded; F is a recorded zero-point grade. Empty strings and lowercase letters are invalid JSON grade values. |
-| `grades[].isPreviousTerm` | Optional boolean, defaults to `false`. `true` marks a grade carried forward rather than newly awarded. |
-| `grades[].raw` | Optional source text, at most 20 characters. If omitted, derived from `grade` and `isPreviousTerm` (`B`, `(B)`, or an empty string). Calculations always use the structured fields, never `raw`. |
+| Field                     | Contract                                                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `format`                  | Required literal `schoolsoftplus.final-grades`.                                                                                                                                                  |
+| `version`                 | Required numeric integer `1`. Unknown versions fail rather than being guessed.                                                                                                                   |
+| `exportedAt`              | Optional ISO 8601 UTC timestamp ending in `Z`, at most 40 characters. Export includes it. It describes the file, not the last account save.                                                      |
+| `periods`                 | Required unique array, oldest to newest, at most 20 nonblank names of up to 60 characters. Labels are opaque strings, not parsed dates.                                                          |
+| `subjects`                | Required array, at most 80 subjects. Empty arrays are valid.                                                                                                                                     |
+| `subjects[].id`           | Required unique, stable, nonblank string, at most 140 characters. Opaque; UUIDs or external IDs work.                                                                                            |
+| `subjects[].subject`      | Required nonblank display name, up to 120 characters. Subject names need not be unique; IDs must be.                                                                                             |
+| `subjects[].comment`      | Optional text up to 1000 characters, defaults to the empty string. Unicode, line breaks and punctuation are preserved.                                                                           |
+| `subjects[].manual`       | Optional boolean provenance hint, defaults to `false`. It does not change merit.                                                                                                                 |
+| `subjects[].grades`       | Required array of at most 20 cells, at most one cell per period per subject. Cells may be sparse.                                                                                                |
+| `grades[].period`         | Required exact reference to one of the top-level period names.                                                                                                                                   |
+| `grades[].grade`          | Required uppercase `A`, `B`, `C`, `D`, `E`, `F`, or JSON `null`. `null` means ungraded; F is a recorded zero-point grade. Empty strings and lowercase letters are invalid JSON grade values.     |
+| `grades[].isPreviousTerm` | Optional boolean, defaults to `false`. `true` marks a grade carried forward rather than newly awarded.                                                                                           |
+| `grades[].raw`            | Optional source text, at most 20 characters. If omitted, derived from `grade` and `isPreviousTerm` (`B`, `(B)`, or an empty string). Calculations always use the structured fields, never `raw`. |
 
 Import orders each subject's cells by top-level `periods` and fills omitted cells with ungraded records. This preserves chronology even when different subjects have sparse histories. Unknown JSON properties are accepted and discarded; this is not an extension-preserving archive. Export includes only the documented record fields and does not leak account identifiers, inferred merit flags, authentication information or planner targets. File parsing preserves text; account saving applies the API's existing trimming rules.
 
@@ -126,8 +126,8 @@ The separators below are actual tabs:
 ```text
 Subject	24/25 Fall	24/25 Spring	Comments
 English	C	(B)	Carried forward
-Mathematics	D	C	
-Art		E	
+Mathematics	D	C
+Art		E
 ```
 
 The parser preserves Art's empty first-period cell. The UI previews up to five subjects and ten warnings, reports additional counts, and applies the entire parsed record. Imported data stays unsaved until **Save changes**. Import replaces rather than merges records; exporting first is a convenient backup.

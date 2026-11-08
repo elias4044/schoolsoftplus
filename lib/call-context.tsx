@@ -1,9 +1,11 @@
 ﻿'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { Headphones, Mic, MicOff, PhoneOff, VolumeX } from 'lucide-react';
 
 import { CallPanel } from '@/components/CallPanel';
 
+import { useRegisterCommandActions, type PaletteAction } from './command-actions';
 import {
   useCall,
   useGroupCall,
@@ -20,18 +22,16 @@ interface RemoteProfile {
 }
 
 function useRemoteProfile(username: string | null): RemoteProfile | null {
-  const [profile, setProfile] = useState<RemoteProfile | null>(null);
+  const [profile, setProfile] = useState<(RemoteProfile & { userId: string }) | null>(null);
   useEffect(() => {
-    if (!username) {
-      setProfile(null);
-      return;
-    }
+    if (!username) return;
     let cancelled = false;
     fetch(`/api/profile/${encodeURIComponent(username)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled && data.success) {
           setProfile({
+            userId: username,
             displayName: data.profile?.displayName ?? username,
             avatarUrl: data.profile?.pfpUrl ?? '',
           });
@@ -42,7 +42,7 @@ function useRemoteProfile(username: string | null): RemoteProfile | null {
       cancelled = true;
     };
   }, [username]);
-  return profile;
+  return profile?.userId === username ? profile : null;
 }
 
 function useGroupParticipantProfiles(
@@ -134,6 +134,41 @@ function GlobalCallPanel({
   const groupParticipantProfiles = useGroupParticipantProfiles(
     groupCall.session?.participantIds ?? []
   );
+  const groupActive = groupCall.phase === 'in_call';
+  const voiceActive = call.phase === 'in_call' || groupActive;
+  const muted = groupActive ? groupCall.isMuted : call.isMuted;
+  const audio = groupActive ? groupCall.audio : call.audio;
+  const callCommands: PaletteAction[] = voiceActive
+    ? [
+        {
+          id: 'call-toggle-mute',
+          label: muted ? 'Unmute microphone' : 'Mute microphone',
+          group: 'Active call',
+          keywords: 'voice audio call mic',
+          icon: muted ? Mic : MicOff,
+          run: groupActive ? groupCall.toggleMute : call.toggleMute,
+        },
+        {
+          id: 'call-toggle-deafen',
+          label: audio.isDeafened ? 'Hear call audio' : 'Deafen call audio',
+          group: 'Active call',
+          keywords: 'speaker sound volume',
+          icon: audio.isDeafened ? Headphones : VolumeX,
+          run: audio.toggleDeafen,
+        },
+        {
+          id: 'call-end',
+          label: groupActive ? 'Leave group call' : 'End voice call',
+          group: 'Active call',
+          keywords: 'hang up disconnect',
+          icon: PhoneOff,
+          run: () => {
+            void (groupActive ? groupCall.leaveGroupCall() : call.hangUp());
+          },
+        },
+      ]
+    : [];
+  useRegisterCommandActions('voice-call', callCommands);
 
   return (
     <CallPanel
@@ -152,6 +187,11 @@ function GlobalCallPanel({
       isMuted={call.isMuted}
       error={call.error}
       remoteAudioRef={call.remoteAudioRef}
+      audio={call.audio}
+      groupAudio={groupCall.audio}
+      connectionState={call.connectionState}
+      groupPeerStates={groupCall.peerStates}
+      username={username}
       remoteDisplayName={remoteProfile?.displayName}
       remoteAvatarUrl={remoteProfile?.avatarUrl}
       onAccept={() => {

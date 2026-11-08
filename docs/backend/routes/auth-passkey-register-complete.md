@@ -35,106 +35,82 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-req.cookies.get('ssp_ss_orgid')
+req.cookies.get('ssp_ss_orgid');
 ```
 
-
 ```ts
-req.cookies.get('ssp_ss_refresh_token')
+req.cookies.get('ssp_ss_refresh_token');
 ```
 
-
 ```ts
-req.cookies.get('ssp_pk_challenge_id')
+req.cookies.get('ssp_pk_challenge_id');
 ```
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 ```ts
-req.headers.get('user-agent')
+req.headers.get('user-agent');
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    response: RegistrationResponseJSON;
-    deviceName?: string;
-  };
+  response: RegistrationResponseJSON;
+  deviceName?: string;
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error: 'No AuthV2 refresh token found. Please log in with SchoolSoft OAuth first.',
-      },
-      { status: 400 }
-    )
+  {
+    success: false,
+    error: 'No AuthV2 refresh token found. Please log in with SchoolSoft OAuth first.',
+  },
+  { status: 400 }
+);
 ```
 
+```ts
+NextResponse.json({ success: false, error: 'No pending registration challenge.' }, { status: 400 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'No pending registration challenge.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Registration challenge expired or not found. Please try again.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Registration challenge expired or not found. Please try again.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Passkey verification failed. Please try again.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Passkey verification failed. Please try again.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: false, error: 'Passkey verification failed.' }, { status: 400 });
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Passkey verification failed.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: true, credentialId, deviceName });
 ```
-
-
-```ts
-NextResponse.json({ success: true, credentialId, deviceName })
-```
-
 
 #### Cookie writes
 
-
 ```ts
-res.cookies.set('ssp_pk_challenge_id', '', { maxAge: 0, path: '/' })
+res.cookies.set('ssp_pk_challenge_id', '', { maxAge: 0, path: '/' });
 ```
-
 
 #### Direct upstream calls
 

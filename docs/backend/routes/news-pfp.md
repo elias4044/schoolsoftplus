@@ -29,11 +29,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('id')
+searchParams.get('id');
 ```
-
 
 #### Parsed body and local type
 
@@ -41,27 +39,23 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Invalid teacher id.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid teacher id.' }, { status: 400 });
 ```
-
 
 ```ts
 new NextResponse(response.data, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': cacheControl,
-      },
-    })
+  status: 200,
+  headers: {
+    'Content-Type': contentType,
+    'Cache-Control': cacheControl,
+  },
+});
 ```
-
 
 #### Cookie writes
 
@@ -69,11 +63,9 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 api.get('/jsp/student/pictureFile.jsp?teacherId=' + id, {
-      headers: { Cookie: cookies },
-      responseType: 'arraybuffer',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'arraybuffer',
+});
 ```
-

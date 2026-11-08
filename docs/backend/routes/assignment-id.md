@@ -33,16 +33,13 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('type')
+searchParams.get('type');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('refresh')
+req.nextUrl.searchParams.get('refresh');
 ```
-
 
 #### Parsed body and local type
 
@@ -50,58 +47,48 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Planning not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Planning not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json(
-          { success: false, error: 'Planning view not found.' },
-          { status: 404 }
-        )
+NextResponse.json({ success: false, error: 'Planning view not found.' }, { status: 404 });
 ```
-
 
 ```ts
 NextResponse.json({
-        success: true,
-        type: 'planning',
-        assignment: cleanSubjectContent(view),
-        sections: Array.isArray(sections) ? cleanSubjectContent(sections) : [],
-        connectedPlannings: [],
-        assessment: normalizeAssessment(null),
-        grading: { availableColumns: [], selectedCriteria: [] },
-      })
+  success: true,
+  type: 'planning',
+  assignment: cleanSubjectContent(view),
+  sections: Array.isArray(sections) ? cleanSubjectContent(sections) : [],
+  connectedPlannings: [],
+  assessment: normalizeAssessment(null),
+  grading: { availableColumns: [], selectedCriteria: [] },
+});
 ```
-
 
 ```ts
-NextResponse.json({ success: false, error: 'Assignment not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Assignment not found.' }, { status: 404 });
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      type: 'assignment',
-      assignment,
-      sections: cleanSubjectContent(sections),
-      connectedPlannings,
-      assessment: normalizeAssessment(assessmentRaw),
-      grading: {
-        availableColumns,
-        selectedCriteria: cleanSubjectContent(selectedCriteria),
-      },
-    })
+  success: true,
+  type: 'assignment',
+  assignment,
+  sections: cleanSubjectContent(sections),
+  connectedPlannings,
+  assessment: normalizeAssessment(assessmentRaw),
+  grading: {
+    availableColumns,
+    selectedCriteria: cleanSubjectContent(selectedCriteria),
+  },
+});
 ```
-
 
 #### Cookie writes
 

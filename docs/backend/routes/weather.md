@@ -29,21 +29,17 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('lat')
+searchParams.get('lat');
 ```
 
-
 ```ts
-searchParams.get('lon')
+searchParams.get('lon');
 ```
 
-
 ```ts
-searchParams.get('city')
+searchParams.get('city');
 ```
-
 
 #### Parsed body and local type
 
@@ -51,31 +47,25 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Invalid city.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid city.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Provide lat/lon or city' }, { status: 400 })
+NextResponse.json({ error: 'Provide lat/lon or city' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data })
+NextResponse.json({ success: true, data });
 ```
 
-
 ```ts
-NextResponse.json({ error: message }, { status: 502 })
+NextResponse.json({ error: message }, { status: 502 });
 ```
-
 
 #### Cookie writes
 
@@ -111,11 +101,9 @@ No direct HTTP response; this helper transforms or fetches data.
 
 #### Upstream calls
 
-
 ```ts
-fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 86400 } })
+fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 86400 } });
 ```
-
 
 ### fetchWeatherForCoords
 
@@ -127,11 +115,9 @@ No direct HTTP response; this helper transforms or fetches data.
 
 #### Upstream calls
 
-
 ```ts
-fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 300 } })
+fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 300 } });
 ```
-
 
 ### reverseGeocode
 
@@ -143,12 +129,10 @@ No direct HTTP response; this helper transforms or fetches data.
 
 #### Upstream calls
 
-
 ```ts
 fetch(url, {
-      signal: AbortSignal.timeout(8_000),
-      headers: { 'User-Agent': 'SchoolSoftPlus/1.0' },
-      next: { revalidate: 86400 },
-    })
+  signal: AbortSignal.timeout(8_000),
+  headers: { 'User-Agent': 'SchoolSoftPlus/1.0' },
+  next: { revalidate: 86400 },
+});
 ```
-

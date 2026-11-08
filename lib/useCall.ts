@@ -22,9 +22,10 @@ import {
 } from 'firebase/firestore';
 
 import { clientDb } from './firebase';
+import { useCallAudio, type CallAudioControls } from './useCallAudio';
 import { useFirebaseAuth } from './useFirebaseAuth';
 
-/* ── ICE server config ─────────────────────────────────────── */
+/*  ICE server config  */
 function buildIceServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -43,7 +44,7 @@ function buildIceServers(): RTCIceServer[] {
   return servers;
 }
 
-/* ── Internal group peer state ─────────────────────────────── */
+/*  Internal group peer state  */
 interface PeerEntry {
   pc: RTCPeerConnection;
   connectionKey: string;
@@ -54,7 +55,7 @@ interface PeerEntry {
   unsubs: Unsubscribe[];
 }
 
-/* ── Types ──────────────────────────────────────────────────── */
+/*  Types  */
 export type CallPhase =
   | 'idle'
   | 'requesting_mic'
@@ -87,6 +88,8 @@ export interface UseCallReturn {
   hangUp: () => Promise<void>;
   toggleMute: () => void;
   remoteAudioRef: React.RefObject<HTMLAudioElement | null>;
+  audio: CallAudioControls;
+  connectionState: RTCPeerConnectionState;
 }
 
 export type GroupCallPhase = 'idle' | 'joining' | 'in_call' | 'ended' | 'failed';
@@ -103,6 +106,8 @@ export interface UseGroupCallReturn {
   error: string | null;
   isMuted: boolean;
   mutedPeers: Set<string>;
+  audio: CallAudioControls;
+  peerStates: Record<string, RTCPeerConnectionState>;
   startGroupCall: (myUsername: string, conversationId: string) => Promise<void>;
   joinGroupCall: (callId: string, conversationId: string, myUsername: string) => Promise<void>;
   leaveGroupCall: () => Promise<void>;
@@ -110,7 +115,7 @@ export interface UseGroupCallReturn {
   togglePeerMute: (username: string) => void;
 }
 
-/* ── useCall ────────────────────────────────────────────────── */
+/*  useCall  */
 export function useCall(): UseCallReturn {
   const [phase, setPhase] = useState<CallPhase>('idle');
   const [session, setSession] = useState<CallSession | null>(null);
@@ -126,58 +131,66 @@ export function useCall(): UseCallReturn {
   // Buffer for remote ICE candidates received before setRemoteDescription
   const iceCandidateBufferRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescSetRef = useRef(false);
+  const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
+  const getPeers = useCallback(() => (pcRef.current ? [pcRef.current] : []), []);
+  const getAudioElements = useCallback(
+    () => (remoteAudioRef.current ? [remoteAudioRef.current] : []),
+    []
+  );
+  const audio = useCallAudio(localStreamRef, getPeers, getAudioElements);
+  const { requestMicrophone, releaseMicrophone, playRemoteAudio } = audio;
 
-  /* ── cleanup ─────────────────────────────────────────── */
-  const cleanup = useCallback(async (markEnded = false) => {
-    if (ringTimeoutRef.current) {
-      clearTimeout(ringTimeoutRef.current);
-      ringTimeoutRef.current = null;
-    }
-
-    for (const unsub of unsubsRef.current) unsub();
-    unsubsRef.current = [];
-
-    iceCandidateBufferRef.current = [];
-    remoteDescSetRef.current = false;
-
-    if (markEnded && callIdRef.current) {
-      try {
-        const callId = callIdRef.current;
-        const batch = writeBatch(clientDb);
-        const [callerSnap, calleeSnap] = await Promise.all([
-          getDocs(collection(clientDb, 'calls_v1', callId, 'callerCandidates')),
-          getDocs(collection(clientDb, 'calls_v1', callId, 'calleeCandidates')),
-        ]);
-        callerSnap.docs.forEach((d) => batch.delete(d.ref));
-        calleeSnap.docs.forEach((d) => batch.delete(d.ref));
-        batch.delete(doc(clientDb, 'calls_v1', callId));
-        await batch.commit();
-      } catch {
-        /* ignore — may already be deleted by the other party */
+  /*  cleanup  */
+  const cleanup = useCallback(
+    async (markEnded = false) => {
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current);
+        ringTimeoutRef.current = null;
       }
-    }
 
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
-    }
+      for (const unsub of unsubsRef.current) unsub();
+      unsubsRef.current = [];
 
-    if (pcRef.current) {
-      pcRef.current.ontrack = null;
-      pcRef.current.onicecandidate = null;
-      pcRef.current.onconnectionstatechange = null;
-      pcRef.current.close();
-      pcRef.current = null;
-    }
+      iceCandidateBufferRef.current = [];
+      remoteDescSetRef.current = false;
 
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-    }
+      const endedCallId = callIdRef.current;
+      callIdRef.current = null;
+      releaseMicrophone();
 
-    callIdRef.current = null;
-  }, []);
+      if (pcRef.current) {
+        pcRef.current.ontrack = null;
+        pcRef.current.onicecandidate = null;
+        pcRef.current.onconnectionstatechange = null;
+        pcRef.current.close();
+        pcRef.current = null;
+      }
 
-  /* ── ICE candidate helpers ───────────────────────────── */
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
+
+      if (markEnded && endedCallId) {
+        try {
+          const callId = endedCallId;
+          const batch = writeBatch(clientDb);
+          const [callerSnap, calleeSnap] = await Promise.all([
+            getDocs(collection(clientDb, 'calls_v1', callId, 'callerCandidates')),
+            getDocs(collection(clientDb, 'calls_v1', callId, 'calleeCandidates')),
+          ]);
+          callerSnap.docs.forEach((d) => batch.delete(d.ref));
+          calleeSnap.docs.forEach((d) => batch.delete(d.ref));
+          batch.delete(doc(clientDb, 'calls_v1', callId));
+          await batch.commit();
+        } catch {
+          /* ignore — may already be deleted by the other party */
+        }
+      }
+    },
+    [releaseMicrophone]
+  );
+
+  /*  ICE candidate helpers  */
   // Add a remote candidate — buffer it if remote description isn't set yet
   const addRemoteCandidate = useCallback(
     async (pc: RTCPeerConnection, candidate: RTCIceCandidateInit) => {
@@ -209,7 +222,7 @@ export function useCall(): UseCallReturn {
     }
   }, []);
 
-  /* ── createPeerConnection ─────────────────────────────── */
+  /*  createPeerConnection  */
   const createPeerConnection = useCallback((): RTCPeerConnection => {
     const pc = new RTCPeerConnection({ iceServers: buildIceServers() });
 
@@ -217,12 +230,16 @@ export function useCall(): UseCallReturn {
       const [stream] = event.streams;
       if (stream && remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream;
-        remoteAudioRef.current.play().catch(() => {});
+        void playRemoteAudio(remoteAudioRef.current);
       }
     };
 
     pc.onconnectionstatechange = () => {
+      if (pcRef.current !== pc) return;
+      if (pcRef.current !== pc) return;
       const state = pc.connectionState;
+      setConnectionState(state);
+      setConnectionState(state);
       if (state === 'connected') {
         setPhase('in_call');
       } else if (state === 'failed') {
@@ -248,9 +265,9 @@ export function useCall(): UseCallReturn {
     };
 
     return pc;
-  }, [cleanup]);
+  }, [cleanup, playRemoteAudio]);
 
-  /* ── startCall (outgoing) ─────────────────────────────── */
+  /*  startCall (outgoing)  */
   const startCall = useCallback(
     async (myUsername: string, calleeUserId: string) => {
       if (phase !== 'idle') return;
@@ -261,7 +278,7 @@ export function useCall(): UseCallReturn {
       try {
         setPhase('requesting_mic');
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await requestMicrophone();
         localStreamRef.current = stream;
 
         const pc = createPeerConnection();
@@ -296,6 +313,10 @@ export function useCall(): UseCallReturn {
           expireAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
         });
 
+        if (pcRef.current !== pc) {
+          await deleteDoc(callDocRef).catch(() => {});
+          return;
+        }
         setSession({ callId: callDocRef.id, remoteUsername: calleeUserId, isOutgoing: true });
         setPhase('calling');
 
@@ -308,6 +329,7 @@ export function useCall(): UseCallReturn {
 
         // Listen for answer, decline, and end
         const unsubCall = onSnapshot(callDocRef, async (snap) => {
+          if (pcRef.current !== pc) return;
           if (!snap.exists()) {
             setPhase('ended');
             cleanup(false);
@@ -360,6 +382,7 @@ export function useCall(): UseCallReturn {
         });
         unsubsRef.current.push(unsubCallee);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         const msg =
           err instanceof Error
             ? err.name === 'NotAllowedError'
@@ -371,10 +394,17 @@ export function useCall(): UseCallReturn {
         await cleanup(false);
       }
     },
-    [phase, createPeerConnection, cleanup, addRemoteCandidate, drainCandidateBuffer]
+    [
+      phase,
+      createPeerConnection,
+      cleanup,
+      addRemoteCandidate,
+      drainCandidateBuffer,
+      requestMicrophone,
+    ]
   );
 
-  /* ── acceptCall (incoming) ────────────────────────────── */
+  /*  acceptCall (incoming)  */
   const acceptCall = useCallback(
     async (callId: string, callerUserId: string, myUsername: string) => {
       if (phase !== 'idle') return;
@@ -385,7 +415,7 @@ export function useCall(): UseCallReturn {
       try {
         setPhase('requesting_mic');
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await requestMicrophone();
         localStreamRef.current = stream;
 
         const pc = createPeerConnection();
@@ -397,6 +427,7 @@ export function useCall(): UseCallReturn {
 
         const callDocRef = doc(clientDb, 'calls_v1', callId);
         const callSnap = await getDoc(callDocRef);
+        if (pcRef.current !== pc) return;
         if (!callSnap.exists()) throw new Error('Call session not found.');
 
         const callData = callSnap.data();
@@ -425,6 +456,7 @@ export function useCall(): UseCallReturn {
           expireAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
         });
 
+        if (pcRef.current !== pc) return;
         setPhase('connecting');
 
         // Caller's ICE candidates — remote desc is already set so add directly
@@ -461,6 +493,7 @@ export function useCall(): UseCallReturn {
         });
         unsubsRef.current.push(unsubCall);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         const msg =
           err instanceof Error
             ? err.name === 'NotAllowedError'
@@ -472,10 +505,10 @@ export function useCall(): UseCallReturn {
         await cleanup(false);
       }
     },
-    [phase, createPeerConnection, cleanup]
+    [phase, createPeerConnection, cleanup, requestMicrophone]
   );
 
-  /* ── declineCall ──────────────────────────────────────── */
+  /*  declineCall  */
   const declineCall = useCallback(async (callId: string) => {
     try {
       // Signal "declined" first so the caller sees the explicit status,
@@ -497,24 +530,17 @@ export function useCall(): UseCallReturn {
     }
   }, []);
 
-  /* ── hangUp ───────────────────────────────────────────── */
+  /*  hangUp  */
   const hangUp = useCallback(async () => {
-    // Write status: "ended" before deleting so the other party's onSnapshot
-    // fires the status change and transitions to ended immediately.
-    if (callIdRef.current) {
-      try {
-        await updateDoc(doc(clientDb, 'calls_v1', callIdRef.current), {
-          status: 'ended',
-        });
-      } catch {
-        /* ignore — might already be deleted */
-      }
-    }
+    const callId = callIdRef.current;
     setPhase('ended');
-    await cleanup(true);
+    const cleaning = cleanup(true);
+    if (callId)
+      await updateDoc(doc(clientDb, 'calls_v1', callId), { status: 'ended' }).catch(() => {});
+    await cleaning;
   }, [cleanup]);
 
-  /* ── toggleMute ───────────────────────────────────────── */
+  /*  toggleMute  */
   const toggleMute = useCallback(() => {
     if (!localStreamRef.current) return;
     const next = !isMuted;
@@ -524,16 +550,16 @@ export function useCall(): UseCallReturn {
     setIsMuted(next);
   }, [isMuted]);
 
-  /* ── cleanup on unmount ───────────────────────────────── */
+  /*  cleanup on unmount  */
   useEffect(() => {
     return () => {
-      const shouldMarkEnded = phase === 'in_call' || phase === 'calling' || phase === 'connecting';
+      const shouldMarkEnded = Boolean(callIdRef.current);
       cleanup(shouldMarkEnded);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── reset to idle after ended / failed / declined ──── */
+  /*  reset to idle after ended / failed / declined  */
   useEffect(() => {
     if (phase === 'ended' || phase === 'failed' || phase === 'declined') {
       const t = setTimeout(() => {
@@ -556,6 +582,8 @@ export function useCall(): UseCallReturn {
     hangUp,
     toggleMute,
     remoteAudioRef,
+    audio,
+    connectionState,
   };
 }
 
@@ -574,8 +602,16 @@ export function useGroupCall(): UseGroupCallReturn {
   const myUsernameRef = useRef<string>('');
   const localStreamRef = useRef<MediaStream | null>(null);
   const unsubsRef = useRef<Unsubscribe[]>([]);
+  const [peerStates, setPeerStates] = useState<Record<string, RTCPeerConnectionState>>({});
+  const getPeers = useCallback(() => [...peersRef.current.values()].map((entry) => entry.pc), []);
+  const getAudioElements = useCallback(
+    () => [...peersRef.current.values()].map((entry) => entry.audioElement),
+    []
+  );
+  const audio = useCallAudio(localStreamRef, getPeers, getAudioElements);
+  const { requestMicrophone, releaseMicrophone, playRemoteAudio } = audio;
 
-  /* ── cleanup a single peer ──────────────────────────── */
+  /*  cleanup a single peer  */
   const cleanupPeer = useCallback((username: string) => {
     const entry = peersRef.current.get(username);
     if (!entry) return;
@@ -589,7 +625,7 @@ export function useGroupCall(): UseGroupCallReturn {
     peersRef.current.delete(username);
   }, []);
 
-  /* ── cleanup everything ─────────────────────────────── */
+  /*  cleanup everything  */
   const cleanupAll = useCallback(
     async (removeFromFirestore = false) => {
       for (const unsub of unsubsRef.current) unsub();
@@ -599,12 +635,14 @@ export function useGroupCall(): UseGroupCallReturn {
         cleanupPeer(username);
       }
 
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
+      releaseMicrophone();
+      setPeerStates({});
 
-      if (removeFromFirestore && callIdRef.current) {
-        const callId = callIdRef.current;
-        const myUsername = myUsernameRef.current;
+      const callId = callIdRef.current;
+      const myUsername = myUsernameRef.current;
+      callIdRef.current = null;
+      myUsernameRef.current = '';
+      if (removeFromFirestore && callId) {
         try {
           const callRef = doc(clientDb, 'group_calls_v2', callId);
           const callSnap = await getDoc(callRef);
@@ -645,14 +683,11 @@ export function useGroupCall(): UseGroupCallReturn {
           /* ignore */
         }
       }
-
-      callIdRef.current = null;
-      myUsernameRef.current = '';
     },
-    [cleanupPeer]
+    [cleanupPeer, releaseMicrophone]
   );
 
-  /* ── create a PeerConnection for a group participant ── */
+  /*  create a PeerConnection for a group participant  */
   const createGroupPeer = useCallback(
     (
       peerUsername: string,
@@ -678,11 +713,13 @@ export function useGroupCall(): UseGroupCallReturn {
         const [stream] = event.streams;
         if (stream) {
           audioElement.srcObject = stream;
-          audioElement.play().catch(() => {});
+          void playRemoteAudio(audioElement);
         }
       };
 
       pc.onconnectionstatechange = () => {
+        if (peersRef.current.get(peerUsername)?.pc !== pc) return;
+        setPeerStates((previous) => ({ ...previous, [peerUsername]: pc.connectionState }));
         if (pc.connectionState === 'failed') {
           pc.restartIce();
         } else if (pc.connectionState === 'disconnected') {
@@ -727,10 +764,10 @@ export function useGroupCall(): UseGroupCallReturn {
 
       return entry;
     },
-    [cleanupPeer]
+    [cleanupPeer, playRemoteAudio]
   );
 
-  /* ── add a remote ICE candidate (with buffering) ──── */
+  /*  add a remote ICE candidate (with buffering)  */
   const addGroupCandidate = useCallback(
     async (entry: PeerEntry, candidate: RTCIceCandidateInit) => {
       if (entry.remoteDescSet && entry.pc.signalingState !== 'closed') {
@@ -746,7 +783,7 @@ export function useGroupCall(): UseGroupCallReturn {
     []
   );
 
-  /* ── drain buffered ICE candidates ─────────────────── */
+  /*  drain buffered ICE candidates  */
   const drainGroupBuffer = useCallback(async (entry: PeerEntry) => {
     entry.remoteDescSet = true;
     const buffered = entry.candidateBuffer.splice(0);
@@ -761,7 +798,7 @@ export function useGroupCall(): UseGroupCallReturn {
     }
   }, []);
 
-  /* ── connect to an existing peer (we are the joiner) */
+  /*  connect to an existing peer (we are the joiner) */
   const connectToExistingPeer = useCallback(
     async (peerUsername: string, callId: string, myUsername: string) => {
       if (peersRef.current.has(peerUsername)) return;
@@ -831,7 +868,7 @@ export function useGroupCall(): UseGroupCallReturn {
     [createGroupPeer, drainGroupBuffer, addGroupCandidate, cleanupPeer]
   );
 
-  /* ── respond to an incoming connection (we are responderUserId) */
+  /*  respond to an incoming connection (we are responderUserId) */
   const handleIncomingConnection = useCallback(
     async (
       initiatorUsername: string,
@@ -889,7 +926,7 @@ export function useGroupCall(): UseGroupCallReturn {
     [createGroupPeer, drainGroupBuffer, addGroupCandidate, cleanupPeer]
   );
 
-  /* ── subscribe to Firestore group call events ────── */
+  /*  subscribe to Firestore group call events  */
   const subscribeToGroupCall = useCallback(
     (callId: string, myUsername: string) => {
       const callRef = doc(clientDb, 'group_calls_v2', callId);
@@ -927,7 +964,7 @@ export function useGroupCall(): UseGroupCallReturn {
     [cleanupAll, handleIncomingConnection]
   );
 
-  /* ── startGroupCall ─────────────────────────────── */
+  /*  startGroupCall  */
   const startGroupCall = useCallback(
     async (myUsername: string, conversationId: string) => {
       if (phase !== 'idle') return;
@@ -937,7 +974,7 @@ export function useGroupCall(): UseGroupCallReturn {
         setPhase('joining');
         myUsernameRef.current = myUsername;
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await requestMicrophone();
         localStreamRef.current = stream;
 
         const callDocRef = doc(collection(clientDb, 'group_calls_v2'));
@@ -952,11 +989,16 @@ export function useGroupCall(): UseGroupCallReturn {
           expireAt: Timestamp.fromMillis(Date.now() + 4 * 60 * 60 * 1000),
         });
 
+        if (callIdRef.current !== callDocRef.id || localStreamRef.current !== stream) {
+          await deleteDoc(callDocRef).catch(() => {});
+          return;
+        }
         setSession({ callId: callDocRef.id, conversationId, participantIds: [myUsername] });
         setPhase('in_call');
 
         subscribeToGroupCall(callDocRef.id, myUsername);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         const msg =
           err instanceof Error
             ? err.name === 'NotAllowedError'
@@ -968,10 +1010,10 @@ export function useGroupCall(): UseGroupCallReturn {
         await cleanupAll(false);
       }
     },
-    [phase, cleanupAll, subscribeToGroupCall]
+    [phase, cleanupAll, subscribeToGroupCall, requestMicrophone]
   );
 
-  /* ── joinGroupCall ──────────────────────────────── */
+  /*  joinGroupCall  */
   const joinGroupCall = useCallback(
     async (callId: string, conversationId: string, myUsername: string) => {
       if (phase !== 'idle') return;
@@ -981,7 +1023,7 @@ export function useGroupCall(): UseGroupCallReturn {
         setPhase('joining');
         myUsernameRef.current = myUsername;
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await requestMicrophone();
         localStreamRef.current = stream;
         callIdRef.current = callId;
 
@@ -997,6 +1039,10 @@ export function useGroupCall(): UseGroupCallReturn {
           return current;
         });
 
+        if (callIdRef.current !== callId || localStreamRef.current !== stream) {
+          await updateDoc(callRef, { participantIds: arrayRemove(myUsername) }).catch(() => {});
+          return;
+        }
         setSession({
           callId,
           conversationId,
@@ -1010,6 +1056,7 @@ export function useGroupCall(): UseGroupCallReturn {
 
         subscribeToGroupCall(callId, myUsername);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         const msg =
           err instanceof Error
             ? err.name === 'NotAllowedError'
@@ -1021,10 +1068,10 @@ export function useGroupCall(): UseGroupCallReturn {
         await cleanupAll(false);
       }
     },
-    [phase, cleanupAll, connectToExistingPeer, subscribeToGroupCall]
+    [phase, cleanupAll, connectToExistingPeer, subscribeToGroupCall, requestMicrophone]
   );
 
-  /* ── leaveGroupCall ─────────────────────────────── */
+  /*  leaveGroupCall  */
   const leaveGroupCall = useCallback(async () => {
     setPhase('ended');
     await cleanupAll(true);
@@ -1036,7 +1083,7 @@ export function useGroupCall(): UseGroupCallReturn {
     }, 2_000);
   }, [cleanupAll]);
 
-  /* ── toggleMute (local mic) ─────────────────────── */
+  /*  toggleMute (local mic)  */
   const toggleMute = useCallback(() => {
     if (!localStreamRef.current) return;
     const next = !isMuted;
@@ -1046,7 +1093,7 @@ export function useGroupCall(): UseGroupCallReturn {
     setIsMuted(next);
   }, [isMuted]);
 
-  /* ── togglePeerMute (mute a remote participant locally) */
+  /*  togglePeerMute (mute a remote participant locally) */
   const togglePeerMute = useCallback((username: string) => {
     const entry = peersRef.current.get(username);
     if (entry) {
@@ -1063,17 +1110,15 @@ export function useGroupCall(): UseGroupCallReturn {
     });
   }, []);
 
-  /* ── cleanup on unmount ─────────────────────────── */
+  /*  cleanup on unmount  */
   useEffect(() => {
     return () => {
-      if (phase === 'in_call' || phase === 'joining') {
-        cleanupAll(true);
-      }
+      void cleanupAll(Boolean(callIdRef.current));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── reset to idle after ended / failed ─────────── */
+  /*  reset to idle after ended / failed  */
   useEffect(() => {
     if (phase === 'ended' || phase === 'failed') {
       const t = setTimeout(() => {
@@ -1092,6 +1137,8 @@ export function useGroupCall(): UseGroupCallReturn {
     error,
     isMuted,
     mutedPeers,
+    audio,
+    peerStates,
     startGroupCall,
     joinGroupCall,
     leaveGroupCall,

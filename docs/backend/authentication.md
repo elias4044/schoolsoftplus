@@ -4,17 +4,17 @@ The backend supports classic browser cookies, browser OAuth with PKCE, mobile to
 
 ## Choose a flow
 
-| Need | Entry point | Result |
-| --- | --- | --- |
-| Classic browser login | `POST /api/login` | SSP browser cookies; no SchoolSoft access token |
-| Browser SchoolSoft OAuth | `GET /api/auth/v2/initiate` | Redirect, PKCE cookie, callback, browser cookies and SchoolSoft tokens |
-| Browser SAML login | `GET /api/auth/v2/initiate/external` | Same callback, direct SchoolSoft SAML entry |
-| Native app password exchange | `POST /api/auth/login` | Raw SchoolSoft token fields in JSON |
-| Native app browser PKCE | `GET /api/auth/login`, then `POST /api/auth/token` | SSP-signed mobile JWT, not browser cookies |
-| Native app SchoolSoft token refresh | `POST /api/auth/refresh` | Raw refreshed SchoolSoft token fields |
-| Convert a SchoolSoft token to session material | `GET /api/auth/session` | SSP cookie values and upstream Cookie header in JSON; no Set-Cookie installation |
-| Login using a saved refresh token | `POST /api/auth/v2/refresh-token-login` | Verified AuthV2 browser cookies |
-| Passkey login | Begin and complete authentication endpoints | Verified AuthV2 browser cookies |
+| Need                                           | Entry point                                        | Result                                                                           |
+| ---------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Classic browser login                          | `POST /api/login`                                  | SSP browser cookies; no SchoolSoft access token                                  |
+| Browser SchoolSoft OAuth                       | `GET /api/auth/v2/initiate`                        | Redirect, PKCE cookie, callback, browser cookies and SchoolSoft tokens           |
+| Browser SAML login                             | `GET /api/auth/v2/initiate/external`               | Same callback, direct SchoolSoft SAML entry                                      |
+| Native app password exchange                   | `POST /api/auth/login`                             | Raw SchoolSoft token fields in JSON                                              |
+| Native app browser PKCE                        | `GET /api/auth/login`, then `POST /api/auth/token` | SSP-signed mobile JWT, not browser cookies                                       |
+| Native app SchoolSoft token refresh            | `POST /api/auth/refresh`                           | Raw refreshed SchoolSoft token fields                                            |
+| Convert a SchoolSoft token to session material | `GET /api/auth/session`                            | SSP cookie values and upstream Cookie header in JSON; no Set-Cookie installation |
+| Login using a saved refresh token              | `POST /api/auth/v2/refresh-token-login`            | Verified AuthV2 browser cookies                                                  |
+| Passkey login                                  | Begin and complete authentication endpoints        | Verified AuthV2 browser cookies                                                  |
 
 ## Classic browser login
 
@@ -75,11 +75,14 @@ Complete accepts `{response: RegistrationResponseJSON,deviceName?}` and also req
 
 ```js
 // In a client with @simplewebauthn/browser installed:
-const begin = await fetch('/api/auth/passkey/register/begin', { method: 'POST' }).then(r => r.json());
+const begin = await fetch('/api/auth/passkey/register/begin', { method: 'POST' }).then((r) =>
+  r.json()
+);
 const response = await startRegistration({ optionsJSON: begin.options });
 await fetch('/api/auth/passkey/register/complete', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ response, deviceName: 'My laptop' })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ response, deviceName: 'My laptop' }),
 });
 ```
 
@@ -93,15 +96,15 @@ After verifying the assertion, the handler checks counter progression (zero stor
 
 All these cookie writers use path `/`, SameSite Lax where specified, and Secure in production. Cookie lifetime is not proof that SchoolSoft still accepts the underlying session.
 
-| Cookie family | Typical lifetime | Purpose |
-| --- | --- | --- |
-| `ssp_jsessionid`, `ssp_hash`, `ssp_usertype` | Seven days on login | Browser session bridge |
-| `ssp_school`, `ssp_username`, `ssp_userid`, `ssp_ss_orgid` | Varies by writer, seven or thirty days | Context and display metadata; never authoritative identity |
-| `ssp_ss_token`, `ssp_ss_refresh_token` | Thirty days | AuthV2 recovery; HttpOnly |
-| `ssp_ss_token_expires` | Thirty days | Browser-readable access-token expiry in seconds |
-| `ssp_auth_type` | Thirty days in shared AuthV2 writer; seven in passkey completion | Marks token-backed sessions |
-| `ssp_v2_pkce` | Ten minutes | Browser PKCE verifier/state |
-| `ssp_pk_challenge_id`, `ssp_pk_auth_challenge_id` | Five minutes | WebAuthn ceremony references |
+| Cookie family                                              | Typical lifetime                                                 | Purpose                                                    |
+| ---------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| `ssp_jsessionid`, `ssp_hash`, `ssp_usertype`               | Seven days on login                                              | Browser session bridge                                     |
+| `ssp_school`, `ssp_username`, `ssp_userid`, `ssp_ss_orgid` | Varies by writer, seven or thirty days                           | Context and display metadata; never authoritative identity |
+| `ssp_ss_token`, `ssp_ss_refresh_token`                     | Thirty days                                                      | AuthV2 recovery; HttpOnly                                  |
+| `ssp_ss_token_expires`                                     | Thirty days                                                      | Browser-readable access-token expiry in seconds            |
+| `ssp_auth_type`                                            | Thirty days in shared AuthV2 writer; seven in passkey completion | Marks token-backed sessions                                |
+| `ssp_v2_pkce`                                              | Ten minutes                                                      | Browser PKCE verifier/state                                |
+| `ssp_pk_challenge_id`, `ssp_pk_auth_challenge_id`          | Five minutes                                                     | WebAuthn ceremony references                               |
 
 HttpOnly flags for account/organization metadata differ between writers. The route contract extracts show each actual cookie call. `applySessionCookieUpdates` refreshes classic bridge cookies with seven-day defaults and selected identity/token metadata for thirty days.
 

@@ -34,62 +34,48 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { title?: string; body?: string; type?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json(
-      { error: 'Server is not configured for issue creation. Please contact the admin.' },
-      { status: 503 }
-    )
+  { error: 'Server is not configured for issue creation. Please contact the admin.' },
+  { status: 503 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ error: 'Title is required.' }, { status: 400 })
+NextResponse.json({ error: 'Title is required.' }, { status: 400 });
 ```
-
 
 ```ts
-NextResponse.json({ error: 'Title is too long (max 256 chars).' }, { status: 400 })
+NextResponse.json({ error: 'Title is too long (max 256 chars).' }, { status: 400 });
 ```
-
 
 ```ts
-NextResponse.json(
-      { error: 'Failed to create issue. Please try again later.' },
-      { status: 502 }
-    )
+NextResponse.json({ error: 'Failed to create issue. Please try again later.' }, { status: 502 });
 ```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    number: issue.number,
-    html_url: issue.html_url,
-  })
+  success: true,
+  number: issue.number,
+  html_url: issue.html_url,
+});
 ```
-
 
 #### Cookie writes
 
@@ -97,19 +83,17 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 fetch(API, {
-    signal: AbortSignal.timeout(8_000),
-    method: 'POST',
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-      'User-Agent': 'schoolsoftplus-app',
-    },
-    body: JSON.stringify({ title: title.trim(), body: issueBody, labels }),
-  })
+  signal: AbortSignal.timeout(8_000),
+  method: 'POST',
+  headers: {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json',
+    'User-Agent': 'schoolsoftplus-app',
+  },
+  body: JSON.stringify({ title: title.trim(), body: issueBody, labels }),
+});
 ```
-

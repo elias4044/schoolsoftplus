@@ -32,11 +32,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('week')
+req.nextUrl.searchParams.get('week');
 ```
-
 
 #### Parsed body and local type
 
@@ -44,21 +42,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid week number.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid week number.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, schedule, week })
+NextResponse.json({ success: true, schedule, week });
 ```
-
 
 #### Cookie writes
 
@@ -66,14 +60,12 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 api.get(`/rest-api/student/calendar/lessons/week/${week}`, {
-      headers: { Cookie: cookies, Accept: 'application/json' },
-      responseType: 'json',
-    })
+  headers: { Cookie: cookies, Accept: 'application/json' },
+  responseType: 'json',
+});
 ```
-
 
 ## Local helper behavior
 

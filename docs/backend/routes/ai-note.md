@@ -34,77 +34,59 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    action?: string;
-    content?: string;
-    selection?: string;
-    title?: string;
-  };
+  action?: string;
+  content?: string;
+  selection?: string;
+  title?: string;
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 })
+NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        message: `Invalid action. Valid: ${Object.keys(ACTION_PROMPTS).join(', ')}`,
-      },
-      { status: 400 }
-    )
+  {
+    success: false,
+    message: `Invalid action. Valid: ${Object.keys(ACTION_PROMPTS).join(', ')}`,
+  },
+  { status: 400 }
+);
 ```
 
+```ts
+NextResponse.json({ success: false, message: 'Note content is empty.' }, { status: 400 });
+```
+
+```ts
+NextResponse.json({ success: false, message: 'No response from AI.' }, { status: 500 });
+```
+
+```ts
+NextResponse.json({ success: true, result: text, action });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, message: 'Note content is empty.' },
-      { status: 400 }
-    )
+  { success: false, message: 'AI request failed.', error: (err as Error).message },
+  { status: 500 }
+);
 ```
-
-
-```ts
-NextResponse.json(
-        { success: false, message: 'No response from AI.' },
-        { status: 500 }
-      )
-```
-
-
-```ts
-NextResponse.json({ success: true, result: text, action })
-```
-
-
-```ts
-NextResponse.json(
-      { success: false, message: 'AI request failed.', error: (err as Error).message },
-      { status: 500 }
-    )
-```
-
 
 #### Cookie writes
 
@@ -112,16 +94,14 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 genAI.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction:
-          'You are a precise writing assistant. Follow instructions exactly. ' +
-          'Never add preambles, explanations, or meta-commentary. Return only what was asked for.',
-      },
-    })
+  model: 'gemini-3.1-flash-lite',
+  contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  config: {
+    systemInstruction:
+      'You are a precise writing assistant. Follow instructions exactly. ' +
+      'Never add preambles, explanations, or meta-commentary. Return only what was asked for.',
+  },
+});
 ```
-

@@ -33,21 +33,17 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('view')
+req.nextUrl.searchParams.get('view');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('refresh')
+req.nextUrl.searchParams.get('refresh');
 ```
 
-
 ```ts
-req.nextUrl.searchParams.get('includeAssessment')
+req.nextUrl.searchParams.get('includeAssessment');
 ```
-
 
 #### Parsed body and local type
 
@@ -55,37 +51,33 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, assignments })
+NextResponse.json({ success: true, assignments });
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      subject: {
-        ...room,
-        ...(assessmentLink
-          ? { holisticAssessmentId: assessmentLink.subject?.holisticAssessmentId ?? null }
-          : {}),
-      },
-      ...(assessmentLink
-        ? { assessmentLink: assessmentLink.status, assessmentSummary: assessmentLink.subject }
-        : {}),
-      overview: {
-        examinations: examinationsRes.data,
-        submissions: submissionsRes.data,
-      },
-      assignments: assignmentsRes.data,
-    })
+  success: true,
+  subject: {
+    ...room,
+    ...(assessmentLink
+      ? { holisticAssessmentId: assessmentLink.subject?.holisticAssessmentId ?? null }
+      : {}),
+  },
+  ...(assessmentLink
+    ? { assessmentLink: assessmentLink.status, assessmentSummary: assessmentLink.subject }
+    : {}),
+  overview: {
+    examinations: examinationsRes.data,
+    submissions: submissionsRes.data,
+  },
+  assignments: assignmentsRes.data,
+});
 ```
-
 
 #### Cookie writes
 

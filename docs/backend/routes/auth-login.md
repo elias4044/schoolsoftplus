@@ -1,6 +1,6 @@
 # /api/auth/login
 
-GET creates a stateless mobile PKCE URL, verifier, and state for the app to retain. POST performs password-to-code-to-SchoolSoft-token exchange and returns raw SchoolSoft token fields, despite older comments describing an SSP JWT. Neither method installs browser cookies. Actual paths are /api/auth/*, not the old /api/mobile/* comment paths.
+GET creates a stateless mobile PKCE URL, verifier, and state for the app to retain. POST performs password-to-code-to-SchoolSoft-token exchange and returns raw SchoolSoft token fields, despite older comments describing an SSP JWT. Neither method installs browser cookies. Actual paths are /api/auth/_, not the old /api/mobile/_ comment paths.
 
 [Domain guide](../authentication.md) | [Common validation and errors](../architecture.md) | [All routes](README.md)
 
@@ -32,21 +32,17 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('school')
+searchParams.get('school');
 ```
 
-
 ```ts
-searchParams.get('orgid')
+searchParams.get('orgid');
 ```
 
-
 ```ts
-searchParams.get('redirect_uri')
+searchParams.get('redirect_uri');
 ```
-
 
 #### Parsed body and local type
 
@@ -54,11 +50,9 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: true, authUrl, verifier, state })
+NextResponse.json({ success: true, authUrl, verifier, state });
 ```
-
 
 #### Cookie writes
 
@@ -87,74 +81,62 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 ```ts
-req.headers.get('x-school')
+req.headers.get('x-school');
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    username?: string;
-    password?: string;
-    school?: string;
-    orgid?: string;
-  };
+  username?: string;
+  password?: string;
+  school?: string;
+  orgid?: string;
+};
 ```
-
 
 #### Response branches
 
+```ts
+NextResponse.json(
+  { success: false, error: 'username and password are required.' },
+  { status: 400 }
+);
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'username and password are required.' },
-      { status: 400 }
-    )
+  { success: false, error: loginRes.data?.userMessage || 'Authentication failed.' },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-        { success: false, error: loginRes.data?.userMessage || 'Authentication failed.' },
-        { status: 401 }
-      )
+  { success: false, error: 'Authentication failed \u2014 no authorization code returned.' },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-        { success: false, error: 'Authentication failed \u2014 no authorization code returned.' },
-        { status: 401 }
-      )
+  { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
-      { status: 502 }
-    )
+NextResponse.json({ success: false, error: 'Token exchange failed.' }, { status: 401 });
 ```
-
 
 ```ts
-NextResponse.json({ success: false, error: 'Token exchange failed.' }, { status: 401 })
+NextResponse.json({ success: true, ...tokenResult });
 ```
-
-
-```ts
-NextResponse.json({ success: true, ...tokenResult })
-```
-
 
 #### Cookie writes
 
@@ -162,14 +144,12 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 axios.get(passwordLoginUrl, {
-      timeout: 8_000,
-      signal: AbortSignal.timeout(8_000),
-      maxRedirects: 0,
-      headers: { Accept: 'application/json', 'User-Agent': 'SchoolSoftPlus-Mobile/1.0' },
-      validateStatus: () => true,
-    })
+  timeout: 8_000,
+  signal: AbortSignal.timeout(8_000),
+  maxRedirects: 0,
+  headers: { Accept: 'application/json', 'User-Agent': 'SchoolSoftPlus-Mobile/1.0' },
+  validateStatus: () => true,
+});
 ```
-

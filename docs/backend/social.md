@@ -16,10 +16,11 @@ The helper stores userId and updatedAt on every upsert and joinedAt only on crea
 
 ```js
 await fetch('/api/profile', {
-  method: 'PUT', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ displayName: 'Alex', bio: 'Learning biology', accentColor: '#337755' })
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ displayName: 'Alex', bio: 'Learning biology', accentColor: '#337755' }),
 });
-const users = await fetch('/api/users/search?q=student').then(r => r.json());
+const users = await fetch('/api/users/search?q=student').then((r) => r.json());
 ```
 
 ## Friends
@@ -31,7 +32,7 @@ const users = await fetch('/api/users/search?q=student').then(r => r.json());
 `PATCH /api/friends` takes `{fromUsername,accept?}`. Omitted accept means true; false declines. Only a pending request from that requester can be answered. Missing/mismatched requests are 404. Success is `{success,friendship}`. `DELETE` takes `{targetUsername}` and removes the relationship if present; missing relationships still return `{success:true}`.
 
 ```json
-{"fromUsername":"12346","accept":true}
+{ "fromUsername": "12346", "accept": true }
 ```
 
 ## Conversations
@@ -43,21 +44,27 @@ const users = await fetch('/api/users/search?q=student').then(r => r.json());
 A group request uses `{type:"group",groupName,groupDescription?,encrypted?,members:[...]}`. A nonblank name and at least one other member are required; profiles must exist. The creator becomes admin, duplicates/self are removed, and the group has at most fifty participants. The route does not require friendships for group creation. Group names allow eighty characters, description two hundred. New groups capture participant display names and pictures and return the conversation.
 
 ```json
-{"type":"group","groupName":"Biology revision","groupDescription":"Chapter 4","members":["12346","12347"],"encrypted":false}
+{
+  "type": "group",
+  "groupName": "Biology revision",
+  "groupDescription": "Chapter 4",
+  "members": ["12346", "12347"],
+  "encrypted": false
+}
 ```
 
 `GET /api/conversations/[conversationId]` checks membership, then returns `{success,messages}` with the latest sixty messages in chronological order. `?pinned=true` selects all nondeleted pinned messages instead. It does not return conversation metadata or mark the conversation read. Ordinary message reads include soft-deleted records; the consumer must handle deletedAt.
 
 `PATCH /api/conversations/[conversationId]` uses an action:
 
-| Action | Fields | Authorization and result |
-| --- | --- | --- |
-| mark_read | None | Any participant, including DMs; `{success:true}`. Transaction skips if lastReadAt already reaches lastAt. |
-| rename | groupName and/or groupDescription | Group admin; `{success,conversation}`. An empty patch can succeed. |
-| add_member | targetUsername | Group admin; profile must exist; existing member is a no-op; full group is 409. |
-| remove_member | targetUsername | Admin can remove another member; a member can remove themselves. |
-| leave | None | Remove caller. If admin leaves, the first remaining participant becomes admin; an empty group remains with null admin. |
-| transfer_admin | targetUsername | Current admin; target must already participate. |
+| Action         | Fields                            | Authorization and result                                                                                               |
+| -------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| mark_read      | None                              | Any participant, including DMs; `{success:true}`. Transaction skips if lastReadAt already reaches lastAt.              |
+| rename         | groupName and/or groupDescription | Group admin; `{success,conversation}`. An empty patch can succeed.                                                     |
+| add_member     | targetUsername                    | Group admin; profile must exist; existing member is a no-op; full group is 409.                                        |
+| remove_member  | targetUsername                    | Admin can remove another member; a member can remove themselves.                                                       |
+| leave          | None                              | Remove caller. If admin leaves, the first remaining participant becomes admin; an empty group remains with null admin. |
+| transfer_admin | targetUsername                    | Current admin; target must already participate.                                                                        |
 
 Unknown action or group-only action on a DM is 400; missing/foreign conversations are 404; denied helper mutations generally return 403. Membership checks are repeated transactionally for writes. Account-alias guards prevent stale username writers from resurrecting already-migrated references.
 
@@ -77,8 +84,12 @@ The resulting message and conversation's latest preview/sender/time are written 
 
 ```js
 await fetch('/api/conversations/conversation-id', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ content: 'Shall we revise chapter 4?', replyTo: { messageId: 'message-id' } })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    content: 'Shall we revise chapter 4?',
+    replyTo: { messageId: 'message-id' },
+  }),
 });
 // Share cards take IDs, not trusted client titles or content.
 // { shareCard: { type: 'note', noteId: 'owned-note-id' } }

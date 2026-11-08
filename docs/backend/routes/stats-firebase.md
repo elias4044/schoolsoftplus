@@ -37,59 +37,53 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
 new Response(
-        JSON.stringify({
-          operational: false,
-          error: 'NOT_FOUND',
-          message: 'Service status document not found.',
-        }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }
-      )
+  JSON.stringify({
+    operational: false,
+    error: 'NOT_FOUND',
+    message: 'Service status document not found.',
+  }),
+  { status: 503, headers: { 'Content-Type': 'application/json' } }
+);
 ```
-
 
 ```ts
 Response.json({
-        operational: false,
-        errorCode: 'RESOURCE_EXHAUSTED',
-        today,
-        month,
-        limits,
-        exceeded,
-      })
+  operational: false,
+  errorCode: 'RESOURCE_EXHAUSTED',
+  today,
+  month,
+  limits,
+  exceeded,
+});
 ```
-
 
 ```ts
 Response.json({
-        operational: false,
-        error: data.error ?? 'SERVICE_DOWN',
-        today,
-        month,
-        limits,
-        exceeded,
-      })
+  operational: false,
+  error: data.error ?? 'SERVICE_DOWN',
+  today,
+  month,
+  limits,
+  exceeded,
+});
 ```
-
 
 ```ts
-Response.json({ operational: true, today, month, limits, exceeded })
+Response.json({ operational: true, today, month, limits, exceeded });
 ```
-
 
 ```ts
 new Response(
-      JSON.stringify({
-        operational: false,
-        error: code,
-        message: 'Service status is unavailable.',
-      }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    )
+  JSON.stringify({
+    operational: false,
+    error: code,
+    message: 'Service status is unavailable.',
+  }),
+  { status: 503, headers: { 'Content-Type': 'application/json' } }
+);
 ```
-
 
 #### Cookie writes
 

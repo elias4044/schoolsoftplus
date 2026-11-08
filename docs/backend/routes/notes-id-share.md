@@ -39,21 +39,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, token })
+NextResponse.json({ success: true, token });
 ```
-
 
 #### Cookie writes
 
@@ -88,21 +84,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 

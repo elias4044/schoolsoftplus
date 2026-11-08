@@ -1,0 +1,121 @@
+.workspace {
+  height: 100dvh;
+  background: var(--background);
+  isolation: isolate;
+  --chat-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.workspace ::selection {
+  background: color-mix(in oklch, var(--primary) 25%, transparent);
+  color: var(--foreground);
+}
+
+.workspace :is(input, textarea) {
+  caret-color: var(--primary);
+}
+
+.workspace :is(button, a, [role='button']):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.workspace :is(input, textarea):focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
+.workspace :is(button, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.workspace :is(button, a)[aria-label] {
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.workspace :is([class*='overflow-y-auto']) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  overscroll-behavior: contain;
+}
+
+.inbox {
+  background: color-mix(in oklch, var(--card) 85%, var(--muted));
+}
+
+.timeline > div,
+.timeline > p,
+.composer > * {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+}
+
+.timeline [id^='msg-'] {
+  scroll-margin-block: 32px;
+}
+
+.timeline [id^='msg-']:target {
+  background: var(--muted);
+}
+
+.composer {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: var(--background);
+}
+
+.composer > :global(.relative) {
+  align-items: flex-end;
+}
+
+.chatHeader :global(button) {
+  min-width: 36px;
+  min-height: 36px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .workspace button {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace {
+    height: calc(100dvh - 56px);
+  }
+
+  .chatHeader {
+    min-height: 72px;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+
+  .chatHeader > :global(.min-w-0) {
+    flex-basis: 0;
+    min-width: 64px;
+  }
+
+  .composer textarea {
+    font-size: 16px;
+  }
+
+  .composer :global(.absolute.bottom-full) {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace *,
+  .workspace *::before,
+  .workspace *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

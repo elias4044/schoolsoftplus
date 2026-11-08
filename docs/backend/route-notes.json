@@ -376,9 +376,7 @@
         "body": {
           "title": "Biology",
           "color": "emerald",
-          "tags": [
-            "cells"
-          ]
+          "tags": ["cells"]
         }
       }
     }

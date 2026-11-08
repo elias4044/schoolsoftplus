@@ -32,16 +32,13 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('week')
+searchParams.get('week');
 ```
 
-
 ```ts
-searchParams.get('year')
+searchParams.get('year');
 ```
-
 
 #### Parsed body and local type
 
@@ -49,24 +46,20 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
 NextResponse.json(
-      { success: false, error: 'week and year query parameters are required.' },
-      { status: 400 }
-    )
+  { success: false, error: 'week and year query parameters are required.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
-NextResponse.json({ success: true, data: response.data })
+NextResponse.json({ success: true, data: response.data });
 ```
-
 
 #### Cookie writes
 
@@ -74,11 +67,9 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
-api.get(
-      `/rest-api/student/ps/assignments/start-page?week=${week}&year=${year}`,
-      { headers: { Cookie: cookies }, responseType: 'json' }
-    )
+api.get(`/rest-api/student/ps/assignments/start-page?week=${week}&year=${year}`, {
+  headers: { Cookie: cookies },
+  responseType: 'json',
+});
 ```
-
