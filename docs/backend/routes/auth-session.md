@@ -34,51 +34,41 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.headers.get('x-ss-token')
+req.headers.get('x-ss-token');
 ```
 
-
 ```ts
-req.headers.get('x-school')
+req.headers.get('x-school');
 ```
 
-
 ```ts
-req.headers.get('x-userid')
+req.headers.get('x-userid');
 ```
 
-
 ```ts
-req.headers.get('x-username')
+req.headers.get('x-username');
 ```
 
-
 ```ts
-req.headers.get('x-orgid')
+req.headers.get('x-orgid');
 ```
 
-
 ```ts
-req.headers.get('x-language')
+req.headers.get('x-language');
 ```
 
-
 ```ts
-req.headers.get('x-theme')
+req.headers.get('x-theme');
 ```
 
-
 ```ts
-req.headers.get('x-useros')
+req.headers.get('x-useros');
 ```
 
-
 ```ts
-req.headers.get('x-redirect-url')
+req.headers.get('x-redirect-url');
 ```
-
 
 #### Parsed body and local type
 
@@ -86,60 +76,50 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
+```ts
+NextResponse.json({ success: false, error: 'x-ss-token header is required.' }, { status: 400 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'x-ss-token header is required.' },
-      { status: 400 }
-    )
+  { success: false, error: 'SchoolSoft did not return any session cookies.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-        { success: false, error: 'SchoolSoft did not return any session cookies.' },
-        { status: 502 }
-      )
+  { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
-      { status: 502 }
-    )
+  {
+    success: false,
+    error: 'SchoolSoft did not return a valid session (missing JSESSIONID or hash).',
+  },
+  { status: 502 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-      {
-        success: false,
-        error: 'SchoolSoft did not return a valid session (missing JSESSIONID or hash).',
-      },
-      { status: 502 }
-    )
+NextResponse.json({ error: 'Account verification failed.' }, { status: 401 });
 ```
-
-
-```ts
-NextResponse.json({ error: 'Account verification failed.' }, { status: 401 })
-```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    school,
-    username: data.user.userName.toLowerCase(),
-    userId: verifiedId,
-    ssp_jsessionid: jsessionid,
-    ssp_hash: hash,
-    ssp_usertype: usertype,
-    cookieHeader: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}`,
-  })
+  success: true,
+  school,
+  username: data.user.userName.toLowerCase(),
+  userId: verifiedId,
+  ssp_jsessionid: jsessionid,
+  ssp_hash: hash,
+  ssp_usertype: usertype,
+  cookieHeader: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}`,
+});
 ```
-
 
 #### Cookie writes
 
@@ -147,33 +127,30 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 axios.get(sessionUrl, {
-      timeout: 8_000,
-      signal: AbortSignal.timeout(8_000),
-      headers: {
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'User-Agent': 'nyEva',
-        'X-Requested-With': 'com.schoolsoft.eapp.android',
-        token: ssToken,
-        orgid: orgid,
-        redirecturl: redirectUrl,
-        language: language,
-        theme: theme,
-        useros: useros,
-        ...(userId ? { userid: userId } : {}),
-      },
-      maxRedirects: 0,
-      validateStatus: () => true,
-    })
+  timeout: 8_000,
+  signal: AbortSignal.timeout(8_000),
+  headers: {
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'User-Agent': 'nyEva',
+    'X-Requested-With': 'com.schoolsoft.eapp.android',
+    token: ssToken,
+    orgid: orgid,
+    redirecturl: redirectUrl,
+    language: language,
+    theme: theme,
+    useros: useros,
+    ...(userId ? { userid: userId } : {}),
+  },
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
 ```
-
 
 ```ts
 createSchoolsoftClient(school).get('/rest-api/session', {
-    headers: { Cookie: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}` },
-    responseType: 'json',
-  })
+  headers: { Cookie: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}` },
+  responseType: 'json',
+});
 ```
-

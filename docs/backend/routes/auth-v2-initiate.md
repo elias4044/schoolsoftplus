@@ -30,26 +30,21 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('school')
+searchParams.get('school');
 ```
 
-
 ```ts
-searchParams.get('orgid')
+searchParams.get('orgid');
 ```
 
-
 ```ts
-req.headers.get('x-forwarded-proto')
+req.headers.get('x-forwarded-proto');
 ```
 
-
 ```ts
-req.headers.get('host')
+req.headers.get('host');
 ```
-
 
 #### Parsed body and local type
 
@@ -57,25 +52,21 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.redirect(authUrl)
+NextResponse.redirect(authUrl);
 ```
-
 
 #### Cookie writes
 
-
 ```ts
 res.cookies.set('ssp_v2_pkce', pkcePayload, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 10, // 10 minutes \u2014 enough to complete the login
-  })
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 60 * 10, // 10 minutes \u2014 enough to complete the login
+});
 ```
-
 
 #### Direct upstream calls
 

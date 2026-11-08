@@ -298,10 +298,7 @@ export function removeGroupMember(conversationId: string, userId: string, target
 ## markConversationRead
 
 ```ts
-export async function markConversationRead(
-  conversationId: string,
-  username: string
-): Promise<void>;
+export async function markConversationRead(conversationId: string, username: string): Promise<void>;
 ```
 
 ## transferGroupAdmin

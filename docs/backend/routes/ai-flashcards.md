@@ -34,74 +34,58 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { text?: string; count?: number; language?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, message: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 })
+NextResponse.json({ success: false, message: 'AI is not configured.' }, { status: 503 });
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, message: 'text must be at least 20 characters.' },
-      { status: 400 }
-    )
+  { success: false, message: 'text must be at least 20 characters.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, message: 'text is too long (max 20 000 characters).' },
-      { status: 400 }
-    )
+  { success: false, message: 'text is too long (max 20 000 characters).' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-        { success: false, message: 'AI returned unparseable output. Try again.' },
-        { status: 502 }
-      )
+  { success: false, message: 'AI returned unparseable output. Try again.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-        { success: false, message: 'AI returned unexpected format.' },
-        { status: 502 }
-      )
+NextResponse.json({ success: false, message: 'AI returned unexpected format.' }, { status: 502 });
 ```
-
 
 ```ts
-NextResponse.json({ success: true, cards: clean })
+NextResponse.json({ success: true, cards: clean });
 ```
-
 
 ```ts
-NextResponse.json({ success: false, message: 'AI generation failed.' }, { status: 500 })
+NextResponse.json({ success: false, message: 'AI generation failed.' }, { status: 500 });
 ```
-
 
 #### Cookie writes
 
@@ -109,12 +93,10 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: { temperature: 0.4, maxOutputTokens: 4096 },
-    })
+  model: 'gemini-3.1-flash-lite',
+  contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  config: { temperature: 0.4, maxOutputTokens: 4096 },
+});
 ```
-

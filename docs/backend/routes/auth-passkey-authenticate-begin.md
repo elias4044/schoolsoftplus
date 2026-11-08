@@ -38,25 +38,21 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: true, options, challengeId })
+NextResponse.json({ success: true, options, challengeId });
 ```
-
 
 #### Cookie writes
 
-
 ```ts
 res.cookies.set('ssp_pk_auth_challenge_id', challengeId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 5 * 60,
-  })
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 5 * 60,
+});
 ```
-
 
 #### Direct upstream calls
 

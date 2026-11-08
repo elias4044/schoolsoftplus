@@ -31,11 +31,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('limit')
+searchParams.get('limit');
 ```
-
 
 #### Parsed body and local type
 
@@ -43,24 +41,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'limit must be between 1 and 50.' }, { status: 400 })
+NextResponse.json({ error: 'limit must be between 1 and 50.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data: enriched })
+NextResponse.json({ success: true, data: enriched });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'Failed to load leaderboard.' },
-      { status: 500 }
-    )
+NextResponse.json({ success: false, error: 'Failed to load leaderboard.' }, { status: 500 });
 ```
-
 
 #### Cookie writes
 

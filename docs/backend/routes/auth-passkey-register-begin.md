@@ -31,11 +31,9 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-req.cookies.get('ssp_ss_orgid')
+req.cookies.get('ssp_ss_orgid');
 ```
-
 
 #### Parsed body and local type
 
@@ -43,36 +41,31 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    options,
-    challengeId,
-    userHandle,
-    meta: { username, school, orgId },
-  })
+  success: true,
+  options,
+  challengeId,
+  userHandle,
+  meta: { username, school, orgId },
+});
 ```
-
 
 #### Cookie writes
 
-
 ```ts
 res.cookies.set('ssp_pk_challenge_id', challengeId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 5 * 60,
-  })
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 5 * 60,
+});
 ```
-
 
 #### Direct upstream calls
 

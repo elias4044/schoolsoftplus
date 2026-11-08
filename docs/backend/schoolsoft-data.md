@@ -13,22 +13,22 @@ In assignment mode it fetches `/rest-api/student/ps/assignments/{id}/view`, then
 In planning mode it loads `/plannings/{id}/planning_parts/tabs`, uses only the first tab, and fetches its view and sections. Empty tabs or absent view produce 404. The response keeps the same envelope but returns the planning view without assignment normalization, empty connected plannings, empty assessment, and empty grading arrays.
 
 ```js
-const item = await fetch('/api/assignment/12345').then(r => r.json());
+const item = await fetch('/api/assignment/12345').then((r) => r.json());
 console.log(item.assignment.title, item.assessment.teacherComment);
-const planning = await fetch('/api/assignment/12345?type=planning').then(r => r.json());
+const planning = await fetch('/api/assignment/12345?type=planning').then((r) => r.json());
 ```
 
 The `safeFetch` helper in this route only absorbs upstream 403/404 as null. Other errors can fail the entire aggregation. The comment suggesting every sub-request is nonfatal is broader than the implementation.
 
 ## Subjects and grade scans
 
-| Route | Work and response |
-| --- | --- |
-| `GET /api/subjects` | Fetch `/subjectroom/all`; for every activity fetch entities, unread count, and teachers in parallel. Return `{success,subjects}`. Each entity gains `entityType`, chosen from whether `planningId` is truthy. A failure within one subject's enrichment gives that subject empty entities/teachers and unread zero. Failure of the initial list fails the route. |
-| `GET /api/subjects/[id]` | Fetch room view, examinations with `activityId`, submissions with `activityId`, and table rows in parallel. Return `{success,subject,overview:{examinations,submissions},assignments}`. A failed core component fails the whole route. With `?includeAssessment=true`, optionally fetch `/holistic_assessment/rows` and resolve a unique normalized subject name or shared assignment/activity IDs. Add `assessmentLink`, published `assessmentSummary`, and `subject.holisticAssessmentId`; failed discovery preserves coursework. |
-| `GET /api/subjects/[id]/assessment` | Require a separate positive `holisticId` query value, then fetch cookie-auth attendance, assessed assignments, criteria, and criteria overview independently. Return per-resource available/unavailable/error states, sanitize rich text, and propagate expired authentication. See [subject assessment API](../subject-assessment-api.md). |
-| `GET /api/subjects/results_all` | Fetch `/subjectroom/results/grid/rows`, return `{success,rows}` without local row normalization. |
-| `POST /api/subjects/[id]/grades` | Scan assessments from subject table rows. No request body is required. Return `{success,scanned,total,skipped,grades}` without saving a tracker. |
+| Route                               | Work and response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/subjects`                 | Fetch `/subjectroom/all`; for every activity fetch entities, unread count, and teachers in parallel. Return `{success,subjects}`. Each entity gains `entityType`, chosen from whether `planningId` is truthy. A failure within one subject's enrichment gives that subject empty entities/teachers and unread zero. Failure of the initial list fails the route.                                                                                                                                                                    |
+| `GET /api/subjects/[id]`            | Fetch room view, examinations with `activityId`, submissions with `activityId`, and table rows in parallel. Return `{success,subject,overview:{examinations,submissions},assignments}`. A failed core component fails the whole route. With `?includeAssessment=true`, optionally fetch `/holistic_assessment/rows` and resolve a unique normalized subject name or shared assignment/activity IDs. Add `assessmentLink`, published `assessmentSummary`, and `subject.holisticAssessmentId`; failed discovery preserves coursework. |
+| `GET /api/subjects/[id]/assessment` | Require a separate positive `holisticId` query value, then fetch cookie-auth attendance, assessed assignments, criteria, and criteria overview independently. Return per-resource available/unavailable/error states, sanitize rich text, and propagate expired authentication. See [subject assessment API](../subject-assessment-api.md).                                                                                                                                                                                         |
+| `GET /api/subjects/results_all`     | Fetch `/subjectroom/results/grid/rows`, return `{success,rows}` without local row normalization.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `POST /api/subjects/[id]/grades`    | Scan assessments from subject table rows. No request body is required. Return `{success,scanned,total,skipped,grades}` without saving a tracker.                                                                                                                                                                                                                                                                                                                                                                                    |
 
 The scan selects reported assignment rows plus expired, not-yet-reported assignment rows. Reported rows skip the view request. Expired candidates must have a view whose result status is `REPORTED`. It fetches assessments in batches of four, skips unusable rows, and returns only rows with a derived grade. Table 403/404 becomes an empty list. Optional scan fetches absorb 400, 403, 404, and upstream 5xx; per-item exceptions are also skipped.
 
@@ -39,8 +39,9 @@ const scanResponse = await fetch('/api/subjects/120/grades', { method: 'POST' })
 const scan = await scanResponse.json();
 // Saving is a separate request. Pass the scan results explicitly.
 await fetch('/api/grade-tracker/120', {
-  method: 'PUT', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ scanned: scan.grades, subjectName: 'Mathematics' })
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ scanned: scan.grades, subjectName: 'Mathematics' }),
 });
 ```
 
@@ -99,8 +100,8 @@ It forwards browser SchoolSoft cookies, uses JSON response mode, and wraps upstr
 
 ```js
 const result = await fetch('/api/custom', {
-  headers: { 'x-url': 'rest-api/student/ps/subjectroom/all' }
-}).then(r => r.json());
+  headers: { 'x-url': 'rest-api/student/ps/subjectroom/all' },
+}).then((r) => r.json());
 ```
 
 See [the route reference](routes/README.md) for exact request reads and response branches.

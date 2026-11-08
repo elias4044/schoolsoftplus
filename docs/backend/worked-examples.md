@@ -11,10 +11,12 @@ async function requestJson(url, method = 'GET', body) {
   const response = await fetch(url, {
     method,
     credentials: 'include',
-    ...(body === undefined ? {} : {
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
+    ...(body === undefined
+      ? {}
+      : {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
   });
   const result = await response.json();
   if (!response.ok) {
@@ -34,10 +36,10 @@ Check status before inspecting success. For example, Firebase service status can
 const { note } = await requestJson('/api/notes', 'POST', {
   title: 'Cell biology',
   content: '# Cells\nThe nucleus contains DNA.',
-  status: 'draft'
+  status: 'draft',
 });
 await requestJson(`/api/notes/${note.id}`, 'PUT', {
-  content: '# Cells\nThe nucleus contains DNA. Mitochondria release usable energy.'
+  content: '# Cells\nThe nucleus contains DNA. Mitochondria release usable energy.',
 });
 const { token } = await requestJson(`/api/notes/${note.id}/share`, 'POST');
 // This URL works without the owner's cookies while the token exists.
@@ -72,10 +74,12 @@ Public note responses omit userId and shareToken. Status remains draft in this w
 const { cards } = await requestJson('/api/ai/flashcards', 'POST', {
   text: 'The nucleus contains DNA. Mitochondria release usable energy through cellular respiration.',
   count: 5,
-  language: 'English'
+  language: 'English',
 });
 const { deck } = await requestJson('/api/flashcards', 'POST', {
-  title: 'Cell structures', color: 'emerald', tags: ['biology']
+  title: 'Cell structures',
+  color: 'emerald',
+  tags: ['biology'],
 });
 // The AI can return no usable cards, so avoid posting an empty bulk request.
 if (cards.length) await requestJson(`/api/flashcards/${deck.id}/cards`, 'POST', { cards });
@@ -83,8 +87,11 @@ const saved = await requestJson(`/api/flashcards/${deck.id}`);
 if (saved.cards.length) {
   const card = saved.cards[0];
   await requestJson(`/api/flashcards/${deck.id}/cards/${card.id}`, 'PATCH', {
-    repetitions: 1, easeFactor: 2.5, interval: 1,
-    lastReview: Date.now(), nextReview: Date.now() + 86400000
+    repetitions: 1,
+    easeFactor: 2.5,
+    interval: 1,
+    lastReview: Date.now(),
+    nextReview: Date.now() + 86400000,
   });
 }
 ```
@@ -130,13 +137,14 @@ Account A opens the DM, sends a message, and marks it read:
 
 ```js
 const { conversation } = await requestJson('/api/conversations', 'POST', {
-  type: 'dm', targetUsername: '12346'
+  type: 'dm',
+  targetUsername: '12346',
 });
 const { message } = await requestJson(`/api/conversations/${conversation.id}`, 'POST', {
-  content: 'Ready to revise?'
+  content: 'Ready to revise?',
 });
 await requestJson(`/api/conversations/${conversation.id}/${message.id}`, 'PATCH', {
-  action: 'pin'
+  action: 'pin',
 });
 await requestJson(`/api/conversations/${conversation.id}`, 'PATCH', { action: 'mark_read' });
 ```
@@ -167,7 +175,11 @@ A message response uses this shape:
 A new DM without friendship returns HTTP 403:
 
 ```json
-{"success":false,"error":"You must be friends to start a new direct message. Send them a friend request first.","needsFriend":true}
+{
+  "success": false,
+  "error": "You must be friends to start a new direct message. Send them a friend request first.",
+  "needsFriend": true
+}
 ```
 
 Do not automatically repeat a message POST after a timeout. Fetch history first; the message may already have committed. The API supplies no idempotency key.
@@ -178,7 +190,7 @@ The owner posts a server-verified share card:
 
 ```js
 const { message } = await requestJson('/api/conversations/example-conversation-id', 'POST', {
-  shareCard: { type: 'flashdeck', deckId: 'example-owned-deck-id' }
+  shareCard: { type: 'flashdeck', deckId: 'example-owned-deck-id' },
 });
 console.log(message.id);
 ```
@@ -187,7 +199,8 @@ The recipient supplies both source deck and share message:
 
 ```js
 const imported = await requestJson('/api/flashcards/import', 'POST', {
-  deckId: 'example-owned-deck-id', messageId: 'example-share-message-id'
+  deckId: 'example-owned-deck-id',
+  messageId: 'example-share-message-id',
 });
 console.log(imported.deck.id, imported.cardCount);
 ```
@@ -200,7 +213,9 @@ The import reads current cards rather than cards snapshotted into the message. M
 const scan = await requestJson('/api/subjects/120/grades', 'POST');
 console.log(`Usable results: ${scan.scanned}; candidates: ${scan.total}; skipped: ${scan.skipped}`);
 const { tracker } = await requestJson('/api/grade-tracker/120', 'PUT', {
-  subjectName: 'Mathematics', scanned: scan.grades, addSnapshot: true
+  subjectName: 'Mathematics',
+  scanned: scan.grades,
+  addSnapshot: true,
 });
 console.log(tracker.entries);
 ```
@@ -213,17 +228,19 @@ One illustrative scan result:
   "scanned": 1,
   "total": 2,
   "skipped": 1,
-  "grades": [{
-    "assignmentId": 12345,
-    "title": "Practice assessment",
-    "type": "Test",
-    "endDate": "2026-10-29",
-    "reported": true,
-    "review": "B",
-    "confidence": "confirmed",
-    "gradeSource": "review",
-    "grade": "B"
-  }]
+  "grades": [
+    {
+      "assignmentId": 12345,
+      "title": "Practice assessment",
+      "type": "Test",
+      "endDate": "2026-10-29",
+      "reported": true,
+      "review": "B",
+      "confidence": "confirmed",
+      "gradeSource": "review",
+      "grade": "B"
+    }
+  ]
 }
 ```
 
@@ -234,13 +251,13 @@ Skipped results do not mean there were no assignments. They mean those candidate
 Malformed JSON through the shared reader returns HTTP 400:
 
 ```json
-{"success":false,"error":"Invalid JSON","message":"Invalid JSON"}
+{ "success": false, "error": "Invalid JSON", "message": "Invalid JSON" }
 ```
 
 Oversized streamed JSON returns HTTP 413:
 
 ```json
-{"success":false,"error":"Request body is too large","message":"Request body is too large"}
+{ "success": false, "error": "Request body is too large", "message": "Request body is too large" }
 ```
 
 Updating a foreign/missing note returns HTTP 404 with `{ "error": "Not found" }`. A shared-wrapper 429 includes error and message with `Too many requests. Please wait.`. Do not rely on one error property being present in every route-specific branch; the status plus error/message fallback in the example helper handles this variation.

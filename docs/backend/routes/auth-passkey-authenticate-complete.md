@@ -35,228 +35,186 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-req.cookies.get('ssp_pk_auth_challenge_id')
+req.cookies.get('ssp_pk_auth_challenge_id');
 ```
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { response: AuthenticationResponseJSON };
 ```
 
-
 #### Response branches
 
+```ts
+NextResponse.json(
+  { success: false, error: 'No pending authentication challenge.' },
+  { status: 400 }
+);
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'No pending authentication challenge.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Authentication challenge expired. Please try again.' },
+  { status: 400 }
+);
 ```
 
+```ts
+NextResponse.json({ success: false, error: 'Passkey not recognised.' }, { status: 401 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Authentication challenge expired. Please try again.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Passkey authentication failed. Please try again.' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ success: false, error: 'Passkey not recognised.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Passkey authentication failed.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Passkey authentication failed. Please try again.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Passkey rejected: possible credential clone detected.' },
+  { status: 401 }
+);
 ```
 
+```ts
+NextResponse.json({ success: false, error: 'Passkey user record not found.' }, { status: 401 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Passkey authentication failed.' },
-      { status: 401 }
-    )
+  {
+    success: false,
+    error:
+      'Could not read stored credentials. Please log in with AuthV2 once to re-activate your passkey.',
+  },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Passkey rejected: possible credential clone detected.' },
-      { status: 401 }
-    )
+  {
+    success: false,
+    error: 'Your passkey session has expired. Please log in with AuthV2 once to re-activate it.',
+    code: 'REFRESH_EXPIRED',
+  },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'Passkey user record not found.' },
-      { status: 401 }
-    )
+  { success: false, error: 'No access token in SchoolSoft response.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error:
-          'Could not read stored credentials. Please log in with AuthV2 once to re-activate your passkey.',
-      },
-      { status: 401 }
-    )
+  { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
+  { status: 502 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-        {
-          success: false,
-          error:
-            'Your passkey session has expired. Please log in with AuthV2 once to re-activate it.',
-          code: 'REFRESH_EXPIRED',
-        },
-        { status: 401 }
-      )
+NextResponse.json({ error: 'Passkey account could not be verified.' }, { status: 401 });
 ```
-
 
 ```ts
-NextResponse.json(
-        { success: false, error: 'No access token in SchoolSoft response.' },
-        { status: 502 }
-      )
+NextResponse.json({ success: true, redirectTo: '/dashboard' });
 ```
-
-
-```ts
-NextResponse.json(
-      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
-      { status: 502 }
-    )
-```
-
-
-```ts
-NextResponse.json({ error: 'Passkey account could not be verified.' }, { status: 401 })
-```
-
-
-```ts
-NextResponse.json({ success: true, redirectTo: '/dashboard' })
-```
-
 
 #### Cookie writes
 
-
 ```ts
-res.cookies.set('ssp_jsessionid', jsessionid, base)
+res.cookies.set('ssp_jsessionid', jsessionid, base);
 ```
 
-
 ```ts
-res.cookies.set('ssp_hash', hash, base)
+res.cookies.set('ssp_hash', hash, base);
 ```
 
-
 ```ts
-res.cookies.set('ssp_usertype', usertype, base)
+res.cookies.set('ssp_usertype', usertype, base);
 ```
 
-
 ```ts
-res.cookies.set('ssp_school', school, { ...base, httpOnly: false })
+res.cookies.set('ssp_school', school, { ...base, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_username', canonicalUsername, { ...base, httpOnly: false })
+res.cookies.set('ssp_username', canonicalUsername, { ...base, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_userid', userId, base)
+res.cookies.set('ssp_userid', userId, base);
 ```
 
-
 ```ts
-res.cookies.set('ssp_auth_type', 'authv2', { ...base, httpOnly: false })
+res.cookies.set('ssp_auth_type', 'authv2', { ...base, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_token', ssToken, authv2)
+res.cookies.set('ssp_ss_token', ssToken, authv2);
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_refresh_token', newRefreshToken, authv2)
+res.cookies.set('ssp_ss_refresh_token', newRefreshToken, authv2);
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_orgid', orgId, authv2)
+res.cookies.set('ssp_ss_orgid', orgId, authv2);
 ```
 
-
 ```ts
-res.cookies.set('ssp_ss_token_expires', String(ssTokenExpiresAt), { ...authv2, httpOnly: false })
+res.cookies.set('ssp_ss_token_expires', String(ssTokenExpiresAt), { ...authv2, httpOnly: false });
 ```
 
-
 ```ts
-res.cookies.set('ssp_pk_auth_challenge_id', '', { maxAge: 0, path: '/' })
+res.cookies.set('ssp_pk_auth_challenge_id', '', { maxAge: 0, path: '/' });
 ```
-
 
 #### Direct upstream calls
 
-
 ```ts
 fetch(refreshUrl, {
-      signal: AbortSignal.timeout(8_000),
-      method: 'POST',
-      headers: { accept: 'application/json' },
-    })
+  signal: AbortSignal.timeout(8_000),
+  method: 'POST',
+  headers: { accept: 'application/json' },
+});
 ```
-
 
 ```ts
 axios.get(sessionUrl, {
-      timeout: 8_000,
-      signal: AbortSignal.timeout(8_000),
-      headers: {
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'User-Agent': 'nyEva',
-        'X-Requested-With': 'com.schoolsoft.eapp.android',
-        token: ssToken,
-        orgId,
-        redirecturl: redirectUrl,
-        language: 'sw',
-        theme: 'dark',
-        useros: 'android',
-        ...(userId ? { userid: userId } : {}),
-      },
-      maxRedirects: 0,
-      validateStatus: () => true,
-    })
+  timeout: 8_000,
+  signal: AbortSignal.timeout(8_000),
+  headers: {
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'User-Agent': 'nyEva',
+    'X-Requested-With': 'com.schoolsoft.eapp.android',
+    token: ssToken,
+    orgId,
+    redirecturl: redirectUrl,
+    language: 'sw',
+    theme: 'dark',
+    useros: 'android',
+    ...(userId ? { userid: userId } : {}),
+  },
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
 ```
-
 
 ## Local helper behavior
 

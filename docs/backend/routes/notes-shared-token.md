@@ -38,16 +38,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Not found or link revoked' }, { status: 404 })
+NextResponse.json({ error: 'Not found or link revoked' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, note: pub })
+NextResponse.json({ success: true, note: pub });
 ```
-
 
 #### Cookie writes
 

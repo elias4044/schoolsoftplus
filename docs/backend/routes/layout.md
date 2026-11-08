@@ -41,16 +41,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, layout: await getLayout(userId) })
+NextResponse.json({ success: true, layout: await getLayout(userId) });
 ```
-
 
 #### Cookie writes
 
@@ -79,32 +76,25 @@ curl -i -b cookies.txt -c cookies.txt -X PUT \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const { layout } = await readRouteBody(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, layout: clean })
+NextResponse.json({ success: true, layout: clean });
 ```
-
 
 #### Cookie writes
 

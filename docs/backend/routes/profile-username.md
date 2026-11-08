@@ -39,21 +39,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Profile not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Profile not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, profile: publicProfile })
+NextResponse.json({ success: true, profile: publicProfile });
 ```
-
 
 #### Cookie writes
 

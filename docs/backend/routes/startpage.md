@@ -39,16 +39,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data: { homework, tests } })
+NextResponse.json({ success: true, data: { homework, tests } });
 ```
-
 
 #### Cookie writes
 
@@ -56,11 +53,9 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 api.get('/jsp/student/right_student_startpage.jsp', {
-      headers: { Cookie: cookies },
-      responseType: 'arraybuffer',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'arraybuffer',
+});
 ```
-

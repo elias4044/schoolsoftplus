@@ -43,16 +43,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, conversations })
+NextResponse.json({ success: true, conversations });
 ```
-
 
 #### Cookie writes
 
@@ -81,83 +78,63 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    type?: string;
-    targetUsername?: string;
-    groupName?: string;
-    groupDescription?: string;
-    encrypted?: boolean;
-    members?: string[];
-  };
+  type?: string;
+  targetUsername?: string;
+  groupName?: string;
+  groupDescription?: string;
+  encrypted?: boolean;
+  members?: string[];
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Group name is required.' },
-        { status: 400 }
-      )
+NextResponse.json({ success: false, error: 'Group name is required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Add at least one other member.' },
-        { status: 400 }
-      )
+NextResponse.json({ success: false, error: 'Add at least one other member.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'One or more members were not found.' }, { status: 404 })
+NextResponse.json({ error: 'One or more members were not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, conversation })
+NextResponse.json({ success: true, conversation });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid target user.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
 ```
-
 
 ```ts
 NextResponse.json(
-        {
-          success: false,
-          error:
-            'You must be friends to start a new direct message. Send them a friend request first.',
-          needsFriend: true,
-        },
-        { status: 403 }
-      )
+  {
+    success: false,
+    error: 'You must be friends to start a new direct message. Send them a friend request first.',
+    needsFriend: true,
+  },
+  { status: 403 }
+);
 ```
-
 
 #### Cookie writes
 

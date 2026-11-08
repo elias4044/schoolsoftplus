@@ -4,11 +4,11 @@ SchoolSoft+ runs its HTTP backend in Next.js App Router handlers under `app/api`
 
 ## Three data paths
 
-| Path | Authentication | What happens |
-| --- | --- | --- |
-| Browser to `/api/*` to SchoolSoft | SSP cookies, verified against SchoolSoft | REST proxying, HTML parsing, aggregation, and AuthV2 file/news access |
-| Browser to `/api/*` to Firestore Admin | Same verified SchoolSoft identity | Ownership checks and application writes in helpers; Admin bypasses client Firestore rules |
-| Browser to Firestore client SDK | Firebase custom-token sign-in with `identityVersion: 2` | Realtime subscriptions, restricted read receipts, and call signaling under `firestore.rules` |
+| Path                                   | Authentication                                          | What happens                                                                                 |
+| -------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Browser to `/api/*` to SchoolSoft      | SSP cookies, verified against SchoolSoft                | REST proxying, HTML parsing, aggregation, and AuthV2 file/news access                        |
+| Browser to `/api/*` to Firestore Admin | Same verified SchoolSoft identity                       | Ownership checks and application writes in helpers; Admin bypasses client Firestore rules    |
+| Browser to Firestore client SDK        | Firebase custom-token sign-in with `identityVersion: 2` | Realtime subscriptions, restricted read receipts, and call signaling under `firestore.rules` |
 
 The mobile authentication endpoints are a fourth entry point for obtaining tokens or session material. They do not automatically install browser cookies or make every API route accept `Authorization: Bearer`.
 
@@ -39,12 +39,12 @@ String limits normally count JavaScript string length. The body and document-ID 
 
 ## Errors are not a single schema
 
-| Source | Status and shape |
-| --- | --- |
-| Wrapper `InputError` | Its status, default 400; `{success:false,error,message}` |
-| Wrapper unexpected exception | 500; `{success:false,error:"Request failed. Please try again."}` |
-| `handleApiError` | Axios timeout 504; upstream 4xx preserved; other upstream failures 502; `{success:false,error}` |
-| Handler-specific branch | Exact route-specific envelope; often `error` or `message`, sometimes both absent |
+| Source                       | Status and shape                                                                                |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Wrapper `InputError`         | Its status, default 400; `{success:false,error,message}`                                        |
+| Wrapper unexpected exception | 500; `{success:false,error:"Request failed. Please try again."}`                                |
+| `handleApiError`             | Axios timeout 504; upstream 4xx preserved; other upstream failures 502; `{success:false,error}` |
+| Handler-specific branch      | Exact route-specific envelope; often `error` or `message`, sometimes both absent                |
 
 `handleApiError` only applies where a handler calls it. For example, an uncaught network exception in another route can become the wrapper's 500 instead of 502. Friends and group-invite handlers catch some helper errors and return 400 even when the helper originally used 404 or 409. Route pages include the response branches so callers can see these differences.
 
@@ -66,25 +66,25 @@ See [operations](operations.md) for timeouts and configuration, [authentication]
 
 Every module in `app/api/lib` has an entry in the [contract index](contracts/README.md). This map distinguishes active request machinery from static or older helpers.
 
-| Modules | Responsibility |
-| --- | --- |
-| schoolsoft | Shared client, cookie reconstruction/recovery, live session verification, per-request memoization, cookie updates |
-| authenticatedUser | Small adapter returning requireSession's canonical userId or null |
-| identity | School slug and positive decimal safe-integer account validation |
-| accountRegistry, accountMigration | Legacy reference resolution, transactional stale-writer checks, progressive ownership migration |
-| validation, routeValidation, requestBody | Scalar validators, streamed bounds, JSON parsing, query/path checks, response wrapper, route-specific input schemas |
-| studyValidation, gradeValidation | Note/deck/card/countdown fields and nested grade-tracker validation |
-| apiError | Axios upstream-error mapping used by SchoolSoft proxy handlers |
-| firebaseAdmin | Service-account initialization and cached Firestore Admin handle |
-| notesDb, countdownsDb, flashcardsDb | Owned study documents, sharing/import permissions, transactional writes/counts |
-| gradeTrackerDb, finalGradesDb, layoutDb | User-keyed saved grade/layout state and snapshots |
-| profileDb, messagingDb, friendsDb, groupInvitesDb, presenceDb | Profile projection, social state, membership mutations, search, and throttled presence |
-| referralDb | Code reservation/lookup, idempotent per-referrer credit, leaderboard |
-| passkeyDb, serverCrypto | Challenge lifecycle, credentials/index storage, AES-GCM token encryption |
-| mobileAuth, auth/v2/lib | PKCE, mobile JWT utilities, provider token exchange, verified browser bridge and AuthV2 cookie writing |
-| auth | Older standalone cookie/username verification helpers; these do not replace requireSession's canonical identity contract |
-| loginStats, statsHelper | Transactional per-user login totals versus best-effort feature counters and UTC histograms |
-| rateLimit | Bounded process-local fixed windows used by AI and issue creation |
-| version, changelog | APP_VERSION comes from the first entry in `lib/changelog`; the API-local changelog module is separate static release data, with no own HTTP route |
+| Modules                                                       | Responsibility                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| schoolsoft                                                    | Shared client, cookie reconstruction/recovery, live session verification, per-request memoization, cookie updates                                 |
+| authenticatedUser                                             | Small adapter returning requireSession's canonical userId or null                                                                                 |
+| identity                                                      | School slug and positive decimal safe-integer account validation                                                                                  |
+| accountRegistry, accountMigration                             | Legacy reference resolution, transactional stale-writer checks, progressive ownership migration                                                   |
+| validation, routeValidation, requestBody                      | Scalar validators, streamed bounds, JSON parsing, query/path checks, response wrapper, route-specific input schemas                               |
+| studyValidation, gradeValidation                              | Note/deck/card/countdown fields and nested grade-tracker validation                                                                               |
+| apiError                                                      | Axios upstream-error mapping used by SchoolSoft proxy handlers                                                                                    |
+| firebaseAdmin                                                 | Service-account initialization and cached Firestore Admin handle                                                                                  |
+| notesDb, countdownsDb, flashcardsDb                           | Owned study documents, sharing/import permissions, transactional writes/counts                                                                    |
+| gradeTrackerDb, finalGradesDb, layoutDb                       | User-keyed saved grade/layout state and snapshots                                                                                                 |
+| profileDb, messagingDb, friendsDb, groupInvitesDb, presenceDb | Profile projection, social state, membership mutations, search, and throttled presence                                                            |
+| referralDb                                                    | Code reservation/lookup, idempotent per-referrer credit, leaderboard                                                                              |
+| passkeyDb, serverCrypto                                       | Challenge lifecycle, credentials/index storage, AES-GCM token encryption                                                                          |
+| mobileAuth, auth/v2/lib                                       | PKCE, mobile JWT utilities, provider token exchange, verified browser bridge and AuthV2 cookie writing                                            |
+| auth                                                          | Older standalone cookie/username verification helpers; these do not replace requireSession's canonical identity contract                          |
+| loginStats, statsHelper                                       | Transactional per-user login totals versus best-effort feature counters and UTC histograms                                                        |
+| rateLimit                                                     | Bounded process-local fixed windows used by AI and issue creation                                                                                 |
+| version, changelog                                            | APP_VERSION comes from the first entry in `lib/changelog`; the API-local changelog module is separate static release data, with no own HTTP route |
 
 Shared modules outside app/api include `lib/accountReferences.ts` for historical message identities and `lib/grades` for inference, scan merging, and snapshots. Grade analytics maps A/B/C/D/E/F to 20/17.5/15/12.5/10/0, removes excluded entries, optionally removes manual entries, and sorts by date. Equal weighting uses 1; recent weighting rises from 0.5 to 1 across ordered entries, unless a positive customWeight overrides it. `showEstimated` is stored but the current active-entry filter does not use it. Snapshot averages use these same analytics. Final-grade paste parsing and insights in `lib/final-grades/analytics.ts` are client features; the final-grades API only sanitizes and persists the submitted subjects.

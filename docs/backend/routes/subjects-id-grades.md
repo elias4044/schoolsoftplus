@@ -42,22 +42,19 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json({
-      success: true,
-      scanned: results.length,
-      total: toScan.length,
-      skipped,
-      grades: results,
-    })
+  success: true,
+  scanned: results.length,
+  total: toScan.length,
+  skipped,
+  grades: results,
+});
 ```
-
 
 #### Cookie writes
 
@@ -81,14 +78,12 @@ No direct HTTP response; this helper transforms or fetches data.
 
 #### Upstream calls
 
-
 ```ts
 api.get(url, {
-      headers: { Cookie: cookies },
-      responseType: 'json',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'json',
+});
 ```
-
 
 ### scanAssignment
 
@@ -112,11 +107,9 @@ No direct HTTP response; this helper transforms or fetches data.
 
 #### Upstream calls
 
-
 ```ts
 api.get(`/rest-api/student/ps/subjectroom/${subjectId}/table/rows`, {
-      headers: { Cookie: cookies },
-      responseType: 'json',
-    })
+  headers: { Cookie: cookies },
+  responseType: 'json',
+});
 ```
-

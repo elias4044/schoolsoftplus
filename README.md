@@ -97,7 +97,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | Language      | TypeScript 5                                                              |
 | Styling       | Tailwind CSS v4 · oklch colour space                                      |
 | UI components | shadcn/ui · Radix UI primitives                                           |
-| Animation     | Framer Motion                                                      |
+| Animation     | Framer Motion                                                             |
 | Database      | Firebase Firestore (notes, messages, friends, presence, stats)            |
 | Auth          | httpOnly session cookies proxied from SchoolSoft + Firebase custom tokens |
 | AI            | Google Gemini via `@google/genai`                                         |

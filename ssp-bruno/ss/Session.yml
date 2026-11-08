@@ -8,7 +8,7 @@ http:
   url: https://sms.schoolsoft.se/engelska/rest-api/session
   headers:
     - name: Cookie
-      value: ""
+      value: ''
       disabled: true
   auth:
     type: bearer

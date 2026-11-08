@@ -39,26 +39,23 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    credentials: creds.map((c) => ({
-      id: c.credentialId,
-      deviceName: c.deviceName,
-      deviceType: c.deviceType,
-      backedUp: c.backedUp,
-      createdAt: (c.createdAt as Timestamp).toMillis(),
-      lastUsedAt: (c.lastUsedAt as Timestamp).toMillis(),
-    })),
-  })
+  success: true,
+  credentials: creds.map((c) => ({
+    id: c.credentialId,
+    deviceName: c.deviceName,
+    deviceType: c.deviceType,
+    backedUp: c.backedUp,
+    createdAt: (c.createdAt as Timestamp).toMillis(),
+    lastUsedAt: (c.lastUsedAt as Timestamp).toMillis(),
+  })),
+});
 ```
-
 
 #### Cookie writes
 

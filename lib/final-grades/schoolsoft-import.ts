@@ -6,7 +6,7 @@ export interface SchoolSoftImport {
   warnings: string[];
 }
 
-// Theres a lot of RegEx in this code, read about it here if you don't know it as it can be a bit hard to read: 
+// Theres a lot of RegEx in this code, read about it here if you don't know it as it can be a bit hard to read:
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions
 
 const SUBJECT_HEADER = /^(subject|\u00e4mne)$/i;

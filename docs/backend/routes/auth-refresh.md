@@ -32,56 +32,43 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 ```ts
-req.headers.get('x-school')
+req.headers.get('x-school');
 ```
-
 
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { refreshToken?: string; school?: string };
 ```
 
-
 #### Response branches
 
+```ts
+NextResponse.json({ success: false, error: 'refreshToken is required.' }, { status: 400 });
+```
 
 ```ts
 NextResponse.json(
-      { success: false, error: 'refreshToken is required.' },
-      { status: 400 }
-    )
+  { success: false, error: 'Refresh failed. The refresh token may have expired.' },
+  { status: 401 }
+);
 ```
 
+```ts
+NextResponse.json({ success: true, ...(data as object) });
+```
 
 ```ts
 NextResponse.json(
-        { success: false, error: 'Refresh failed. The refresh token may have expired.' },
-        { status: 401 }
-      )
+  { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
+  { status: 502 }
+);
 ```
-
-
-```ts
-NextResponse.json({ success: true, ...(data as object) })
-```
-
-
-```ts
-NextResponse.json(
-      { success: false, error: 'Could not reach SchoolSoft. Try again later.' },
-      { status: 502 }
-    )
-```
-
 
 #### Cookie writes
 
@@ -89,12 +76,10 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 fetch(refreshUrl, {
-      signal: AbortSignal.timeout(8_000),
-      method: 'POST',
-      headers: { accept: 'application/json' },
-    })
+  signal: AbortSignal.timeout(8_000),
+  method: 'POST',
+  headers: { accept: 'application/json' },
+});
 ```
-

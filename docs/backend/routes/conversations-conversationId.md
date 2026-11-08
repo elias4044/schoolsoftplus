@@ -36,11 +36,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('pinned')
+req.nextUrl.searchParams.get('pinned');
 ```
-
 
 #### Parsed body and local type
 
@@ -48,21 +46,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, messages })
+NextResponse.json({ success: true, messages });
 ```
-
 
 #### Cookie writes
 
@@ -91,72 +85,53 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    content?: string;
-    replyTo?: ReplyTo;
-    shareCard?: { type: string; noteId?: string; assignmentId?: string; deckId?: string };
-  };
+  content?: string;
+  replyTo?: ReplyTo;
+  shareCard?: { type: string; noteId?: string; assignmentId?: string; deckId?: string };
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Note not found or access denied.' },
-        { status: 403 }
-      )
+NextResponse.json({ success: false, error: 'Note not found or access denied.' }, { status: 403 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Assignment not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Assignment not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'Deck not found or access denied.' },
-        { status: 403 }
-      )
+NextResponse.json({ success: false, error: 'Deck not found or access denied.' }, { status: 403 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Message is empty.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Message is empty.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Reply message not found.' }, { status: 404 })
+NextResponse.json({ error: 'Reply message not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, message })
+NextResponse.json({ success: true, message });
 ```
-
 
 #### Cookie writes
 
@@ -185,78 +160,58 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
-
 
 #### Parsed body and local type
 
-
 ```ts
 const body = (await readRouteBody(req)) as {
-    action?: string;
-    groupName?: string;
-    groupDescription?: string;
-    targetUsername?: string;
-  };
+  action?: string;
+  groupName?: string;
+  groupDescription?: string;
+  targetUsername?: string;
+};
 ```
-
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'Not a group conversation.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: false, error: 'Not a group conversation.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Forbidden.' }, { status: 403 })
+NextResponse.json({ success: false, error: 'Forbidden.' }, { status: 403 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, conversation: updated })
+NextResponse.json({ success: true, conversation: updated });
 ```
 
-
 ```ts
-NextResponse.json(
-        { success: false, error: 'targetUsername required.' },
-        { status: 400 }
-      )
+NextResponse.json({ success: false, error: 'targetUsername required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Unknown action.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Unknown action.' }, { status: 400 });
 ```
-
 
 #### Cookie writes
 

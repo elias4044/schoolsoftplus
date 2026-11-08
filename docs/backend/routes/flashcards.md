@@ -40,16 +40,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, decks })
+NextResponse.json({ success: true, decks });
 ```
-
 
 #### Cookie writes
 
@@ -78,37 +75,29 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = await readJsonObject(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'title is required' }, { status: 400 })
+NextResponse.json({ error: 'title is required' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, deck }, { status: 201 })
+NextResponse.json({ success: true, deck }, { status: 201 });
 ```
-
 
 #### Cookie writes
 

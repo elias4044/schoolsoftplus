@@ -9,7 +9,6 @@ import { prefetch } from './cache/prefetch';
 import { clientAuth } from './firebase';
 import { useSession } from './useSession';
 
-
 export interface AuthSession {
   school: string;
   username: string;

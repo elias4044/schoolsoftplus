@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth-context';
+import { useCommandActions } from '@/lib/command-actions';
 import { useNotificationCenter } from '@/lib/notification-context';
 import { THEMES, useAppTheme, type AccentColor } from '@/lib/theme-context';
 import {
@@ -84,6 +85,10 @@ export function CommandPalette({ onAiOpen, onChangelogOpen }: CommandPaletteProp
   const { session, logout } = useAuth();
   const { theme, accent, setTheme, setAccent } = useAppTheme();
   const notificationCenter = useNotificationCenter();
+  const contextualActions = useCommandActions();
+  const visibleContextualActions = contextualActions.filter(
+    (action) => action.group !== 'Conversations' || search.trim().length >= 2
+  );
 
   const setOpen = React.useCallback((value: boolean | ((previous: boolean) => boolean)) => {
     setIsOpen((previous) => (typeof value === 'function' ? value(previous) : value));
@@ -272,6 +277,30 @@ export function CommandPalette({ onAiOpen, onChangelogOpen }: CommandPaletteProp
         {/*  MAIN VIEW  */}
         {subView === 'main' && (
           <>
+            {[...new Set(visibleContextualActions.map((action) => action.group))].map((group) => (
+              <CommandGroup key={group} heading={group}>
+                {visibleContextualActions
+                  .filter((action) => action.group === group)
+                  .map((action) => (
+                    <CommandItem
+                      key={action.id}
+                      value={`${action.id} ${action.label} ${action.keywords ?? ''} ${action.description ?? ''}`}
+                      disabled={action.disabled}
+                      onSelect={() => runCommand(action.run)}
+                    >
+                      <action.icon className="text-muted-foreground size-4 shrink-0" />
+                      <div className="flex min-w-0 flex-col">
+                        <span className="font-medium">{action.label}</span>
+                        {action.description && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {action.description}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            ))}
             {/* Universal Page Navigation */}
             <CommandGroup heading="Navigation">
               <CommandItem
@@ -442,7 +471,7 @@ export function CommandPalette({ onAiOpen, onChangelogOpen }: CommandPaletteProp
                 <div className="flex min-w-0 flex-col">
                   <span className="font-medium">Messages</span>
                   <span className="text-muted-foreground text-xs">
-                    SchoolSoft communications inbox
+                    Direct messages, study groups and voice calls
                   </span>
                 </div>
                 <CommandShortcut>Alt+M</CommandShortcut>
@@ -531,6 +560,18 @@ export function CommandPalette({ onAiOpen, onChangelogOpen }: CommandPaletteProp
 
             {/* Quick Actions */}
             <CommandGroup heading="Quick Actions">
+              <CommandItem
+                value="new group chat create conversation study classmates"
+                onSelect={() => runCommand(() => router.push('/messages?action=group'))}
+              >
+                <Users className="text-muted-foreground size-4" />
+                <div className="flex min-w-0 flex-col">
+                  <span className="font-medium">Create group chat</span>
+                  <span className="text-muted-foreground text-xs">
+                    Start a conversation with your classmates
+                  </span>
+                </div>
+              </CommandItem>
               <CommandItem
                 value="ai assistant chat ask help bot"
                 onSelect={() => runCommand(() => onAiOpen?.())}

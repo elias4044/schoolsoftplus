@@ -40,16 +40,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, countdowns })
+NextResponse.json({ success: true, countdowns });
 ```
-
 
 #### Cookie writes
 
@@ -78,42 +75,33 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = await readJsonObject(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'title is required' }, { status: 400 })
+NextResponse.json({ error: 'title is required' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'targetDate (unix ms) is required' }, { status: 400 })
+NextResponse.json({ error: 'targetDate (unix ms) is required' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, countdown }, { status: 201 })
+NextResponse.json({ success: true, countdown }, { status: 201 });
 ```
-
 
 #### Cookie writes
 
@@ -142,42 +130,33 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('id')
+req.nextUrl.searchParams.get('id');
 ```
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
-
 
 #### Parsed body and local type
-
 
 ```ts
 const body = await readJsonObject(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, countdown: updated })
+NextResponse.json({ success: true, countdown: updated });
 ```
-
 
 #### Cookie writes
 
@@ -204,11 +183,9 @@ curl -i -b cookies.txt -c cookies.txt -X DELETE \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('id')
+req.nextUrl.searchParams.get('id');
 ```
-
 
 #### Parsed body and local type
 
@@ -216,21 +193,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Not found' }, { status: 404 })
+NextResponse.json({ error: 'Not found' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 

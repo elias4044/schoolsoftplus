@@ -245,7 +245,7 @@ export default function LandingPage() {
             >
               View on GitHub
             </a>
-          </Reveal> 
+          </Reveal>
         </section>
       </main>
       <footer className="[&_nav_a]:text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:[&_nav_a:hover]:text-brand-strong mx-auto w-full max-w-[1440px] px-5 pt-12 pb-10 sm:px-8 xl:px-14 [&_nav]:mt-8 [&_nav]:flex [&_nav]:flex-wrap [&_nav]:gap-x-6 [&_nav]:gap-y-4 [&_nav_a]:text-sm [&_nav_a]:transition-colors [&_nav_a]:duration-180">

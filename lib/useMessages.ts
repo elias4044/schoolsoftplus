@@ -102,12 +102,15 @@ export function useConversations(username: string) {
   const { fbUser, ready } = useFirebaseAuth();
   const [conversations, setConversations] = useState<RTConversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryVersion, setRetryVersion] = useState(0);
   const unsubRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
     if (!ready || !fbUser || !username) return;
 
     setLoading(true);
+    setError(null);
     const q = query(
       collection(clientDb, 'conversations_v1'),
       where('participantIds', 'array-contains', username),
@@ -143,6 +146,7 @@ export function useConversations(username: string) {
       },
       (err) => {
         console.error('[useConversations] snapshot error:', err);
+        setError('Conversations could not load. Check your connection and try again.');
         setLoading(false);
       }
     );
@@ -150,9 +154,9 @@ export function useConversations(username: string) {
     return () => {
       unsubRef.current?.();
     };
-  }, [ready, fbUser, username]);
+  }, [ready, fbUser, username, retryVersion]);
 
-  return { conversations, loading };
+  return { conversations, loading, error, retry: () => setRetryVersion((version) => version + 1) };
 }
 
 /* ── useMessages ──────────────────────────────────────── */
@@ -160,6 +164,8 @@ export function useMessages(conversationId: string | null, aliases?: AccountAlia
   const { fbUser, ready } = useFirebaseAuth();
   const [messages, setMessages] = useState<RTMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryVersion, setRetryVersion] = useState(0);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const knownIdsRef = useRef<Set<string>>(new Set());
   const initialLoadDoneRef = useRef(false);
@@ -188,6 +194,7 @@ export function useMessages(conversationId: string | null, aliases?: AccountAlia
     unsubRef.current?.();
     unsubRef.current = null;
     setMessages([]);
+    setError(null);
     knownIdsRef.current = new Set();
     initialLoadDoneRef.current = false;
 
@@ -226,6 +233,7 @@ export function useMessages(conversationId: string | null, aliases?: AccountAlia
       },
       (err) => {
         console.error('[useMessages] snapshot error:', err);
+        setError('Messages could not load. Check your connection and try again.');
         setLoading(false);
       }
     );
@@ -233,11 +241,16 @@ export function useMessages(conversationId: string | null, aliases?: AccountAlia
     return () => {
       unsubRef.current?.();
     };
-  }, [ready, fbUser, conversationId, applyUpdate]);
+  }, [ready, fbUser, conversationId, applyUpdate, retryVersion]);
 
   const normalizedMessages = useMemo(
     () => messages.map((message) => normalizeMessageIdentity(message, aliases ?? {}) as RTMessage),
     [messages, aliases]
   );
-  return { messages: normalizedMessages, loading };
+  return {
+    messages: normalizedMessages,
+    loading,
+    error,
+    retry: () => setRetryVersion((version) => version + 1),
+  };
 }

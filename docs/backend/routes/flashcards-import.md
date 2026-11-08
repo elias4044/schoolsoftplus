@@ -33,62 +33,45 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readJsonObject(req)
+readJsonObject(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = await readJsonObject(req);
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'deckId is required.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'deckId is required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Invalid message id.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Invalid message id.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'Deck no longer available.' },
-      { status: 404 }
-    )
+NextResponse.json({ success: false, error: 'Deck no longer available.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json(
-          { success: false, error: 'Deck no longer available.' },
-          { status: 404 }
-        )
+NextResponse.json({ success: false, error: 'Deck no longer available.' }, { status: 404 });
 ```
-
 
 ```ts
 NextResponse.json({
-    success: true,
-    deck: { ...newDeck, cardCount: cardData.length },
-    cardCount: cardData.length,
-  })
+  success: true,
+  deck: { ...newDeck, cardCount: cardData.length },
+  cardCount: cardData.length,
+});
 ```
-
 
 #### Cookie writes
 

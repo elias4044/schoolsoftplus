@@ -31,11 +31,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('orgid')
+searchParams.get('orgid');
 ```
-
 
 #### Parsed body and local type
 
@@ -43,61 +41,55 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
+```ts
+NextResponse.json(
+  {
+    success: false,
+    error: 'Missing ID',
+  },
+  { status: 400 }
+);
+```
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error: 'Missing ID',
-      },
-      { status: 400 }
-    )
+  {
+    success: false,
+    error: 'Not authenticated.',
+  },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error: 'Not authenticated.',
-      },
-      { status: 401 }
-    )
+  {
+    success: false,
+    error:
+      'This route requires AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2). The legacy route is available at /api/news/legacy',
+  },
+  { status: 401 }
+);
 ```
-
 
 ```ts
 NextResponse.json(
-      {
-        success: false,
-        error:
-          'This route requires AuthV2 (https://developer.ssp.elias4044.com/docs/auth-v2). The legacy route is available at /api/news/legacy',
-      },
-      { status: 401 }
-    )
+  {
+    success: false,
+    error: 'UserId was not found.',
+  },
+  { status: 400 }
+);
 ```
-
-
-```ts
-NextResponse.json(
-      {
-        success: false,
-        error: 'UserId was not found.',
-      },
-      { status: 400 }
-    )
-```
-
 
 ```ts
 NextResponse.json({
-      ...news,
+  ...news,
 
-      description: descriptionHtml,
-      descriptionHtml,
-    })
+  description: descriptionHtml,
+  descriptionHtml,
+});
 ```
-
 
 #### Cookie writes
 
@@ -105,18 +97,13 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
-api.get<News>(
-      `/eva/api/v2/student/${sess.user.userId}/schools/${orgId}/news/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${sess.token}`,
-        },
-      }
-    )
+api.get<News>(`/eva/api/v2/student/${sess.user.userId}/schools/${orgId}/news/${id}`, {
+  headers: {
+    Authorization: `Bearer ${sess.token}`,
+  },
+});
 ```
-
 
 ## Local helper behavior
 

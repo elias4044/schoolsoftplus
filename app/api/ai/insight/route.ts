@@ -12,7 +12,6 @@ import {
 } from '@/app/api/lib/schoolsoft';
 import { trackAiMessage } from '@/app/api/lib/statsHelper';
 
-
 // ---------------------------------------------------------------------------
 // POST /api/ai/insight
 // Body: { systemPrompt, fetchAssignments?, fetchSchedule?, fetchLunch?, fetchNews?, week?, year? }

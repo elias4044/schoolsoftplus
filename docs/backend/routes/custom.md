@@ -173,40 +173,30 @@ The route also uses these local functions. Imported persistence and authenticati
 
 #### Response branches
 
-
 ```ts
-NextResponse.json(
-      { success: false, error: 'x-url header is required.' },
-      { status: 400 }
-    )
+NextResponse.json({ success: false, error: 'x-url header is required.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ error: 'Invalid SchoolSoft API path.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid SchoolSoft API path.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, data: response.data }, { status: response.status })
+NextResponse.json({ success: true, data: response.data }, { status: response.status });
 ```
-
 
 #### Upstream calls
 
-
 ```ts
 api.request({
-      method,
-      url: `/${customURL}`,
-      headers: { Cookie: cookies },
-      data: body,
-      responseType: 'json',
-    })
+  method,
+  url: `/${customURL}`,
+  headers: { Cookie: cookies },
+  data: body,
+  responseType: 'json',
+});
 ```
-

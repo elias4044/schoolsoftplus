@@ -34,11 +34,9 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-req.nextUrl.searchParams.get('users')
+req.nextUrl.searchParams.get('users');
 ```
-
 
 #### Parsed body and local type
 
@@ -46,21 +44,17 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, presences: {} })
+NextResponse.json({ success: true, presences: {} });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, presences })
+NextResponse.json({ success: true, presences });
 ```
-
 
 #### Cookie writes
 
@@ -89,37 +83,29 @@ curl -i -b cookies.txt -c cookies.txt -X PATCH \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { status?: string };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing userId.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Missing userId.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, status })
+NextResponse.json({ success: true, status });
 ```
-
 
 #### Cookie writes
 

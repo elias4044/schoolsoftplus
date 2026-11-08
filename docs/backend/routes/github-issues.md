@@ -29,26 +29,21 @@ curl -i -b cookies.txt -c cookies.txt -X GET \
 
 #### Request reads
 
-
 ```ts
-searchParams.get('state')
+searchParams.get('state');
 ```
 
-
 ```ts
-searchParams.get('labels')
+searchParams.get('labels');
 ```
 
-
 ```ts
-searchParams.get('page')
+searchParams.get('page');
 ```
 
-
 ```ts
-searchParams.get('per_page')
+searchParams.get('per_page');
 ```
-
 
 #### Parsed body and local type
 
@@ -56,24 +51,20 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Invalid issue query.' }, { status: 400 })
+NextResponse.json({ error: 'Invalid issue query.' }, { status: 400 });
 ```
-
 
 ```ts
 NextResponse.json(
-      { error: 'GitHub API error', status: upstream.status },
-      { status: upstream.status }
-    )
+  { error: 'GitHub API error', status: upstream.status },
+  { status: upstream.status }
+);
 ```
-
 
 ```ts
-NextResponse.json({ issues, hasNext })
+NextResponse.json({ issues, hasNext });
 ```
-
 
 #### Cookie writes
 
@@ -81,12 +72,10 @@ No direct cookie writes. Shared authentication/wrapper helpers can still set rec
 
 #### Direct upstream calls
 
-
 ```ts
 fetch(url.toString(), {
-    signal: AbortSignal.timeout(8_000),
-    headers,
-    next: { revalidate: 60 },
-  })
+  signal: AbortSignal.timeout(8_000),
+  headers,
+  next: { revalidate: 60 },
+});
 ```
-

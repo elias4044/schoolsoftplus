@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
   AtSign,
@@ -26,6 +26,7 @@ import {
   Lock,
   LogOut,
   MessageSquare,
+  MoreHorizontal,
   Paperclip,
   Pencil,
   Phone,
@@ -36,8 +37,8 @@ import {
   Send,
   Settings2,
   ShieldCheck,
-  Smile,
   Sparkles,
+  Star,
   StickyNote,
   Trash2,
   User,
@@ -50,10 +51,20 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { useCallContext } from '@/lib/call-context';
+import {
+  downloadConversationTranscript,
+  getDraftKey,
+  isConversationUnread,
+  mergeMessageTimeline,
+  searchConversationMessages,
+  type InboxFilter,
+} from '@/lib/chat-view';
+import { useRegisterCommandActions, type PaletteAction } from '@/lib/command-actions';
 import { decryptMessage, deriveKey, encryptMessage } from '@/lib/crypto';
 import { uploadImage as uploadHostedImage } from '@/lib/image-upload';
 import { useUnread } from '@/lib/unread-context';
 import { useActiveGroupCallForConversation } from '@/lib/useCall';
+import { useChatFavorites } from '@/lib/useChatFavorites';
 import { useFriends } from '@/lib/useFriends';
 import {
   FlashDeckShareCard,
@@ -77,11 +88,23 @@ import { useSession } from '@/lib/useSession';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { GroupCallEncryptionNotice } from '@/components/CallPanel';
+import { ConversationTools } from '@/components/messages/ConversationTools';
+import { MessageCommandIntent } from '@/components/messages/MessageCommandIntent';
+import { SharedMaterials } from '@/components/messages/SharedMaterials';
 import { UserProfileModal } from '@/components/UserProfileModal';
+
+import styles from './messages.module.css';
 
 /* 
    Types
@@ -113,8 +136,8 @@ const QUICK_REACTIONS = ['👍', '❤️', '❤️‍🩹', '💔', '😂', '�
    Constants
  */
 const MAX_CHARS = 2000;
-const WARN_CHARS = 180; // orange warning
-const HARD_UI_CHARS = 200; // red + won't send without encryption
+const WARN_CHARS = 1800;
+const HARD_UI_CHARS = MAX_CHARS;
 const E2EE_MAX_CHARS = 100; // hard limit in encrypted groups
 
 /* 
@@ -138,12 +161,7 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
   return (
     <>
       {parts.map((part, i) => {
-        if (!URL_REGEX.test(part)) {
-          // Reset lastIndex after test
-          URL_REGEX.lastIndex = 0;
-          return <span key={i}>{part}</span>;
-        }
-        URL_REGEX.lastIndex = 0;
+        if (!/^https?:\/\//.test(part)) return <span key={i}>{part}</span>;
         if (isImageUrl(part)) {
           return (
             <span key={i} className="mt-1.5 block">
@@ -152,7 +170,7 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
                 src={part}
                 alt="Image"
                 loading="lazy"
-                className="max-h-64 max-w-full cursor-pointer rounded-xl border border-white/10 object-contain transition-opacity hover:opacity-90"
+                className="border-border max-h-64 max-w-full cursor-pointer rounded-xl border object-contain transition-opacity hover:opacity-90"
                 style={{ maxWidth: 300 }}
                 onClick={() => window.open(part, '_blank', 'noopener,noreferrer')}
                 onError={(e) => {
@@ -174,7 +192,7 @@ function MessageContent({ text, isMe }: { text: string; isMe: boolean }) {
             rel="noopener noreferrer"
             className={cn(
               'inline-flex items-center gap-0.5 break-all underline underline-offset-2 transition-opacity hover:opacity-80',
-              isMe ? 'text-white/90' : 'text-primary'
+              isMe ? 'text-primary-foreground' : 'text-primary'
             )}
           >
             <LinkIcon className="inline h-2.5 w-2.5 shrink-0" />
@@ -1030,11 +1048,11 @@ function GifPicker({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="bg-card w-72 overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
+      className="bg-card border-border w-72 overflow-hidden rounded-2xl border shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-white/8 px-3 py-2">
+      <div className="border-border flex items-center gap-2 border-b px-3 py-2">
         <Gift className="text-primary h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-xs font-semibold">GIFs</span>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -1042,7 +1060,7 @@ function GifPicker({
         </button>
       </div>
       {/* Search */}
-      <div className="border-b border-white/8 px-2.5 py-2">
+      <div className="border-border border-b px-2.5 py-2">
         <div className="relative">
           <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2" />
           <input
@@ -1050,7 +1068,7 @@ function GifPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search GIFs…"
-            className="text-foreground placeholder:text-muted-foreground focus:border-primary/40 w-full rounded-lg border border-white/10 bg-white/5 py-1 pr-3 pl-7 text-xs focus:outline-none"
+            className="text-foreground placeholder:text-muted-foreground focus:border-primary/40 border-border bg-muted/60 w-full rounded-lg border py-1 pr-3 pl-7 text-xs focus:outline-none"
           />
         </div>
       </div>
@@ -1063,7 +1081,7 @@ function GifPicker({
         ) : error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
             <p className="text-muted-foreground text-xs">{error}</p>
-            <p className="text-muted-foreground/60 text-[10px]">Make sure GIPHY_API_KEY is set.</p>
+            <p className="text-muted-foreground/60 text-xs">Make sure GIPHY_API_KEY is set.</p>
           </div>
         ) : gifs.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -1078,7 +1096,7 @@ function GifPicker({
                   onSelect(g.full);
                   onClose();
                 }}
-                className="hover:ring-primary/60 group relative aspect-square overflow-hidden rounded-lg bg-white/5 transition-all hover:ring-2"
+                className="hover:ring-primary/60 group bg-muted/60 relative aspect-square overflow-hidden rounded-lg transition-all hover:ring-2"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -1092,8 +1110,8 @@ function GifPicker({
           </div>
         )}
       </div>
-      <div className="border-t border-white/8 px-3 py-1">
-        <p className="text-muted-foreground/50 text-center text-[9px]">Powered by GIPHY</p>
+      <div className="border-border border-t px-3 py-1">
+        <p className="text-muted-foreground/50 text-center text-[11px]">Powered by GIPHY</p>
       </div>
     </motion.div>
   );
@@ -1141,11 +1159,11 @@ function EmojiPicker({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="bg-card w-64 overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
+      className="bg-card border-border w-64 overflow-hidden rounded-2xl border shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Search */}
-      <div className="flex items-center gap-2 border-b border-white/8 px-2.5 py-2">
+      <div className="border-border flex items-center gap-2 border-b px-2.5 py-2">
         <SearchIcon className="text-muted-foreground h-3 w-3 shrink-0" />
         <input
           autoFocus
@@ -1160,7 +1178,7 @@ function EmojiPicker({
       </div>
       {/* Category tabs */}
       {!search && (
-        <div className="flex scrollbar-none items-center gap-0.5 overflow-x-auto border-b border-white/8 px-1.5 py-1">
+        <div className="border-border flex scrollbar-none items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1">
           {categories.map((cat, i) => (
             <button
               key={cat.label}
@@ -1168,7 +1186,7 @@ function EmojiPicker({
               title={cat.label}
               className={cn(
                 'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-sm transition-colors',
-                activeCategory === i ? 'bg-primary/20' : 'hover:bg-white/8'
+                activeCategory === i ? 'bg-primary/20' : 'hover:bg-muted/60'
               )}
             >
               {cat.icon}
@@ -1183,7 +1201,7 @@ function EmojiPicker({
             <button
               key={`${emoji}-${i}`}
               onClick={() => onSelect(emoji)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10 active:scale-90"
+              className="hover:bg-muted/60 flex h-7 w-7 items-center justify-center rounded-md text-lg transition-colors active:scale-90"
             >
               {emoji}
             </button>
@@ -1235,7 +1253,7 @@ function formatDate(ts: number) {
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(pointer: coarse)');
+    const mq = window.matchMedia('(max-width: 767px), (pointer: coarse)');
     setIsMobile(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener('change', handler);
@@ -1250,7 +1268,13 @@ function useIsMobile() {
 export default function MessagesPage() {
   const { session, loading: sessionLoading } = useSession();
   const username = session?.userId ?? '';
+  const { favorites, toggleFavorite } = useChatFavorites(username);
   const isMobile = useIsMobile();
+  const reduceMotion = useReducedMotion();
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
+  const [showShared, setShowShared] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const draftConversationRef = useRef<string | null>(null);
 
   // Gate: has the user set up their profile yet?
   const [profileExists, setProfileExists] = useState<boolean | null>(null);
@@ -1262,25 +1286,27 @@ export default function MessagesPage() {
       .catch(() => setProfileExists(false));
   }, []);
 
-  const { conversations, loading: convoLoading } = useConversations(username);
+  const {
+    conversations,
+    loading: convoLoading,
+    error: conversationError,
+    retry: retryConversations,
+  } = useConversations(username);
   const { markRead, setCurrentConversation } = useUnread();
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
   const activeConvoIdRef = useRef<string | null>(null);
-  const { messages, loading: msgLoading } = useMessages(
-    activeConvo?.id ?? null,
-    activeConvo?.participantAliases
-  );
+  const {
+    messages,
+    loading: msgLoading,
+    error: messageError,
+    retry: retryMessages,
+  } = useMessages(activeConvo?.id ?? null, activeConvo?.participantAliases);
 
   // Update unread context when active conversation changes
   useEffect(() => {
     activeConvoIdRef.current = activeConvo?.id ?? null;
     setCurrentConversation(activeConvo?.id ?? null);
   }, [activeConvo?.id, setCurrentConversation]);
-
-  // Clear optimistic when switching conversations
-  useEffect(() => {
-    setOptimisticMsgs([]);
-  }, [activeConvo?.id]);
 
   // Friends
   const {
@@ -1294,7 +1320,7 @@ export default function MessagesPage() {
   } = useFriends(username);
   // Group invites
   const [groupInvites, setGroupInvites] = useState<GroupInvite[]>([]);
-  const [loadingGroupInvites, setLoadingGroupInvites] = useState(false);
+  const [, setLoadingGroupInvites] = useState(false);
 
   // Presence — track own + participantIds
   useMyPresence(username);
@@ -1362,10 +1388,8 @@ export default function MessagesPage() {
   // Message search within conversation
   const [showMsgSearch, setShowMsgSearch] = useState(false);
   const [msgSearchQuery, setMsgSearchQuery] = useState('');
-  const [msgSearchResults, setMsgSearchResults] = useState<Message[]>([]);
 
   // Forward message
-  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [groupEditName, setGroupEditName] = useState('');
   const [groupEditDesc, setGroupEditDesc] = useState('');
@@ -1404,6 +1428,7 @@ export default function MessagesPage() {
 
   // pfp cache: username → pfp URL, fetched from /api/profile/[username]
   const [pfpCache, setPfpCache] = useState<Record<string, string>>({});
+  const [actionError, setActionError] = useState('');
   const pfpFetchingRef = useRef<Set<string>>(new Set());
 
   const fetchPfp = useCallback(async (u: string) => {
@@ -1435,11 +1460,12 @@ export default function MessagesPage() {
   }, [conversations, username, fetchPfp]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const groupAddSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const composeAreaRef = useRef<HTMLFormElement>(null);
+  const conversationSearchRef = useRef<HTMLInputElement>(null);
 
   /* Load recent emojis from localStorage */
   useEffect(() => {
@@ -1461,35 +1487,30 @@ export default function MessagesPage() {
 
   /* Per-conversation draft persistence */
   useEffect(() => {
+    draftConversationRef.current = activeConvo?.id ?? null;
     if (!activeConvo) return;
-    const saved = sessionStorage.getItem(`draft_${activeConvo.id}`);
+    const saved = sessionStorage.getItem(getDraftKey(username, activeConvo.id));
     setDraft(saved ?? '');
     setImagePreview(null);
+    setSendError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeConvo?.id]);
+  }, [activeConvo?.id, username]);
+
+  const updateDraft = (value: string) => {
+    setDraft(value);
+    const conversationId = draftConversationRef.current;
+    if (!conversationId) return;
+    const key = getDraftKey(username, conversationId);
+    if (value) sessionStorage.setItem(key, value);
+    else sessionStorage.removeItem(key);
+  };
 
   useEffect(() => {
-    if (!activeConvo) return;
-    if (draft) sessionStorage.setItem(`draft_${activeConvo.id}`, draft);
-    else sessionStorage.removeItem(`draft_${activeConvo.id}`);
-  }, [draft, activeConvo]);
-
-  /* Message search within conversation */
-  useEffect(() => {
-    if (!msgSearchQuery.trim()) {
-      setMsgSearchResults([]);
-      return;
-    }
-    const q = msgSearchQuery.toLowerCase();
-    setMsgSearchResults(
-      visibleMessages.filter(
-        (m) =>
-          !m.shareCard &&
-          (m.content.toLowerCase().includes(q) || m.senderDisplayName.toLowerCase().includes(q))
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [msgSearchQuery, messages]);
+    const input = inputRef.current;
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+  }, [draft, activeConvo?.id]);
 
   /* Notifications — permission state */
   useEffect(() => {
@@ -1513,9 +1534,9 @@ export default function MessagesPage() {
     const el = scrollRef.current;
     if (!el) return;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth' });
     }
-  }, [messages]);
+  }, [messages, reduceMotion]);
 
   /* Scroll to bottom instantly when switching conversations */
   useEffect(() => {
@@ -1543,6 +1564,12 @@ export default function MessagesPage() {
     setReplyingTo(null);
     setShowScrollBtn(false);
     setShowGroupInfo(false);
+    setActionError('');
+    setShowShared(false);
+    setShowMsgSearch(false);
+    setMsgSearchQuery('');
+    setShowEmojiPicker(false);
+    setShowGifPicker(false);
   }, [activeConvo?.id]);
 
   /* Load group invites */
@@ -1909,6 +1936,7 @@ export default function MessagesPage() {
     const originalReply = replyingTo;
     const originalImage = imagePreview;
     setSending(true);
+    setSendError('');
     let content: string;
     if (hasImage && !draft.trim()) {
       content = imagePreview!.url;
@@ -1924,7 +1952,7 @@ export default function MessagesPage() {
           senderDisplayName: replyingTo.senderDisplayName,
         }
       : null;
-    setDraft('');
+    updateDraft('');
     setReplyingTo(null);
     setImagePreview(null);
 
@@ -1956,6 +1984,7 @@ export default function MessagesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, replyTo: reply }),
+        signal: AbortSignal.timeout(20000),
       });
       const data = await res.json();
       if (!res.ok || !data.success || !data.message) {
@@ -1966,20 +1995,58 @@ export default function MessagesPage() {
           message.id === optMsg.id ? { ...data.message, sending: false, isNew: true } : message
         )
       );
+      if (key)
+        setDecryptedCache((previous) => ({ ...previous, [data.message.id]: optMsg.content }));
     } catch (error) {
       setOptimisticMsgs((prev) => prev.filter((message) => message.id !== optMsg.id));
       if (activeConvoIdRef.current === optMsg.conversationId) {
-        setDraft((current) => (current ? `${originalDraft}\n${current}` : originalDraft));
+        updateDraft(originalDraft);
         setReplyingTo((current) => current ?? originalReply);
         setImagePreview((current) => current ?? originalImage);
       }
-      alert(error instanceof Error ? error.message : 'Could not send message. Please try again.');
+      if (activeConvoIdRef.current !== optMsg.conversationId) {
+        sessionStorage.setItem(getDraftKey(username, optMsg.conversationId), originalDraft);
+      } else {
+        setSendError(
+          error instanceof Error && error.name === 'TimeoutError'
+            ? 'Sending timed out. Check the conversation before trying again.'
+            : error instanceof Error
+              ? error.message
+              : 'Could not send message. Please try again.'
+        );
+      }
     } finally {
       setSending(false);
       // Use rAF to refocus after React re-render
       requestAnimationFrame(() => {
-        inputRef.current?.focus();
+        if (activeConvoIdRef.current === optMsg.conversationId) inputRef.current?.focus();
       });
+    }
+  };
+
+  const performMessageAction = async (
+    messageId: string,
+    method: 'PATCH' | 'DELETE',
+    payload?: Record<string, string>
+  ) => {
+    if (!activeConvo) return false;
+    setActionError('');
+    try {
+      const response = await fetch(`/api/conversations/${activeConvo.id}/${messageId}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: payload ? JSON.stringify(payload) : undefined,
+        signal: AbortSignal.timeout(20000),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.error || 'The change could not be saved. Please try again.');
+      return true;
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : 'The change could not be saved. Please try again.'
+      );
+      return false;
     }
   };
 
@@ -1987,40 +2054,49 @@ export default function MessagesPage() {
     if (!activeConvo || !editContent.trim()) return;
     setEditSaving(true);
     try {
-      await fetch(`/api/conversations/${activeConvo.id}/${messageId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'edit', content: editContent.trim() }),
-      });
+      let content = editContent.trim();
+      if (activeConvo.encrypted) {
+        const key = encKeysRef.current.get(activeConvo.id);
+        if (!key) {
+          setActionError('Unlock the conversation before editing this message.');
+          return;
+        }
+        content = await encryptMessage(key, content);
+      }
+      if (await performMessageAction(messageId, 'PATCH', { action: 'edit', content })) {
+        setEditingId(null);
+        if (activeConvo.encrypted)
+          setDecryptedCache((previous) => ({ ...previous, [messageId]: editContent.trim() }));
+      }
+    } catch {
+      setActionError('The edit could not be saved. Your changes are still in the editor.');
     } finally {
       setEditSaving(false);
-      setEditingId(null);
     }
   };
 
   const deleteMsg = async (messageId: string) => {
     if (!activeConvo) return;
-    await fetch(`/api/conversations/${activeConvo.id}/${messageId}`, { method: 'DELETE' });
-    if (showPinned) loadPinned();
+    if ((await performMessageAction(messageId, 'DELETE')) && showPinned) loadPinned();
   };
 
   const togglePin = async (messageId: string) => {
     if (!activeConvo) return;
-    await fetch(`/api/conversations/${activeConvo.id}/${messageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'pin' }),
-    });
-    if (showPinned) loadPinned();
+    const message =
+      messages.find((item) => item.id === messageId) ??
+      pinnedMessages.find((item) => item.id === messageId);
+    if (
+      (await performMessageAction(messageId, 'PATCH', {
+        action: message?.pinned ? 'unpin' : 'pin',
+      })) &&
+      showPinned
+    )
+      loadPinned();
   };
 
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!activeConvo) return;
-    await fetch(`/api/conversations/${activeConvo.id}/${messageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'react', emoji }),
-    });
+    await performMessageAction(messageId, 'PATCH', { action: 'react', emoji });
   };
 
   const loadPinned = async () => {
@@ -2047,13 +2123,13 @@ export default function MessagesPage() {
   };
 
   // Keep acknowledged messages visible until their exact IDs arrive in the live snapshot.
-  const visibleMessages = (() => {
-    const real = messages.filter((m) => m.deletedAt === null);
-    const realIds = new Set(messages.map((message) => message.id));
-    return [...real, ...optimisticMsgs.filter((message) => !realIds.has(message.id))].sort(
-      (a, b) => a.createdAt - b.createdAt
-    );
-  })();
+  const visibleMessages = mergeMessageTimeline(messages, optimisticMsgs, activeConvo?.id ?? null);
+  const msgSearchResults = searchConversationMessages(
+    visibleMessages,
+    msgSearchQuery,
+    activeConvo?.encrypted ?? false,
+    decryptedCache
+  );
   const grouped: { date: string; msgs: Message[] }[] = [];
   for (const msg of visibleMessages) {
     const d = formatDate(msg.createdAt);
@@ -2062,9 +2138,151 @@ export default function MessagesPage() {
     else grouped.push({ date: d, msgs: [msg] });
   }
 
-  const filteredConvos = conversations.filter((c) =>
-    partnerName(c).toLowerCase().includes(convoFilter.toLowerCase())
+  const isUnread = (conversation: Conversation) => isConversationUnread(conversation, username);
+  const unreadCount = conversations.filter(isUnread).length;
+  const filteredConvos = conversations.filter(
+    (conversation) =>
+      (inboxFilter !== 'unread' || isUnread(conversation)) &&
+      (inboxFilter !== 'groups' || conversation.type === 'group') &&
+      (inboxFilter !== 'favorites' || favorites.has(conversation.id)) &&
+      `${partnerName(conversation)} ${conversation.encrypted ? '' : conversation.lastMessage}`
+        .toLowerCase()
+        .includes(convoFilter.toLowerCase())
   );
+
+  const showInbox = (filter: InboxFilter) => {
+    setSidebarTab('messages');
+    setInboxFilter(filter);
+    setMobileShowChat(false);
+  };
+  const chatCommands: PaletteAction[] = profileExists
+    ? [
+        {
+          id: 'chat-search-conversations',
+          label: 'Search conversations',
+          group: 'Chat',
+          icon: Search,
+          keywords: 'messages inbox people',
+          run: () => {
+            showInbox('all');
+            requestAnimationFrame(() => conversationSearchRef.current?.focus());
+          },
+        },
+        {
+          id: 'chat-unread',
+          label: 'Show unread chats',
+          group: 'Chat',
+          icon: MessageSquare,
+          keywords: 'messages inbox unread',
+          run: () => showInbox('unread'),
+        },
+        {
+          id: 'chat-favorites',
+          label: 'Show favorite chats',
+          group: 'Chat',
+          icon: Star,
+          keywords: 'messages starred favorites',
+          run: () => showInbox('favorites'),
+        },
+        ...conversations.map((conversation): PaletteAction => ({
+          id: 'chat-open-' + conversation.id,
+          label: partnerName(conversation),
+          description: 'Open conversation',
+          group: 'Conversations',
+          icon: conversation.type === 'group' ? Users : MessageSquare,
+          keywords: 'chat message open',
+          run: () => {
+            setActiveConvo(conversation);
+            setMobileShowChat(true);
+            setSidebarTab('messages');
+          },
+        })),
+      ]
+    : [];
+  const conversationCommands: PaletteAction[] =
+    activeConvo && profileExists
+      ? [
+          {
+            id: 'chat-search-messages',
+            label: 'Search this conversation',
+            group: 'Current conversation',
+            icon: Search,
+            keywords: 'find messages',
+            run: () => {
+              setShowMsgSearch(true);
+              setMsgSearchQuery('');
+            },
+          },
+          {
+            id: 'chat-shared-materials',
+            label: 'Show shared materials',
+            group: 'Current conversation',
+            icon: BookOpen,
+            keywords: 'notes flashcards grades links files',
+            run: () => setShowShared(true),
+          },
+          {
+            id: 'chat-pinned',
+            label: 'Show pinned messages',
+            group: 'Current conversation',
+            icon: Pin,
+            keywords: 'saved messages',
+            run: () => {
+              if (!showPinned) togglePinnedPanel();
+            },
+          },
+          {
+            id: 'chat-favorite',
+            label: favorites.has(activeConvo.id)
+              ? 'Remove chat from favorites'
+              : 'Add chat to favorites',
+            group: 'Current conversation',
+            icon: Star,
+            run: () => {
+              if (!toggleFavorite(activeConvo.id))
+                setActionError('Favorites could not be saved in this browser.');
+            },
+          },
+          {
+            id: 'chat-export',
+            label: 'Download conversation',
+            group: 'Current conversation',
+            icon: Download,
+            description: 'Latest 100 loaded messages',
+            keywords: 'export transcript text',
+            disabled: !visibleMessages.length,
+            run: () =>
+              downloadConversationTranscript(
+                partnerName(activeConvo),
+                visibleMessages,
+                activeConvo.encrypted,
+                decryptedCache
+              ),
+          },
+        ]
+      : [];
+  const directCallCommands: PaletteAction[] =
+    activeConvo?.type === 'dm' && profileExists
+      ? [
+          {
+            id: 'chat-start-call',
+            label: 'Call ' + partnerName(activeConvo),
+            group: 'Current conversation',
+            icon: Phone,
+            keywords: 'start voice audio call',
+            disabled: call.phase !== 'idle' || groupCall.phase !== 'idle',
+            run: () => {
+              const partner = activeConvo.participantIds.find((id) => id !== username);
+              if (partner) void call.startCall(username, partner);
+            },
+          },
+        ]
+      : [];
+  useRegisterCommandActions('messages', [
+    ...chatCommands,
+    ...conversationCommands,
+    ...directCallCommands,
+  ]);
 
   if (sessionLoading || profileExists === null) {
     return (
@@ -2079,1963 +2297,2119 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* ═══ Voice call panel is now in the global layout (lib/call-context.tsx) ══ */}
+    <MotionConfig reducedMotion="user" transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}>
+      <div className={cn(styles.workspace, 'flex h-full min-h-0 flex-col')}>
+        <Suspense fallback={null}>
+          <MessageCommandIntent
+            onCompose={() => setShowNewDM(true)}
+            onCreateGroup={() => setShowNewGroup(true)}
+          />
+        </Suspense>
+        {/* ═══ Voice call panel is now in the global layout (lib/call-context.tsx) ══ */}
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* ═══ Conversation list ═════════════════════════════ */}
-        <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className={cn(
-            'bg-card flex shrink-0 flex-col border-r border-white/7',
-            'w-full md:w-72 lg:w-80',
-            mobileShowChat && 'hidden md:flex'
-          )}
-        >
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/7 px-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="text-primary h-4 w-4" />
-              <span className="text-sm font-semibold">Messages</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 rounded-lg hover:bg-white/8"
-                    onClick={async () => {
-                      const p = await Notification.requestPermission();
-                      if (p) setNotifPermission(p);
-                    }}
-                  >
-                    {notifPermission === 'granted' ? (
-                      <Bell className="text-primary h-3.5 w-3.5" />
-                    ) : (
-                      <BellOff className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {notifPermission === 'granted' ? 'Notifications on' : 'Enable notifications'}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 rounded-lg hover:bg-white/8"
-                    onClick={() => setShowNewGroup(true)}
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="text-xs">
-                  New group chat
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 rounded-lg hover:bg-white/8"
-                    onClick={() => setShowNewDM(true)}
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="text-xs">
-                  New conversation
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-
-          {/* Tab bar */}
-          <div className="flex shrink-0 border-b border-white/7">
-            <button
-              onClick={() => setSidebarTab('messages')}
-              className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors',
-                sidebarTab === 'messages'
-                  ? 'text-primary border-primary border-b-2'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Chats
-            </button>
-            <button
-              onClick={() => setSidebarTab('friends')}
-              className={cn(
-                'relative flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors',
-                sidebarTab === 'friends'
-                  ? 'text-primary border-primary border-b-2'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Users className="h-3.5 w-3.5" />
-              Friends
-              {friendRequests.length + groupInvites.length > 0 && (
-                <span
-                  className="absolute top-1 right-3 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold"
-                  style={{ background: 'oklch(0.65 0.22 278)', color: 'white' }}
-                >
-                  {friendRequests.length + groupInvites.length}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {sidebarTab === 'messages' ? (
-              <>
-                {/* Group invite banner */}
-                {groupInvites.length > 0 && (
-                  <div className="space-y-1.5 border-b border-white/7 px-3 py-2">
-                    <p className="text-muted-foreground px-1 text-[10px] font-semibold tracking-wider uppercase">
-                      Group Invites ({groupInvites.length})
-                    </p>
-                    {groupInvites.map((inv) => (
-                      <div
-                        key={inv.id}
-                        className="bg-primary/5 border-primary/15 flex items-center gap-2 rounded-lg border px-2 py-1.5"
-                      >
-                        <div
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                          style={{ background: 'oklch(0.65 0.22 278 / 15%)' }}
-                        >
-                          <Users className="text-primary h-3.5 w-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-medium">{inv.groupName}</p>
-                          <p className="text-muted-foreground truncate text-[9px]">
-                            from {inv.invitedByDisplayName}
-                          </p>
-                        </div>
-                        <div className="flex gap-0.5">
-                          <button
-                            onClick={() => acceptGroupInvite(inv.id, true)}
-                            className="flex h-6 w-6 items-center justify-center rounded-md text-green-400 transition-colors hover:bg-green-500/15"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => acceptGroupInvite(inv.id, false)}
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="shrink-0 border-b border-white/7 px-3 py-2.5">
-                  <div className="relative">
-                    <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
-                    <Input
-                      value={convoFilter}
-                      onChange={(e) => setConvoFilter(e.target.value)}
-                      placeholder="Search conversations…"
-                      className="focus:border-primary/40 h-8 border-white/10 bg-white/5 pl-8 text-xs"
-                    />
-                  </div>
-                </div>
-
-                {convoLoading ? (
-                  <div className="flex h-24 items-center justify-center">
-                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                  </div>
-                ) : filteredConvos.length === 0 ? (
-                  <div className="flex h-40 flex-col items-center justify-center gap-2 px-6 text-center">
-                    <MessageSquare className="text-muted-foreground/30 h-8 w-8" />
-                    <p className="text-muted-foreground text-xs">
-                      {convoFilter ? 'No conversations match.' : 'No conversations yet. Start one!'}
-                    </p>
-                  </div>
-                ) : (
-                  <AnimatePresence initial={false}>
-                    {filteredConvos.map((convo, i) => (
-                      <ConvoItem
-                        key={convo.id}
-                        convo={convo}
-                        name={partnerName(convo)}
-                        subtitle={partnerSubtitle(convo)}
-                        active={activeConvo?.id === convo.id}
-                        username={username}
-                        index={i}
-                        pfpCache={pfpCache}
-                        statusMap={statusMap}
-                        onClick={() => {
-                          setActiveConvo(convo);
-                          setMobileShowChat(true);
-                          setEditingId(null);
-                        }}
-                      />
-                    ))}
-                  </AnimatePresence>
-                )}
-              </>
-            ) : (
-              /*  Friends tab  */
-              <FriendsPanel
-                username={username}
-                friends={friends}
-                received={friendRequests}
-                sent={sentFriendRequests}
-                profileMap={friendProfileMap}
-                statusMap={statusMap}
-                friendSearchQuery={friendSearchQuery}
-                friendSearchResults={friendSearchResults}
-                friendSearching={friendSearching}
-                friendRequestSending={friendRequestSending}
-                isFriend={isFriend}
-                pendingFrom={pendingFrom}
-                sentTo={sentTo}
-                onSearchChange={setFriendSearchQuery}
-                onSendRequest={sendFriendReq}
-                onRespond={respondFriendReq}
-                onOpenDM={(targetUsername: string) => {
-                  const u: UserSearchResult = {
-                    username: targetUsername,
-                    displayName: friendProfileMap[targetUsername]?.displayName ?? targetUsername,
-                    schoolName: friendProfileMap[targetUsername]?.schoolName ?? '',
-                    userType: '',
-                  };
-                  openDM(u);
-                  setSidebarTab('messages');
-                }}
-              />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* ═══ Conversation list ═════════════════════════════ */}
+          <motion.div
+            initial={false}
+            className={cn(
+              styles.inbox,
+              'bg-card border-border flex min-h-0 shrink-0 flex-col border-r',
+              'w-full md:w-72 xl:w-80',
+              mobileShowChat && 'hidden md:flex'
             )}
-          </div>
-        </motion.div>
+          >
+            <div className="flex h-20 shrink-0 items-center justify-between px-5">
+              <div className="flex items-center gap-2">
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">Messages</h1>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {unreadCount
+                      ? `${unreadCount} unread conversations`
+                      : 'Your school, in conversation'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="hover:bg-muted/60 h-7 w-7 rounded-lg"
+                      onClick={async () => {
+                        if (typeof Notification === 'undefined') return;
+                        const p = await Notification.requestPermission();
+                        if (p) setNotifPermission(p);
+                      }}
+                    >
+                      {notifPermission === 'granted' ? (
+                        <Bell className="text-primary h-3.5 w-3.5" />
+                      ) : (
+                        <BellOff className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {notifPermission === 'granted' ? 'Notifications on' : 'Enable notifications'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="New group chat"
+                      size="icon"
+                      variant="ghost"
+                      className="hover:bg-muted/60 h-7 w-7 rounded-lg"
+                      onClick={() => setShowNewGroup(true)}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">
+                    New group chat
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="New conversation"
+                      size="icon"
+                      variant="ghost"
+                      className="hover:bg-muted/60 h-7 w-7 rounded-lg"
+                      onClick={() => setShowNewDM(true)}
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">
+                    New conversation
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
 
-        {/* ═══ Chat area ═════════════════════════════════════ */}
-        <div className={cn('flex min-w-0 flex-1 flex-col', !mobileShowChat && 'hidden md:flex')}>
-          {!activeConvo ? (
-            <EmptyChat onNew={() => setShowNewDM(true)} />
-          ) : (
-            <>
-              {/* Header — sticky so it stays visible when the outer scroll jumps */}
-              <motion.div
-                initial={{ y: -8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.25 }}
-                className="sticky top-0 z-10 flex h-14 min-w-0 shrink-0 items-center gap-2 border-b border-white/7 px-3"
-                style={{ background: 'var(--card)' }}
+            {/* Tab bar */}
+            <div className="border-border flex shrink-0 border-b">
+              <button
+                onClick={() => setSidebarTab('messages')}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors',
+                  sidebarTab === 'messages'
+                    ? 'text-primary border-primary border-b-2'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
               >
-                <button
-                  className="text-muted-foreground hover:text-foreground mr-0.5 shrink-0 md:hidden"
-                  onClick={() => setMobileShowChat(false)}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <Avatar
-                  className={cn(
-                    'h-8 w-8 shrink-0',
-                    activeConvo.type === 'dm' &&
-                      'hover:ring-primary/40 cursor-pointer transition-all hover:ring-2'
+                <MessageSquare className="h-3.5 w-3.5" />
+                Chats
+              </button>
+              <button
+                onClick={() => setSidebarTab('friends')}
+                className={cn(
+                  'relative flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors',
+                  sidebarTab === 'friends'
+                    ? 'text-primary border-primary border-b-2'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Friends
+                {friendRequests.length + groupInvites.length > 0 && (
+                  <span
+                    className="absolute top-1 right-3 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[11px] font-bold"
+                    style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                  >
+                    {friendRequests.length + groupInvites.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {sidebarTab === 'messages' ? (
+                <>
+                  {/* Group invite banner */}
+                  {groupInvites.length > 0 && (
+                    <div className="border-border space-y-1.5 border-b px-3 py-2">
+                      <p className="text-muted-foreground px-1 text-xs font-semibold tracking-wider uppercase">
+                        Group Invites ({groupInvites.length})
+                      </p>
+                      {groupInvites.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="bg-primary/5 border-primary/15 flex items-center gap-2 rounded-lg border px-2 py-1.5"
+                        >
+                          <div
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{
+                              background: 'color-mix(in oklch, var(--primary) 15%, transparent)',
+                            }}
+                          >
+                            <Users className="text-primary h-3.5 w-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-medium">{inv.groupName}</p>
+                            <p className="text-muted-foreground truncate text-[11px]">
+                              from {inv.invitedByDisplayName}
+                            </p>
+                          </div>
+                          <div className="flex gap-0.5">
+                            <button
+                              onClick={() => acceptGroupInvite(inv.id, true)}
+                              className="flex h-6 w-6 items-center justify-center rounded-md text-green-400 transition-colors hover:bg-green-500/15"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => acceptGroupInvite(inv.id, false)}
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  onClick={() => {
-                    if (activeConvo.type === 'dm') {
-                      const partner = activeConvo.participantIds.find((p) => p !== username);
-                      if (partner) setViewProfileUsername(partner);
-                    }
+
+                  <div className="border-border shrink-0 border-b px-3 py-2.5">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                      <Input
+                        ref={conversationSearchRef}
+                        aria-label="Search conversations"
+                        value={convoFilter}
+                        onChange={(e) => setConvoFilter(e.target.value)}
+                        placeholder="Search conversations…"
+                        className="focus:border-primary/40 border-border bg-muted/60 h-8 pl-8 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1 px-3 py-3" aria-label="Filter conversations">
+                    {(['all', 'unread', 'groups', 'favorites'] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        type="button"
+                        aria-pressed={inboxFilter === filter}
+                        onClick={() => setInboxFilter(filter)}
+                        className={cn(
+                          'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                          inboxFilter === filter
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground hover:bg-muted'
+                        )}
+                      >
+                        {filter === 'all'
+                          ? 'All chats'
+                          : filter === 'unread'
+                            ? `Unread${unreadCount ? ` (${unreadCount})` : ''}`
+                            : filter === 'groups'
+                              ? 'Groups'
+                              : 'Favorites'}
+                      </button>
+                    ))}
+                  </div>
+                  {conversationError ? (
+                    <div role="alert" className="px-5 py-6 text-sm">
+                      <p className="text-muted-foreground">{conversationError}</p>
+                      <Button variant="outline" className="mt-3" onClick={retryConversations}>
+                        Try again
+                      </Button>
+                    </div>
+                  ) : convoLoading ? (
+                    <div className="flex h-24 items-center justify-center">
+                      <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                    </div>
+                  ) : filteredConvos.length === 0 ? (
+                    <div className="flex h-40 flex-col items-center justify-center gap-2 px-6 text-center">
+                      <MessageSquare className="text-muted-foreground/30 h-8 w-8" />
+                      <p className="text-muted-foreground text-xs">
+                        {convoFilter
+                          ? 'No conversations match.'
+                          : inboxFilter === 'favorites'
+                            ? 'Add favorites from the conversation tools menu.'
+                            : inboxFilter === 'unread'
+                              ? 'You are all caught up.'
+                              : inboxFilter === 'groups'
+                                ? 'No group chats yet.'
+                                : 'No conversations yet. Start one!'}
+                      </p>
+                    </div>
+                  ) : (
+                    <AnimatePresence initial={false}>
+                      {filteredConvos.map((convo) => (
+                        <ConvoItem
+                          key={convo.id}
+                          convo={convo}
+                          name={partnerName(convo)}
+                          subtitle={partnerSubtitle(convo)}
+                          active={activeConvo?.id === convo.id}
+                          username={username}
+                          unread={isUnread(convo)}
+                          favorite={favorites.has(convo.id)}
+                          pfpCache={pfpCache}
+                          statusMap={statusMap}
+                          onClick={() => {
+                            setActiveConvo(convo);
+                            setMobileShowChat(true);
+                            setEditingId(null);
+                          }}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </>
+              ) : (
+                /*  Friends tab  */
+                <FriendsPanel
+                  username={username}
+                  friends={friends}
+                  received={friendRequests}
+                  sent={sentFriendRequests}
+                  profileMap={friendProfileMap}
+                  statusMap={statusMap}
+                  friendSearchQuery={friendSearchQuery}
+                  friendSearchResults={friendSearchResults}
+                  friendSearching={friendSearching}
+                  friendRequestSending={friendRequestSending}
+                  isFriend={isFriend}
+                  pendingFrom={pendingFrom}
+                  sentTo={sentTo}
+                  onSearchChange={setFriendSearchQuery}
+                  onSendRequest={sendFriendReq}
+                  onRespond={respondFriendReq}
+                  onOpenDM={(targetUsername: string) => {
+                    const u: UserSearchResult = {
+                      username: targetUsername,
+                      displayName: friendProfileMap[targetUsername]?.displayName ?? targetUsername,
+                      schoolName: friendProfileMap[targetUsername]?.schoolName ?? '',
+                      userType: '',
+                    };
+                    openDM(u);
+                    setSidebarTab('messages');
                   }}
+                />
+              )}
+            </div>
+          </motion.div>
+
+          {/* ═══ Chat area ═════════════════════════════════════ */}
+          <div className={cn('flex min-w-0 flex-1 flex-col', !mobileShowChat && 'hidden md:flex')}>
+            {!activeConvo ? (
+              <EmptyChat onNew={() => setShowNewDM(true)} />
+            ) : (
+              <>
+                {/* Header — sticky so it stays visible when the outer scroll jumps */}
+                <motion.div
+                  initial={false}
+                  className={cn(
+                    styles.chatHeader,
+                    'border-border sticky top-0 z-10 flex min-h-20 min-w-0 shrink-0 items-center gap-2 border-b px-4 md:px-6'
+                  )}
+                  style={{ background: 'var(--card)' }}
                 >
-                  {activeConvo.type === 'dm' &&
-                    (() => {
-                      const partner = activeConvo.participantIds.find((p) => p !== username);
-                      const pfp = partner
-                        ? pfpCache[partner] || activeConvo.participantPfpUrls[partner] || ''
-                        : '';
-                      return pfp ? <AvatarImage src={pfp} alt={partnerName(activeConvo)} /> : null;
-                    })()}
-                  <AvatarFallback
-                    className="text-xs font-bold"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, oklch(0.65 0.22 278 / 40%), oklch(0.55 0.25 295 / 40%))',
-                      color: 'oklch(0.78 0.15 278)',
+                  <button
+                    aria-label="Back to conversations"
+                    className="text-muted-foreground hover:text-foreground mr-0.5 shrink-0 md:hidden"
+                    onClick={() => setMobileShowChat(false)}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <Avatar
+                    className={cn(
+                      'h-8 w-8 shrink-0',
+                      activeConvo.type === 'dm' &&
+                        'hover:ring-primary/40 cursor-pointer transition-all hover:ring-2'
+                    )}
+                    onClick={() => {
+                      if (activeConvo.type === 'dm') {
+                        const partner = activeConvo.participantIds.find((p) => p !== username);
+                        if (partner) setViewProfileUsername(partner);
+                      }
                     }}
                   >
-                    {activeConvo.type === 'group' ? (
-                      <Users className="h-4 w-4" />
-                    ) : (
-                      initials(partnerName(activeConvo))
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-                <div
-                  className={cn('min-w-0 flex-1', activeConvo.type === 'dm' && 'cursor-pointer')}
-                  onClick={() => {
-                    if (activeConvo.type === 'dm') {
-                      const partner = activeConvo.participantIds.find((p) => p !== username);
-                      if (partner) setViewProfileUsername(partner);
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-semibold">{partnerName(activeConvo)}</p>
-                    {activeConvo.encrypted && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <Lock className="text-primary h-3 w-3 shrink-0" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
-                          End-to-end encrypted
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
                     {activeConvo.type === 'dm' &&
                       (() => {
                         const partner = activeConvo.participantIds.find((p) => p !== username);
-                        const st = partner ? (statusMap[partner] ?? 'offline') : 'offline';
-                        return (
-                          <span
-                            className="flex items-center gap-1 text-[10px]"
-                            style={{ color: statusColor(st) }}
-                          >
-                            <span
-                              className="inline-block h-1.5 w-1.5 rounded-full"
-                              style={{ background: statusColor(st) }}
-                            />
-                            {statusLabel(st)}
-                          </span>
-                        );
+                        const pfp = partner
+                          ? pfpCache[partner] || activeConvo.participantPfpUrls[partner] || ''
+                          : '';
+                        return pfp ? (
+                          <AvatarImage src={pfp} alt={partnerName(activeConvo)} />
+                        ) : null;
                       })()}
-                    {activeConvo.type === 'group' && (
-                      <p className="text-muted-foreground truncate text-[10px]">
-                        {partnerSubtitle(activeConvo)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {activeConvo.type === 'dm' && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={cn(
-                          'h-8 w-8 shrink-0 rounded-lg',
-                          call.phase !== 'idle' && 'bg-primary/15 text-primary'
-                        )}
-                        disabled={call.phase !== 'idle' || groupCall.phase !== 'idle'}
-                        onClick={() => {
-                          const partner = activeConvo.participantIds.find((p) => p !== username);
-                          if (partner) call.startCall(username, partner);
-                        }}
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {call.phase !== 'idle' ? 'Call in progress' : 'Voice call'}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {activeConvo.type === 'group' && activeGroupCallInfo && (
-                  // Active group call banner
+                    <AvatarFallback
+                      className="text-xs font-bold"
+                      style={{
+                        background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                        color: 'var(--foreground)',
+                      }}
+                    >
+                      {activeConvo.type === 'group' ? (
+                        <Users className="h-4 w-4" />
+                      ) : (
+                        initials(partnerName(activeConvo))
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
                   <div
-                    className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs font-medium"
-                    style={{
-                      background: 'oklch(0.60 0.20 148 / 12%)',
-                      border: '1px solid oklch(0.60 0.20 148 / 25%)',
+                    className={cn('min-w-0 flex-1', activeConvo.type === 'dm' && 'cursor-pointer')}
+                    onClick={() => {
+                      if (activeConvo.type === 'dm') {
+                        const partner = activeConvo.participantIds.find((p) => p !== username);
+                        if (partner) setViewProfileUsername(partner);
+                      }
                     }}
                   >
-                    <span
-                      className="h-1.5 w-1.5 animate-pulse rounded-full"
-                      style={{ background: 'oklch(0.60 0.20 148)' }}
-                    />
-                    <span className="text-[10px]" style={{ color: 'oklch(0.65 0.18 148)' }}>
-                      {activeGroupCallInfo.participantIds.length} in call
-                    </span>
-                    {groupCall.session?.callId === activeGroupCallInfo.callId ? (
-                      <button
-                        onClick={() => groupCall.leaveGroupCall()}
-                        className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:bg-red-500/15"
-                        style={{ color: 'oklch(0.72 0.20 24)' }}
-                      >
-                        Leave
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (groupCall.phase !== 'idle' || call.phase !== 'idle') return;
-                          groupCall.joinGroupCall(
-                            activeGroupCallInfo.callId,
-                            activeConvo.id,
-                            username
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold">{partnerName(activeConvo)}</p>
+                      {activeConvo.encrypted && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Lock className="text-primary h-3 w-3 shrink-0" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="text-xs">
+                            End-to-end encrypted
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {activeConvo.type === 'dm' &&
+                        (() => {
+                          const partner = activeConvo.participantIds.find((p) => p !== username);
+                          const st = partner ? (statusMap[partner] ?? 'offline') : 'offline';
+                          return (
+                            <span
+                              className="flex items-center gap-1 text-xs"
+                              style={{ color: statusColor(st) }}
+                            >
+                              <span
+                                className="inline-block h-1.5 w-1.5 rounded-full"
+                                style={{ background: statusColor(st) }}
+                              />
+                              {statusLabel(st)}
+                            </span>
                           );
-                        }}
-                        disabled={groupCall.phase !== 'idle' || call.phase !== 'idle'}
-                        className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:bg-green-500/15 disabled:opacity-50"
-                        style={{ color: 'oklch(0.65 0.18 148)' }}
-                      >
-                        Join
-                      </button>
-                    )}
+                        })()}
+                      {activeConvo.type === 'group' && (
+                        <p className="text-muted-foreground truncate text-xs">
+                          {partnerSubtitle(activeConvo)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
-                {activeConvo.type === 'group' && !activeGroupCallInfo && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 shrink-0 rounded-lg"
-                        disabled={groupCall.phase !== 'idle' || call.phase !== 'idle'}
-                        onClick={() => {
-                          if (activeConvo.encrypted) {
-                            setShowEncCallWarning(true);
-                          } else {
-                            groupCall.startGroupCall(username, activeConvo.id);
-                          }
-                        }}
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      Start voice call
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {activeConvo.type === 'group' && (
+                  <ConversationTools
+                    onSearch={() => {
+                      setShowMsgSearch(true);
+                      setMsgSearchQuery('');
+                    }}
+                    onShowPinned={togglePinnedPanel}
+                    name={partnerName(activeConvo)}
+                    messages={visibleMessages}
+                    encrypted={activeConvo.encrypted}
+                    decrypted={decryptedCache}
+                    favorite={favorites.has(activeConvo.id)}
+                    onToggleFavorite={() => {
+                      if (!toggleFavorite(activeConvo.id))
+                        setActionError('Favorites could not be saved in this browser.');
+                    }}
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Shared materials"
+                    title="Shared materials"
+                    aria-expanded={showShared}
+                    className={cn('shrink-0', showShared && 'bg-muted text-primary')}
+                    onClick={() => setShowShared((value) => !value)}
+                  >
+                    <BookOpen className="size-4" />
+                  </Button>
+                  {activeConvo.type === 'dm' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={cn(
+                            'h-8 w-8 shrink-0 rounded-lg',
+                            call.phase !== 'idle' && 'bg-primary/15 text-primary'
+                          )}
+                          disabled={call.phase !== 'idle' || groupCall.phase !== 'idle'}
+                          onClick={() => {
+                            const partner = activeConvo.participantIds.find((p) => p !== username);
+                            if (partner) call.startCall(username, partner);
+                          }}
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {call.phase !== 'idle' ? 'Call in progress' : 'Voice call'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {activeConvo.type === 'group' && activeGroupCallInfo && (
+                    // Active group call banner
+                    <div
+                      className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs font-medium"
+                      style={{
+                        background: 'oklch(0.60 0.20 148 / 12%)',
+                        border: '1px solid oklch(0.60 0.20 148 / 25%)',
+                      }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 animate-pulse rounded-full"
+                        style={{ background: 'oklch(0.60 0.20 148)' }}
+                      />
+                      <span className="text-xs" style={{ color: 'oklch(0.65 0.18 148)' }}>
+                        {activeGroupCallInfo.participantIds.length} in call
+                      </span>
+                      {groupCall.session?.callId === activeGroupCallInfo.callId ? (
+                        <button
+                          onClick={() => groupCall.leaveGroupCall()}
+                          className="rounded-md px-1.5 py-0.5 text-xs font-semibold transition-colors hover:bg-red-500/15"
+                          style={{ color: 'oklch(0.72 0.20 24)' }}
+                        >
+                          Leave
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (groupCall.phase !== 'idle' || call.phase !== 'idle') return;
+                            groupCall.joinGroupCall(
+                              activeGroupCallInfo.callId,
+                              activeConvo.id,
+                              username
+                            );
+                          }}
+                          disabled={groupCall.phase !== 'idle' || call.phase !== 'idle'}
+                          className="rounded-md px-1.5 py-0.5 text-xs font-semibold transition-colors hover:bg-green-500/15 disabled:opacity-50"
+                          style={{ color: 'oklch(0.65 0.18 148)' }}
+                        >
+                          Join
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {activeConvo.type === 'group' && !activeGroupCallInfo && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          aria-label="Start voice call"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 rounded-lg"
+                          disabled={groupCall.phase !== 'idle' || call.phase !== 'idle'}
+                          onClick={() => {
+                            if (activeConvo.encrypted) {
+                              setShowEncCallWarning(true);
+                            } else {
+                              groupCall.startGroupCall(username, activeConvo.id);
+                            }
+                          }}
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Start voice call
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {activeConvo.type === 'group' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          aria-label="Group info"
+                          size="icon"
+                          variant="ghost"
+                          className={cn(
+                            'h-8 w-8 shrink-0 rounded-lg',
+                            showGroupInfo && 'bg-primary/15 text-primary'
+                          )}
+                          onClick={() => {
+                            setShowGroupInfo((v) => !v);
+                            setShowPinned(false);
+                            if (!showGroupInfo) {
+                              setGroupEditName(activeConvo.groupName ?? '');
+                              setGroupEditDesc(activeConvo.groupDescription ?? '');
+                            }
+                          }}
+                        >
+                          <Settings2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Group info
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         size="icon"
                         variant="ghost"
                         className={cn(
-                          'h-8 w-8 shrink-0 rounded-lg',
-                          showGroupInfo && 'bg-primary/15 text-primary'
+                          'hidden h-8 w-8 shrink-0 rounded-lg sm:inline-flex',
+                          showPinned && 'bg-primary/15 text-primary'
                         )}
-                        onClick={() => {
-                          setShowGroupInfo((v) => !v);
-                          setShowPinned(false);
-                          if (!showGroupInfo) {
-                            setGroupEditName(activeConvo.groupName ?? '');
-                            setGroupEditDesc(activeConvo.groupDescription ?? '');
-                          }
-                        }}
+                        onClick={togglePinnedPanel}
                       >
-                        <Settings2 className="h-3.5 w-3.5" />
+                        <Pin className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-xs">
-                      Group info
+                      {showPinned ? 'Hide pinned' : 'Pinned messages'}
                     </TooltipContent>
                   </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className={cn(
-                        'h-8 w-8 shrink-0 rounded-lg',
-                        showPinned && 'bg-primary/15 text-primary'
-                      )}
-                      onClick={togglePinnedPanel}
-                    >
-                      <Pin className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {showPinned ? 'Hide pinned' : 'Pinned messages'}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className={cn(
-                        'h-8 w-8 shrink-0 rounded-lg',
-                        showMsgSearch && 'bg-primary/15 text-primary'
-                      )}
-                      onClick={() => {
-                        setShowMsgSearch((v) => !v);
-                        setMsgSearchQuery('');
-                        setMsgSearchResults([]);
-                      }}
-                    >
-                      <SearchIcon className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    Search messages
-                  </TooltipContent>
-                </Tooltip>
-              </motion.div>
-
-              <div className="flex min-h-0 flex-1">
-                {/* Messages */}
-                <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-                  {/* Message search panel */}
-                  <AnimatePresence>
-                    {showMsgSearch && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="shrink-0 overflow-hidden border-b border-white/7 bg-black/20 px-4 py-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <SearchIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                          <input
-                            autoFocus
-                            className="placeholder:text-muted-foreground/50 flex-1 bg-transparent text-sm outline-none"
-                            placeholder="Search messages…"
-                            value={msgSearchQuery}
-                            onChange={(e) => setMsgSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Escape') {
-                                setShowMsgSearch(false);
-                                setMsgSearchQuery('');
-                              }
-                            }}
-                          />
-                          {msgSearchQuery && (
-                            <span className="text-muted-foreground shrink-0 text-[10px]">
-                              {msgSearchResults.length} result
-                              {msgSearchResults.length !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 shrink-0"
-                            onClick={() => {
-                              setShowMsgSearch(false);
-                              setMsgSearchQuery('');
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        {msgSearchResults.length > 0 && (
-                          <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
-                            {msgSearchResults.map((m) => (
-                              <button
-                                key={m.id}
-                                type="button"
-                                className="w-full rounded-lg bg-white/5 px-3 py-2 text-left transition-colors hover:bg-white/10"
-                                onClick={() => {
-                                  const el = document.getElementById(`msg-${m.id}`);
-                                  if (el)
-                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                  setShowMsgSearch(false);
-                                  setMsgSearchQuery('');
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-primary text-[10px] font-medium">
-                                    {m.senderDisplayName}
-                                  </span>
-                                  <span className="text-muted-foreground text-[10px]">
-                                    {new Date(m.createdAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <p className="text-foreground/80 mt-0.5 truncate text-xs">
-                                  {m.content}
-                                </p>
-                              </button>
-                            ))}
-                          </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label="Search messages"
+                        size="icon"
+                        variant="ghost"
+                        className={cn(
+                          'hidden h-8 w-8 shrink-0 rounded-lg sm:inline-flex',
+                          showMsgSearch && 'bg-primary/15 text-primary'
                         )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        onClick={() => {
+                          setShowMsgSearch((v) => !v);
+                          setMsgSearchQuery('');
+                        }}
+                      >
+                        <SearchIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Search messages
+                    </TooltipContent>
+                  </Tooltip>
+                </motion.div>
+
+                {actionError && (
                   <div
-                    ref={scrollRef}
-                    onScroll={onScroll}
-                    className="flex-1 space-y-1 overflow-y-auto px-4 py-3"
+                    role="alert"
+                    className="bg-destructive/10 text-destructive flex items-center justify-between gap-3 px-5 py-3 text-sm"
                   >
-                    {msgLoading ? (
-                      <div className="flex h-24 items-center justify-center">
-                        <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                      </div>
-                    ) : visibleMessages.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
-                        <MessageSquare className="text-muted-foreground/20 h-10 w-10" />
-                        <p className="text-muted-foreground text-xs">No messages yet. Say hello!</p>
-                      </div>
-                    ) : (
-                      grouped.map((group) => (
-                        <div key={group.date}>
-                          <div className="flex items-center gap-3 py-3">
-                            <div className="h-px flex-1 bg-white/7" />
-                            <span className="text-muted-foreground shrink-0 text-[10px]">
-                              {group.date}
-                            </span>
-                            <div className="h-px flex-1 bg-white/7" />
-                          </div>
-                          {group.msgs.map((msg, i) => (
-                            <div key={msg.id} id={`msg-${msg.id}`}>
-                              <MessageBubble
-                                msg={msg}
-                                displayContent={
-                                  msg.sending
-                                    ? msg.content
-                                    : activeConvo?.encrypted
-                                      ? (decryptedCache[msg.id] ?? null)
-                                      : msg.content
-                                }
-                                replyToDisplayContent={
-                                  activeConvo?.encrypted && msg.replyTo
-                                    ? (decryptedCache[msg.replyTo.messageId] ?? null)
-                                    : (msg.replyTo?.content ?? null)
-                                }
-                                isEncryptedConvo={activeConvo?.encrypted ?? false}
-                                isMe={msg.senderUserId === username}
-                                sameSender={
-                                  i > 0 && group.msgs[i - 1].senderUserId === msg.senderUserId
-                                }
-                                isLastInGroup={
-                                  i === group.msgs.length - 1 ||
-                                  group.msgs[i + 1].senderUserId !== msg.senderUserId
-                                }
-                                isEditing={editingId === msg.id}
-                                editContent={editContent}
-                                editSaving={editSaving}
-                                username={username}
-                                isGroup={activeConvo?.type === 'group'}
-                                canDelete={
-                                  msg.senderUserId === username ||
-                                  activeConvo?.adminUserId === username
-                                }
-                                isMobile={isMobile}
-                                pfpUrl={
-                                  pfpCache[msg.senderUserId] ||
-                                  activeConvo?.participantPfpUrls[msg.senderUserId] ||
-                                  ''
-                                }
-                                onAvatarClick={() => {
-                                  if (msg.senderUserId !== username)
-                                    setViewProfileUsername(msg.senderUserId);
-                                }}
-                                onMobileTap={() => setMobileActionMsg(msg)}
-                                onEditStart={() => {
-                                  setEditingId(msg.id);
-                                  setEditContent(
-                                    activeConvo?.encrypted
-                                      ? (decryptedCache[msg.id] ?? msg.content)
-                                      : msg.content
-                                  );
-                                }}
-                                onEditChange={setEditContent}
-                                onEditSubmit={() => submitEdit(msg.id)}
-                                onEditCancel={() => setEditingId(null)}
-                                onDelete={() => deleteMsg(msg.id)}
-                                onPin={() => togglePin(msg.id)}
-                                onReply={() => {
-                                  setReplyingTo(msg);
-                                  inputRef.current?.focus();
-                                }}
-                                onReact={(emoji) => toggleReaction(msg.id, emoji)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ))
-                    )}
-                    <div ref={bottomRef} />
+                    <p>{actionError}</p>
+                    <button
+                      aria-label="Dismiss message action error"
+                      onClick={() => setActionError('')}
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-
-                  {/* Scroll-to-bottom button */}
-                  <AnimatePresence>
-                    {showScrollBtn && (
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.8, y: 8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 8 }}
-                        transition={{ duration: 0.15 }}
-                        onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                        className="bg-card text-muted-foreground hover:text-foreground absolute right-4 bottom-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 shadow-lg transition-colors hover:bg-white/10"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </motion.button>
+                )}
+                <div className="relative flex min-h-0 flex-1">
+                  {/* Messages */}
+                  <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+                    {showShared && (
+                      <SharedMaterials
+                        messages={visibleMessages}
+                        encrypted={activeConvo.encrypted}
+                        onClose={() => setShowShared(false)}
+                        onJump={(messageId) => {
+                          setShowShared(false);
+                          document.getElementById(`msg-${messageId}`)?.scrollIntoView({
+                            behavior: reduceMotion ? 'instant' : 'smooth',
+                            block: 'center',
+                          });
+                        }}
+                      />
                     )}
-                  </AnimatePresence>
-
-                  {/* Reply preview */}
-                  <AnimatePresence>
-                    {replyingTo && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="overflow-hidden px-4"
-                      >
-                        <div
-                          className="mb-1 flex items-center gap-2 rounded-lg border border-l-2 border-white/10 bg-white/5 px-3 py-2"
-                          style={{ borderLeftColor: 'oklch(0.65 0.22 278)' }}
-                        >
-                          <CornerUpLeft className="text-primary h-3 w-3 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-primary text-[10px] font-semibold">
-                              {replyingTo.senderDisplayName}
-                            </p>
-                            <p className="text-muted-foreground truncate text-[11px]">
-                              {replyingTo.content}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => setReplyingTo(null)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Compose */}
-                  <form
-                    onSubmit={sendMessage}
-                    className="flex shrink-0 flex-col gap-1 border-t border-white/7 px-4 py-3"
-                    onPaste={handleComposePaste}
-                    ref={composeAreaRef}
-                  >
-                    {/* Hidden file input */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          uploadImage(file);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-
-                    {/* Encrypted group — locked banner */}
-                    {activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id) && (
-                      <div className="mb-1 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
-                        <Lock className="h-3 w-3 shrink-0" />
-                        Enter the group password to read and send messages.
-                      </div>
-                    )}
-
-                    {/* Image preview strip */}
+                    {/* Message search panel */}
                     <AnimatePresence>
-                      {imagePreview && (
+                      {showMsgSearch && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="mb-1 flex items-center gap-2"
+                          className="border-border bg-muted/40 shrink-0 overflow-hidden border-b px-4 py-2"
                         >
-                          <div className="relative inline-block">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={imagePreview.url}
-                              alt={imagePreview.name}
-                              className="h-20 w-auto max-w-40 rounded-lg border border-white/10 object-cover"
+                          <div className="flex items-center gap-2">
+                            <SearchIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                            <input
+                              autoFocus
+                              className="placeholder:text-muted-foreground/50 flex-1 bg-transparent text-sm outline-none"
+                              placeholder="Search messages…"
+                              aria-label="Search messages in this conversation"
+                              value={msgSearchQuery}
+                              onChange={(e) => setMsgSearchQuery(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setShowMsgSearch(false);
+                                  setMsgSearchQuery('');
+                                }
+                              }}
                             />
-                            <button
-                              type="button"
-                              onClick={() => setImagePreview(null)}
-                              className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-black/80 transition-colors hover:bg-red-600/80"
+                            {msgSearchQuery && (
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {msgSearchResults.length} result
+                                {msgSearchResults.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => {
+                                setShowMsgSearch(false);
+                                setMsgSearchQuery('');
+                              }}
                             >
-                              <X className="h-3 w-3 text-white" />
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {msgSearchResults.length > 0 && (
+                            <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                              {msgSearchResults.map((m) => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  className="bg-muted/60 hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left transition-colors"
+                                  onClick={() => {
+                                    const el = document.getElementById(`msg-${m.id}`);
+                                    if (el)
+                                      el.scrollIntoView({
+                                        behavior: reduceMotion ? 'instant' : 'smooth',
+                                        block: 'center',
+                                      });
+                                    setShowMsgSearch(false);
+                                    setMsgSearchQuery('');
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-primary text-xs font-medium">
+                                      {m.senderDisplayName}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {new Date(m.createdAt).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-foreground/80 mt-0.5 truncate text-xs">
+                                    {m.content}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div
+                      ref={scrollRef}
+                      onScroll={onScroll}
+                      className={cn(
+                        styles.timeline,
+                        'min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-5 md:px-8'
+                      )}
+                    >
+                      {messageError ? (
+                        <div role="alert" className="py-12 text-center text-sm">
+                          <p className="text-muted-foreground">{messageError}</p>
+                          <Button variant="outline" className="mt-3" onClick={retryMessages}>
+                            Try again
+                          </Button>
+                        </div>
+                      ) : msgLoading ? (
+                        <div className="flex h-24 items-center justify-center">
+                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                        </div>
+                      ) : visibleMessages.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
+                          <MessageSquare className="text-muted-foreground/20 h-10 w-10" />
+                          <p className="text-muted-foreground text-xs">
+                            No messages yet. Say hello!
+                          </p>
+                        </div>
+                      ) : (
+                        grouped.map((group) => (
+                          <div key={group.date}>
+                            <div className="flex items-center gap-3 py-3">
+                              <div className="bg-muted/60 h-px flex-1" />
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {group.date}
+                              </span>
+                              <div className="bg-muted/60 h-px flex-1" />
+                            </div>
+                            {group.msgs.map((msg, i) => (
+                              <div key={msg.id} id={`msg-${msg.id}`}>
+                                <MessageBubble
+                                  msg={msg}
+                                  displayContent={
+                                    msg.sending
+                                      ? msg.content
+                                      : activeConvo?.encrypted
+                                        ? (decryptedCache[msg.id] ?? null)
+                                        : msg.content
+                                  }
+                                  replyToDisplayContent={
+                                    activeConvo?.encrypted && msg.replyTo
+                                      ? (decryptedCache[msg.replyTo.messageId] ?? null)
+                                      : (msg.replyTo?.content ?? null)
+                                  }
+                                  isEncryptedConvo={activeConvo?.encrypted ?? false}
+                                  isMe={msg.senderUserId === username}
+                                  sameSender={
+                                    i > 0 && group.msgs[i - 1].senderUserId === msg.senderUserId
+                                  }
+                                  isLastInGroup={
+                                    i === group.msgs.length - 1 ||
+                                    group.msgs[i + 1].senderUserId !== msg.senderUserId
+                                  }
+                                  isEditing={editingId === msg.id}
+                                  editContent={editContent}
+                                  editSaving={editSaving}
+                                  username={username}
+                                  isGroup={activeConvo?.type === 'group'}
+                                  canDelete={
+                                    msg.senderUserId === username ||
+                                    activeConvo?.adminUserId === username
+                                  }
+                                  isMobile={isMobile}
+                                  pfpUrl={
+                                    pfpCache[msg.senderUserId] ||
+                                    activeConvo?.participantPfpUrls[msg.senderUserId] ||
+                                    ''
+                                  }
+                                  onAvatarClick={() => {
+                                    if (msg.senderUserId !== username)
+                                      setViewProfileUsername(msg.senderUserId);
+                                  }}
+                                  onMobileTap={() => setMobileActionMsg(msg)}
+                                  onEditStart={() => {
+                                    setEditingId(msg.id);
+                                    setEditContent(
+                                      activeConvo?.encrypted
+                                        ? (decryptedCache[msg.id] ?? msg.content)
+                                        : msg.content
+                                    );
+                                  }}
+                                  onEditChange={setEditContent}
+                                  onEditSubmit={() => {
+                                    // eslint-disable-next-line react-hooks/refs -- The editor reads encryption keys only when Save is invoked.
+                                    void submitEdit(msg.id);
+                                  }}
+                                  onEditCancel={() => setEditingId(null)}
+                                  onDelete={() => deleteMsg(msg.id)}
+                                  onPin={() => togglePin(msg.id)}
+                                  onReply={() => {
+                                    setReplyingTo(msg);
+                                    inputRef.current?.focus();
+                                  }}
+                                  onReact={(emoji) => toggleReaction(msg.id, emoji)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ))
+                      )}
+                      {visibleMessages.at(-1)?.senderUserId === username &&
+                        !visibleMessages.at(-1)?.sending && (
+                          <p className="text-muted-foreground py-2 pr-9 text-right text-xs">
+                            {activeConvo.participantIds.filter(
+                              (id) =>
+                                id !== username &&
+                                (activeConvo.lastReadAt[id] ?? 0) >=
+                                  visibleMessages.at(-1)!.createdAt
+                            ).length > 0
+                              ? 'Seen'
+                              : 'Sent'}
+                          </p>
+                        )}
+                      <div ref={bottomRef} />
+                    </div>
+
+                    {/* Scroll-to-bottom button */}
+                    <AnimatePresence>
+                      {showScrollBtn && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, y: 8 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={() =>
+                            bottomRef.current?.scrollIntoView({
+                              behavior: reduceMotion ? 'instant' : 'smooth',
+                            })
+                          }
+                          className="bg-card text-muted-foreground hover:text-foreground border-border hover:bg-muted/60 absolute right-4 bottom-20 flex h-9 w-9 items-center justify-center rounded-full border shadow-lg transition-colors"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Reply preview */}
+                    <AnimatePresence>
+                      {replyingTo && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden px-4"
+                        >
+                          <div
+                            className="border-border bg-muted/60 mb-1 flex items-center gap-2 rounded-lg border border-l-2 px-3 py-2"
+                            style={{ borderLeftColor: 'var(--primary)' }}
+                          >
+                            <CornerUpLeft className="text-primary h-3 w-3 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-primary text-xs font-semibold">
+                                {replyingTo.senderDisplayName}
+                              </p>
+                              <p className="text-muted-foreground truncate text-[11px]">
+                                {activeConvo.encrypted
+                                  ? (decryptedCache[replyingTo.id] ?? 'Encrypted message')
+                                  : replyingTo.content}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setReplyingTo(null)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <span className="text-muted-foreground max-w-30 truncate text-xs">
-                            {imagePreview.name}
-                          </span>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    {/* GIF / Emoji pickers — anchored above the toolbar, not in flow */}
-
-                    {/* Toolbar + input row */}
-                    <div className="relative flex items-end gap-1">
-                      {/* Pickers float above the toolbar */}
-                      <AnimatePresence>
-                        {showGifPicker && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute bottom-full left-0 z-50 mb-2"
+                    {/* Compose */}
+                    <form
+                      onSubmit={sendMessage}
+                      className={cn(
+                        styles.composer,
+                        'flex shrink-0 flex-col gap-2 px-4 pt-3 pb-4 md:px-8'
+                      )}
+                      onPaste={handleComposePaste}
+                      ref={composeAreaRef}
+                    >
+                      {sendError && (
+                        <div
+                          role="alert"
+                          className="bg-destructive/10 text-destructive flex items-start justify-between gap-3 rounded-xl px-3 py-2 text-sm"
+                        >
+                          <p>{sendError} Your draft is ready to try again.</p>
+                          <button
+                            type="button"
+                            aria-label="Dismiss send error"
+                            onClick={() => setSendError('')}
                           >
-                            <GifPicker
-                              onSelect={(url) => {
-                                setImagePreview({ url, name: 'GIF' });
-                                setShowGifPicker(false);
-                              }}
-                              onClose={() => setShowGifPicker(false)}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                      <AnimatePresence>
-                        {showEmojiPicker && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute bottom-full left-0 z-50 mb-2"
-                          >
-                            <EmojiPicker
-                              recentEmojis={recentEmojis}
-                              onSelect={(emoji) => {
-                                recordEmojiUsed(emoji);
-                                setDraft((d) => d + emoji);
-                                inputRef.current?.focus();
-                              }}
-                              onClose={() => setShowEmojiPicker(false)}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                      {/* Attachment button */}
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={
-                          imageUploading ||
-                          (activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id))
-                        }
-                        title="Upload image"
-                      >
-                        {imageUploading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Paperclip className="h-4 w-4" />
-                        )}
-                      </Button>
-
-                      {/* GIF button */}
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className={cn(
-                          'text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
-                          showGifPicker && 'text-primary'
-                        )}
-                        onClick={() => {
-                          setShowGifPicker((v) => !v);
-                          setShowEmojiPicker(false);
-                        }}
-                        disabled={activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)}
-                        title="GIFs"
-                      >
-                        <Gift className="h-4 w-4" />
-                      </Button>
-
-                      {/* Emoji button */}
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className={cn(
-                          'text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
-                          showEmojiPicker && 'text-primary'
-                        )}
-                        onClick={() => {
-                          setShowEmojiPicker((v) => !v);
-                          setShowGifPicker(false);
-                        }}
-                        disabled={activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)}
-                        title="Emoji"
-                      >
-                        <span className="text-base leading-none">😊</span>
-                      </Button>
-
-                      <div className="relative flex-1">
-                        <Input
-                          ref={inputRef}
-                          value={draft}
-                          onChange={(e) => {
-                            const limit = activeConvo.encrypted ? E2EE_MAX_CHARS : MAX_CHARS;
-                            if (e.target.value.length <= limit) setDraft(e.target.value);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              sendMessage(e as unknown as FormEvent);
-                            }
-                            if (e.key === 'Escape') {
-                              setReplyingTo(null);
-                              setShowGifPicker(false);
-                              setShowEmojiPicker(false);
-                            }
-                          }}
-                          placeholder={
-                            activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)
-                              ? '🔒 Locked — enter password above'
-                              : imagePreview
-                                ? 'Add a caption…'
-                                : activeConvo.type === 'group'
-                                  ? `Message ${activeConvo.groupName ?? 'group'}…`
-                                  : `Message ${partnerName(activeConvo)}…`
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      )}
+                      {/* Hidden file input */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            uploadImage(file);
+                            e.target.value = '';
                           }
-                          className={cn(
-                            'focus:border-primary/50 flex-1 border-white/10 bg-white/5 text-sm',
-                            draft.length > HARD_UI_CHARS &&
-                              !activeConvo.encrypted &&
-                              'border-red-500/50 focus:border-red-500/70',
-                            draft.length > WARN_CHARS &&
-                              draft.length <= HARD_UI_CHARS &&
-                              'border-amber-500/40 focus:border-amber-500/60'
+                        }}
+                      />
+
+                      {/* Encrypted group — locked banner */}
+                      {activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id) && (
+                        <div className="mb-1 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                          <Lock className="h-3 w-3 shrink-0" />
+                          Enter the group password to read and send messages.
+                        </div>
+                      )}
+
+                      {/* Image preview strip */}
+                      <AnimatePresence>
+                        {imagePreview && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mb-1 flex items-center gap-2"
+                          >
+                            <div className="relative inline-block">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imagePreview.url}
+                                alt={imagePreview.name}
+                                className="border-border h-20 w-auto max-w-40 rounded-lg border object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setImagePreview(null)}
+                                className="border-border absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border bg-black/80 transition-colors hover:bg-red-600/80"
+                              >
+                                <X className="h-3 w-3 text-white" />
+                              </button>
+                            </div>
+                            <span className="text-muted-foreground max-w-30 truncate text-xs">
+                              {imagePreview.name}
+                            </span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* GIF / Emoji pickers — anchored above the toolbar, not in flow */}
+
+                      {/* Toolbar + input row */}
+                      <div className="relative flex items-end gap-1">
+                        {/* Pickers float above the toolbar */}
+                        <AnimatePresence>
+                          {showGifPicker && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute bottom-full left-0 z-50 mb-2"
+                            >
+                              <GifPicker
+                                onSelect={(url) => {
+                                  setImagePreview({ url, name: 'GIF' });
+                                  setShowGifPicker(false);
+                                }}
+                                onClose={() => setShowGifPicker(false)}
+                              />
+                            </motion.div>
                           )}
-                          autoComplete="off"
+                        </AnimatePresence>
+                        <AnimatePresence>
+                          {showEmojiPicker && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute bottom-full left-0 z-50 mb-2"
+                            >
+                              <EmojiPicker
+                                recentEmojis={recentEmojis}
+                                onSelect={(emoji) => {
+                                  recordEmojiUsed(emoji);
+                                  updateDraft(draft + emoji);
+                                  inputRef.current?.focus();
+                                }}
+                                onClose={() => setShowEmojiPicker(false)}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        {/* Attachment button */}
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
+                          onClick={() => fileInputRef.current?.click()}
                           disabled={
-                            sending ||
+                            imageUploading ||
                             (activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id))
                           }
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        size="icon"
-                        disabled={
-                          (!draft.trim() && !imagePreview) ||
-                          sending ||
-                          (activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)) ||
-                          (!activeConvo.encrypted && draft.length > MAX_CHARS)
-                        }
-                        className="h-9 w-9 shrink-0"
-                        style={{ background: 'var(--primary)' }}
-                      >
-                        {sending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    {/* Character count feedback */}
-                    {(() => {
-                      const limit = activeConvo.encrypted ? E2EE_MAX_CHARS : MAX_CHARS;
-                      const len = draft.length;
-                      const showCount = activeConvo.encrypted ? len > 80 : len > WARN_CHARS;
-                      if (!showCount) return null;
-                      const overLimit = len > limit;
-                      const nearLimit = !activeConvo.encrypted && len > WARN_CHARS;
-                      return (
-                        <div
-                          className={cn(
-                            'flex items-center justify-end gap-1 px-1 text-[10px]',
-                            overLimit
-                              ? 'text-red-400'
-                              : nearLimit
-                                ? 'text-amber-400'
-                                : 'text-amber-400'
+                          title="Upload image"
+                        >
+                          {imageUploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Paperclip className="h-4 w-4" />
                           )}
-                        >
-                          {overLimit && <span>Message too long</span>}
-                          <span className="font-mono tabular-nums">
-                            {len}/{limit}
-                          </span>
-                        </div>
-                      );
-                    })()}
-                    {/* E2EE info badge */}
-                    {activeConvo.encrypted && encUnlockedIds.has(activeConvo.id) && (
-                      <div className="text-primary/60 flex items-center gap-1 px-1 text-[10px]">
-                        <ShieldCheck className="h-2.5 w-2.5" />
-                        End-to-end encrypted · images are not encrypted
-                        <button
+                        </Button>
+
+                        {/* GIF button */}
+                        <Button
                           type="button"
+                          size="icon"
+                          variant="ghost"
+                          className={cn(
+                            'text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
+                            showGifPicker && 'text-primary'
+                          )}
                           onClick={() => {
-                            sessionStorage.removeItem(`e2ee_${activeConvo.id}`);
-                            encKeysRef.current.delete(activeConvo.id);
-                            setEncUnlockedIds((prev) => {
-                              const next = new Set(prev);
-                              next.delete(activeConvo.id);
-                              return next;
-                            });
-                            setDecryptedCache({});
-                            setEncPromptConvoId(activeConvo.id);
-                            setEncPromptPassword('');
-                            setEncPromptError('');
+                            setShowGifPicker((v) => !v);
+                            setShowEmojiPicker(false);
                           }}
-                          className="text-muted-foreground/50 hover:text-destructive/70 ml-auto flex items-center gap-0.5 text-[10px] transition-colors"
-                          title="Forget stored password"
+                          disabled={activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)}
+                          title="GIFs"
                         >
-                          <Trash2 className="h-2.5 w-2.5" />
-                          Forget password
-                        </button>
-                      </div>
-                    )}
-                  </form>
-                </div>
+                          <Gift className="h-4 w-4" />
+                        </Button>
 
-                {/* Pinned panel */}
-                <AnimatePresence>
-                  {showPinned && (
-                    <motion.div
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 280, opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                      className="bg-card hidden shrink-0 flex-col overflow-hidden border-l border-white/7 md:flex"
-                    >
-                      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/7 px-4">
-                        <div className="flex items-center gap-2">
-                          <Pin className="text-primary h-3.5 w-3.5" />
-                          <span className="text-xs font-semibold">Pinned</span>
-                        </div>
+                        {/* Emoji button */}
                         <Button
+                          type="button"
                           size="icon"
                           variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => setShowPinned(false)}
+                          className={cn(
+                            'text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
+                            showEmojiPicker && 'text-primary'
+                          )}
+                          onClick={() => {
+                            setShowEmojiPicker((v) => !v);
+                            setShowGifPicker(false);
+                          }}
+                          disabled={activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)}
+                          title="Emoji"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <span aria-hidden="true" className="text-base leading-none">
+                            😊
+                          </span>
                         </Button>
-                      </div>
-                      <div className="flex-1 space-y-2 overflow-y-auto p-3">
-                        {pinnedMessages.length === 0 ? (
-                          <p className="text-muted-foreground py-8 text-center text-xs">
-                            No pinned messages.
-                          </p>
-                        ) : (
-                          <AnimatePresence>
-                            {pinnedMessages.map((msg) => (
-                              <motion.div
-                                key={msg.id}
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                className="space-y-1 rounded-lg border border-white/8 bg-white/5 p-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-primary text-[10px] font-semibold">
-                                    {msg.senderDisplayName}
-                                  </span>
-                                  <button
-                                    onClick={() => togglePin(msg.id)}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                  >
-                                    <PinOff className="h-3 w-3" />
-                                  </button>
-                                </div>
-                                <p className="text-foreground/90 min-w-0 text-xs wrap-break-word">
-                                  {decryptedCache[msg.id] ?? msg.content}
-                                </p>
-                                <p className="text-muted-foreground text-[9px]">
-                                  {formatDate(msg.createdAt)} · {formatTime(msg.createdAt)}
-                                </p>
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
 
-                {/* Group info panel */}
-                <AnimatePresence>
-                  {showGroupInfo && activeConvo?.type === 'group' && (
-                    <motion.div
-                      key="group-info"
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 280, opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                      className="bg-card hidden shrink-0 flex-col overflow-hidden border-l border-white/7 md:flex"
-                    >
-                      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/7 px-4">
-                        <div className="flex items-center gap-2">
-                          <Users className="text-primary h-3.5 w-3.5" />
-                          <span className="text-xs font-semibold">Group Info</span>
+                        <div className="relative flex-1">
+                          <textarea
+                            ref={inputRef}
+                            aria-label="Message"
+                            rows={1}
+                            value={draft}
+                            onChange={(e) => {
+                              const limit = activeConvo.encrypted ? E2EE_MAX_CHARS : MAX_CHARS;
+                              if (e.target.value.length <= limit) updateDraft(e.target.value);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                                e.preventDefault();
+                                sendMessage(e as unknown as FormEvent);
+                              }
+                              if (e.key === 'Escape') {
+                                setReplyingTo(null);
+                                setShowGifPicker(false);
+                                setShowEmojiPicker(false);
+                              }
+                            }}
+                            placeholder={
+                              activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)
+                                ? '🔒 Locked — enter password above'
+                                : imagePreview
+                                  ? 'Add a caption…'
+                                  : activeConvo.type === 'group'
+                                    ? `Message ${activeConvo.groupName ?? 'group'}…`
+                                    : `Message ${partnerName(activeConvo)}…`
+                            }
+                            className={cn(
+                              'placeholder:text-muted-foreground focus-visible:ring-primary/40 border-border bg-muted/40 block max-h-40 min-h-11 w-full resize-none rounded-xl border px-3 py-2.5 text-sm leading-6 outline-none focus-visible:ring-2',
+                              draft.length > HARD_UI_CHARS &&
+                                !activeConvo.encrypted &&
+                                'border-red-500/50 focus:border-red-500/70',
+                              draft.length > WARN_CHARS &&
+                                draft.length <= HARD_UI_CHARS &&
+                                'border-amber-500/40 focus:border-amber-500/60'
+                            )}
+                            autoComplete="off"
+                            disabled={
+                              sending ||
+                              (activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id))
+                            }
+                          />
                         </div>
                         <Button
+                          type="submit"
+                          aria-label="Send message"
                           size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => setShowGroupInfo(false)}
+                          disabled={
+                            (!draft.trim() && !imagePreview) ||
+                            sending ||
+                            (activeConvo.encrypted && !encUnlockedIds.has(activeConvo.id)) ||
+                            (!activeConvo.encrypted && draft.length > MAX_CHARS)
+                          }
+                          className="h-9 w-9 shrink-0"
+                          style={{ background: 'var(--primary)' }}
                         >
-                          <X className="h-3.5 w-3.5" />
+                          {sending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
-                      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-                        {/* Edit name/desc — admin only */}
-                        {activeConvo.adminUserId === username && (
-                          <div className="space-y-2">
-                            <p className="text-muted-foreground px-1 text-[10px] font-semibold tracking-widest uppercase">
-                              Edit Group
-                            </p>
-                            <Input
-                              value={groupEditName}
-                              onChange={(e) => setGroupEditName(e.target.value)}
-                              placeholder="Group name…"
-                              className="focus:border-primary/40 h-8 border-white/10 bg-white/5 text-xs"
-                            />
-                            <Input
-                              value={groupEditDesc}
-                              onChange={(e) => setGroupEditDesc(e.target.value)}
-                              placeholder="Description (optional)…"
-                              className="focus:border-primary/40 h-8 border-white/10 bg-white/5 text-xs"
-                            />
-                            <Button
-                              size="sm"
-                              className="h-7 w-full text-xs"
-                              disabled={!groupEditName.trim() || groupEditSaving}
-                              onClick={saveGroupEdit}
-                            >
-                              {groupEditSaving ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                'Save'
-                              )}
-                            </Button>
+                      <p className="text-muted-foreground hidden px-1 text-xs sm:block">
+                        Enter to send / Shift + Enter for a new line
+                      </p>
+                      {/* Character count feedback */}
+                      {(() => {
+                        const limit = activeConvo.encrypted ? E2EE_MAX_CHARS : MAX_CHARS;
+                        const len = draft.length;
+                        const showCount = activeConvo.encrypted ? len > 80 : len > WARN_CHARS;
+                        if (!showCount) return null;
+                        const overLimit = len > limit;
+                        const nearLimit = !activeConvo.encrypted && len > WARN_CHARS;
+                        return (
+                          <div
+                            className={cn(
+                              'flex items-center justify-end gap-1 px-1 text-xs',
+                              overLimit
+                                ? 'text-red-400'
+                                : nearLimit
+                                  ? 'text-amber-400'
+                                  : 'text-amber-400'
+                            )}
+                          >
+                            {overLimit && <span>Message too long</span>}
+                            <span className="font-mono tabular-nums">
+                              {len}/{limit}
+                            </span>
                           </div>
-                        )}
+                        );
+                      })()}
+                      {/* E2EE info badge */}
+                      {activeConvo.encrypted && encUnlockedIds.has(activeConvo.id) && (
+                        <div className="text-primary/60 flex items-center gap-1 px-1 text-xs">
+                          <ShieldCheck className="h-2.5 w-2.5" />
+                          End-to-end encrypted · images are not encrypted
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sessionStorage.removeItem(`e2ee_${activeConvo.id}`);
+                              encKeysRef.current.delete(activeConvo.id);
+                              setEncUnlockedIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(activeConvo.id);
+                                return next;
+                              });
+                              setDecryptedCache({});
+                              setEncPromptConvoId(activeConvo.id);
+                              setEncPromptPassword('');
+                              setEncPromptError('');
+                            }}
+                            className="text-muted-foreground/50 hover:text-destructive/70 ml-auto flex items-center gap-0.5 text-xs transition-colors"
+                            title="Forget stored password"
+                          >
+                            <Trash2 className="h-2.5 w-2.5" />
+                            Forget password
+                          </button>
+                        </div>
+                      )}
+                    </form>
+                  </div>
 
-                        {/* Members list */}
-                        <div className="space-y-1">
-                          <p className="text-muted-foreground px-1 text-[10px] font-semibold tracking-widest uppercase">
-                            Members ({activeConvo.participantIds.length})
-                          </p>
-                          {activeConvo.participantIds.map((p) => (
-                            <div
-                              key={p}
-                              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5"
-                            >
-                              <Avatar className="h-6 w-6 shrink-0">
-                                <AvatarFallback
-                                  className="text-[9px] font-bold"
-                                  style={{
-                                    background:
-                                      'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                                    color: 'oklch(0.78 0.15 278)',
-                                  }}
+                  {/* Pinned panel */}
+                  <AnimatePresence>
+                    {showPinned && (
+                      <motion.div
+                        initial={{ opacity: 0, transform: 'translateX(12px)' }}
+                        animate={{ opacity: 1, transform: 'translateX(0)' }}
+                        exit={{ opacity: 0, transform: 'translateX(12px)' }}
+                        transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                        className="bg-card border-border absolute inset-0 z-20 flex shrink-0 flex-col overflow-hidden border-l md:static md:w-64 xl:w-72"
+                      >
+                        <div className="border-border flex h-14 shrink-0 items-center justify-between border-b px-4">
+                          <div className="flex items-center gap-2">
+                            <Pin className="text-primary h-3.5 w-3.5" />
+                            <span className="text-xs font-semibold">Pinned</span>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setShowPinned(false)}
+                            aria-label="Close pinned messages"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex-1 space-y-2 overflow-y-auto p-3">
+                          {pinnedMessages.length === 0 ? (
+                            <p className="text-muted-foreground py-8 text-center text-xs">
+                              No pinned messages.
+                            </p>
+                          ) : (
+                            <AnimatePresence>
+                              {pinnedMessages.map((msg) => (
+                                <motion.div
+                                  key={msg.id}
+                                  initial={{ opacity: 0, y: 6 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -6 }}
+                                  className="border-border bg-muted/60 space-y-1 rounded-lg border p-3"
                                 >
-                                  {initials(activeConvo.participantNames[p] || p)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-xs">
-                                  {activeConvo.participantNames[p] || p}
-                                </p>
-                                {activeConvo.adminUserId === p && (
-                                  <p className="text-primary/70 flex items-center gap-0.5 text-[9px]">
-                                    <Crown className="h-2.5 w-2.5" /> Admin
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-primary text-xs font-semibold">
+                                      {msg.senderDisplayName}
+                                    </span>
+                                    <button
+                                      onClick={() => togglePin(msg.id)}
+                                      className="text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      <PinOff className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                  <p className="text-foreground/90 min-w-0 text-xs wrap-break-word">
+                                    {decryptedCache[msg.id] ?? msg.content}
                                   </p>
+                                  <p className="text-muted-foreground text-[11px]">
+                                    {formatDate(msg.createdAt)} · {formatTime(msg.createdAt)}
+                                  </p>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Group info panel */}
+                  <AnimatePresence>
+                    {showGroupInfo && activeConvo?.type === 'group' && (
+                      <motion.div
+                        key="group-info"
+                        initial={{ opacity: 0, transform: 'translateX(12px)' }}
+                        animate={{ opacity: 1, transform: 'translateX(0)' }}
+                        exit={{ opacity: 0, transform: 'translateX(12px)' }}
+                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                        className="bg-card border-border absolute inset-0 z-20 flex shrink-0 flex-col overflow-hidden border-l md:static md:w-64 xl:w-72"
+                      >
+                        <div className="border-border flex h-14 shrink-0 items-center justify-between border-b px-4">
+                          <div className="flex items-center gap-2">
+                            <Users className="text-primary h-3.5 w-3.5" />
+                            <span className="text-xs font-semibold">Group Info</span>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setShowGroupInfo(false)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex-1 space-y-4 overflow-y-auto p-3">
+                          {/* Edit name/desc — admin only */}
+                          {activeConvo.adminUserId === username && (
+                            <div className="space-y-2">
+                              <p className="text-muted-foreground px-1 text-xs font-semibold tracking-widest uppercase">
+                                Edit Group
+                              </p>
+                              <Input
+                                value={groupEditName}
+                                onChange={(e) => setGroupEditName(e.target.value)}
+                                placeholder="Group name…"
+                                className="focus:border-primary/40 border-border bg-muted/60 h-8 text-xs"
+                              />
+                              <Input
+                                value={groupEditDesc}
+                                onChange={(e) => setGroupEditDesc(e.target.value)}
+                                placeholder="Description (optional)…"
+                                className="focus:border-primary/40 border-border bg-muted/60 h-8 text-xs"
+                              />
+                              <Button
+                                size="sm"
+                                className="h-7 w-full text-xs"
+                                disabled={!groupEditName.trim() || groupEditSaving}
+                                onClick={saveGroupEdit}
+                              >
+                                {groupEditSaving ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'Save'
+                                )}
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Members list */}
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground px-1 text-xs font-semibold tracking-widest uppercase">
+                              Members ({activeConvo.participantIds.length})
+                            </p>
+                            {activeConvo.participantIds.map((p) => (
+                              <div
+                                key={p}
+                                className="hover:bg-muted/60 flex items-center gap-2 rounded-lg px-2 py-1.5"
+                              >
+                                <Avatar className="h-6 w-6 shrink-0">
+                                  <AvatarFallback
+                                    className="text-[11px] font-bold"
+                                    style={{
+                                      background:
+                                        'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                                      color: 'var(--foreground)',
+                                    }}
+                                  >
+                                    {initials(activeConvo.participantNames[p] || p)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs">
+                                    {activeConvo.participantNames[p] || p}
+                                  </p>
+                                  {activeConvo.adminUserId === p && (
+                                    <p className="text-primary/70 flex items-center gap-0.5 text-[11px]">
+                                      <Crown className="h-2.5 w-2.5" /> Admin
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Admin actions on members */}
+                                {activeConvo.adminUserId === username && p !== username && (
+                                  <div className="flex gap-0.5">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          aria-label="Make admin"
+                                          className="text-muted-foreground hover:text-primary hover:bg-primary/10 flex h-5 w-5 items-center justify-center rounded"
+                                          onClick={() => transferAdmin(p)}
+                                        >
+                                          <Crown className="h-3 w-3" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="text-xs">
+                                        Make admin
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          aria-label="Remove"
+                                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-5 w-5 items-center justify-center rounded"
+                                          onClick={() => removeMemberFromGroup(p)}
+                                        >
+                                          <UserMinus className="h-3 w-3" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="text-xs">
+                                        Remove
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
                                 )}
                               </div>
-                              {/* Admin actions on members */}
-                              {activeConvo.adminUserId === username && p !== username && (
-                                <div className="flex gap-0.5">
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 flex h-5 w-5 items-center justify-center rounded"
-                                        onClick={() => transferAdmin(p)}
-                                      >
-                                        <Crown className="h-3 w-3" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left" className="text-[10px]">
-                                      Make admin
-                                    </TooltipContent>
-                                  </Tooltip>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-5 w-5 items-center justify-center rounded"
-                                        onClick={() => removeMemberFromGroup(p)}
-                                      >
-                                        <UserMinus className="h-3 w-3" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left" className="text-[10px]">
-                                      Remove
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Add member — admin only */}
-                        {activeConvo.adminUserId === username && (
-                          <div className="space-y-1">
-                            <p className="text-muted-foreground px-1 text-[10px] font-semibold tracking-widest uppercase">
-                              Invite Member
-                            </p>
-                            <p className="text-muted-foreground/60 px-1 text-[9px]">
-                              Sends an invite they can accept or decline.
-                            </p>
-                            <div className="relative">
-                              <Search className="text-muted-foreground absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2" />
-                              <Input
-                                value={groupAddSearch}
-                                onChange={(e) => setGroupAddSearch(e.target.value)}
-                                placeholder="Search…"
-                                className="focus:border-primary/40 h-8 border-white/10 bg-white/5 pl-7 text-xs"
-                              />
-                            </div>
-                            {groupAddSearching && (
-                              <Loader2 className="text-muted-foreground mx-auto h-3 w-3 animate-spin" />
-                            )}
-                            {groupAddResults
-                              .filter((u) => !activeConvo.participantIds.includes(u.username))
-                              .map((u) => (
-                                <button
-                                  key={u.username}
-                                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-white/8"
-                                  onClick={() => addMemberToGroup(u)}
-                                >
-                                  <Avatar className="h-5 w-5 shrink-0">
-                                    <AvatarFallback
-                                      className="text-[8px]"
-                                      style={{
-                                        background:
-                                          'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                                        color: 'oklch(0.78 0.15 278)',
-                                      }}
-                                    >
-                                      {initials(u.displayName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate">{u.displayName}</span>
-                                  <AtSign className="text-muted-foreground/40 ml-auto h-3 w-3 shrink-0" />
-                                </button>
-                              ))}
+                            ))}
                           </div>
-                        )}
 
-                        {/* Leave group */}
-                        <button
-                          onClick={leaveGroup}
-                          className="text-destructive hover:bg-destructive/10 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs transition-colors"
-                        >
-                          <LogOut className="h-3.5 w-3.5" />
-                          Leave group
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ═══ New DM modal ════════════════════════════════════ */}
-        <AnimatePresence>
-          {showNewDM && (
-            <motion.div
-              key="overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-              onClick={() => setShowNewDM(false)}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                transition={{ duration: 0.18 }}
-                className="bg-card w-full max-w-sm space-y-4 rounded-xl border border-white/10 p-5 shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="text-primary h-4 w-4" />
-                    <h2 className="text-sm font-semibold">New Conversation</h2>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => setShowNewDM(false)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Separator className="bg-white/7" />
-
-                {/* Friends quick-select */}
-                {friends.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                      Your Friends
-                    </p>
-                    <div className="max-h-40 space-y-1 overflow-y-auto">
-                      {friends.map((f) => {
-                        const other = f.userAId === username ? f.userBId : f.userAId;
-                        const p = friendProfileMap[other];
-                        const st = statusMap[other] ?? 'offline';
-                        return (
-                          <button
-                            key={other}
-                            disabled={dmCreating}
-                            onClick={() =>
-                              openDM({
-                                username: other,
-                                displayName: p?.displayName ?? other,
-                                schoolName: p?.schoolName ?? '',
-                                userType: '',
-                              })
-                            }
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/8"
-                          >
-                            <div className="relative shrink-0">
-                              <Avatar className="h-8 w-8">
-                                {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
-                                <AvatarFallback
-                                  className="text-xs font-bold"
-                                  style={{
-                                    background:
-                                      'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                                    color: 'oklch(0.78 0.15 278)',
-                                  }}
-                                >
-                                  {initials(p?.displayName ?? other)}
-                                </AvatarFallback>
-                              </Avatar>
-                              {st !== 'offline' && (
-                                <span
-                                  className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2"
-                                  style={{
-                                    background: statusColor(st),
-                                    borderColor: 'var(--card)',
-                                  }}
+                          {/* Add member — admin only */}
+                          {activeConvo.adminUserId === username && (
+                            <div className="space-y-1">
+                              <p className="text-muted-foreground px-1 text-xs font-semibold tracking-widest uppercase">
+                                Invite Member
+                              </p>
+                              <p className="text-muted-foreground/60 px-1 text-[11px]">
+                                Sends an invite they can accept or decline.
+                              </p>
+                              <div className="relative">
+                                <Search className="text-muted-foreground absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2" />
+                                <Input
+                                  value={groupAddSearch}
+                                  onChange={(e) => setGroupAddSearch(e.target.value)}
+                                  placeholder="Search…"
+                                  className="focus:border-primary/40 border-border bg-muted/60 h-8 pl-7 text-xs"
                                 />
+                              </div>
+                              {groupAddSearching && (
+                                <Loader2 className="text-muted-foreground mx-auto h-3 w-3 animate-spin" />
                               )}
+                              {groupAddResults
+                                .filter((u) => !activeConvo.participantIds.includes(u.username))
+                                .map((u) => (
+                                  <button
+                                    key={u.username}
+                                    className="hover:bg-muted/60 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs"
+                                    onClick={() => addMemberToGroup(u)}
+                                  >
+                                    <Avatar className="h-5 w-5 shrink-0">
+                                      <AvatarFallback
+                                        className="text-[8px]"
+                                        style={{
+                                          background:
+                                            'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                                          color: 'var(--foreground)',
+                                        }}
+                                      >
+                                        {initials(u.displayName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate">{u.displayName}</span>
+                                    <AtSign className="text-muted-foreground/40 ml-auto h-3 w-3 shrink-0" />
+                                  </button>
+                                ))}
                             </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">
-                                {p?.displayName ?? other}
-                              </p>
-                              <p className="text-[9px]" style={{ color: statusColor(st) }}>
-                                {statusLabel(st)}
-                              </p>
-                            </div>
+                          )}
+
+                          {/* Leave group */}
+                          <button
+                            onClick={leaveGroup}
+                            className="text-destructive hover:bg-destructive/10 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs transition-colors"
+                          >
+                            <LogOut className="h-3.5 w-3.5" />
+                            Leave group
                           </button>
-                        );
-                      })}
-                    </div>
-                    <Separator className="bg-white/7" />
-                  </div>
-                )}
-
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
-                  <Input
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by username…"
-                    className="focus:border-primary/50 border-white/10 bg-white/5 pl-8 text-sm"
-                  />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div className="min-h-20 space-y-1">
-                  {searching && (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                    </div>
-                  )}
-                  {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
-                    <p className="text-muted-foreground py-6 text-center text-xs">
-                      No users found.
-                    </p>
-                  )}
-                  {searchResults.map((user) => (
-                    <button
-                      key={user.username}
-                      onClick={() => openDM(user)}
-                      disabled={dmCreating}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/8"
-                    >
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback
-                          className="text-xs font-bold"
-                          style={{
-                            background:
-                              'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                            color: 'oklch(0.78 0.15 278)',
-                          }}
-                        >
-                          {initials(user.displayName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{user.displayName}</p>
-                        <p className="text-muted-foreground truncate text-[10px]">
-                          @{user.username}
-                          {user.schoolName ? ` · ${user.schoolName}` : ''}
-                          {isFriend(user.username) ? ' · Friend' : ''}
-                        </p>
-                      </div>
-                      {dmCreating && (
-                        <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
-                      )}
-                    </button>
-                  ))}
-                  {!searching && searchQuery.length < 2 && friends.length === 0 && (
-                    <p className="text-muted-foreground py-4 text-center text-xs">
-                      Add friends first to start conversations. Type to search users.
-                    </p>
-                  )}
-                  {!searching && searchQuery.length < 2 && friends.length > 0 && (
-                    <p className="text-muted-foreground py-2 text-center text-xs">
-                      Or search for anyone above.
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </>
+            )}
+          </div>
 
-        {/* ═══ New Group modal ═════════════════════════════════ */}
-        <AnimatePresence>
-          {showNewGroup && (
-            <motion.div
-              key="group-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-              onClick={() => {
-                setShowNewGroup(false);
-                setGroupName('');
-                setGroupDesc('');
-                setGroupMembers([]);
-                setGroupEncrypted(false);
-                setGroupEncPassword('');
-                setGroupEncPasswordConfirm('');
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                transition={{ duration: 0.18 }}
-                className="bg-card max-h-[90dvh] w-full max-w-sm space-y-4 overflow-y-auto rounded-xl border border-white/10 p-5 shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
+          {/* ═══ New DM modal ════════════════════════════════════ */}
+          <AnimatePresence>
+            {showNewDM && (
+              <Dialog
+                open
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setShowNewDM(false);
+                  }
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="text-primary h-4 w-4" />
-                    <h2 className="text-sm font-semibold">New Group Chat</h2>
+                <DialogContent className="max-w-md gap-4 rounded-2xl p-6">
+                  <DialogDescription className="sr-only">
+                    Choose a friend or search for a Schoolsoft+ user.
+                  </DialogDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="text-primary h-4 w-4" />
+                      <DialogTitle>New conversation</DialogTitle>
+                    </div>
                   </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => {
-                      setShowNewGroup(false);
-                      setGroupName('');
-                      setGroupDesc('');
-                      setGroupMembers([]);
-                      setGroupEncrypted(false);
-                      setGroupEncPassword('');
-                      setGroupEncPasswordConfirm('');
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Separator className="bg-white/7" />
+                  <Separator className="bg-muted/60" />
 
-                {/* Group name & description */}
-                <div className="space-y-2">
-                  <Input
-                    autoFocus
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    placeholder="Group name…"
-                    maxLength={80}
-                    className="focus:border-primary/50 border-white/10 bg-white/5 text-sm"
-                  />
-                  <Input
-                    value={groupDesc}
-                    onChange={(e) => setGroupDesc(e.target.value)}
-                    placeholder="Description (optional)…"
-                    maxLength={200}
-                    className="focus:border-primary/50 border-white/10 bg-white/5 text-sm"
-                  />
-                </div>
+                  {/* Friends quick-select */}
+                  {friends.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                        Your Friends
+                      </p>
+                      <div className="max-h-40 space-y-1 overflow-y-auto">
+                        {friends.map((f) => {
+                          const other = f.userAId === username ? f.userBId : f.userAId;
+                          const p = friendProfileMap[other];
+                          const st = statusMap[other] ?? 'offline';
+                          return (
+                            <button
+                              key={other}
+                              disabled={dmCreating}
+                              onClick={() =>
+                                openDM({
+                                  username: other,
+                                  displayName: p?.displayName ?? other,
+                                  schoolName: p?.schoolName ?? '',
+                                  userType: '',
+                                })
+                              }
+                              className="hover:bg-muted/60 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+                            >
+                              <div className="relative shrink-0">
+                                <Avatar className="h-8 w-8">
+                                  {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
+                                  <AvatarFallback
+                                    className="text-xs font-bold"
+                                    style={{
+                                      background:
+                                        'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                                      color: 'var(--foreground)',
+                                    }}
+                                  >
+                                    {initials(p?.displayName ?? other)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {st !== 'offline' && (
+                                  <span
+                                    className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2"
+                                    style={{
+                                      background: statusColor(st),
+                                      borderColor: 'var(--card)',
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">
+                                  {p?.displayName ?? other}
+                                </p>
+                                <p className="text-[11px]" style={{ color: statusColor(st) }}>
+                                  {statusLabel(st)}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Separator className="bg-muted/60" />
+                    </div>
+                  )}
 
-                {/* Member search */}
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-xs">Add members</p>
                   <div className="relative">
                     <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
                     <Input
+                      autoFocus
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search by username…"
-                      className="focus:border-primary/50 border-white/10 bg-white/5 pl-8 text-sm"
+                      className="focus:border-primary/50 border-border bg-muted/60 pl-8 text-sm"
                     />
                   </div>
-                  <div className="max-h-36 space-y-1 overflow-y-auto">
+                  <div className="min-h-20 space-y-1">
                     {searching && (
-                      <div className="flex items-center justify-center py-4">
+                      <div className="flex items-center justify-center py-6">
                         <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
                       </div>
                     )}
-                    {!searching &&
-                      searchQuery.length >= 2 &&
-                      searchResults.filter(
-                        (u) => !groupMembers.find((m) => m.username === u.username)
-                      ).length === 0 && (
-                        <p className="text-muted-foreground py-3 text-center text-xs">
-                          No more users found.
-                        </p>
-                      )}
-                    {searchResults
-                      .filter((u) => !groupMembers.find((m) => m.username === u.username))
-                      .map((user) => (
-                        <button
-                          key={user.username}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/8"
-                          onClick={() => {
-                            setGroupMembers((prev) => [...prev, user]);
-                            setSearchQuery('');
-                            setSearchResults([]);
-                          }}
-                        >
-                          <Avatar className="h-7 w-7 shrink-0">
-                            <AvatarFallback
-                              className="text-[10px] font-bold"
-                              style={{
-                                background:
-                                  'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                                color: 'oklch(0.78 0.15 278)',
-                              }}
-                            >
-                              {initials(user.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-medium">{user.displayName}</p>
-                            <p className="text-muted-foreground text-[10px]">@{user.username}</p>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Selected members chips */}
-                {groupMembers.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {groupMembers.map((m) => (
-                      <span
-                        key={m.username}
-                        className="bg-primary/10 text-primary flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[11px]"
-                      >
-                        {m.displayName}
-                        <button
-                          onClick={() =>
-                            setGroupMembers((prev) => prev.filter((x) => x.username !== m.username))
-                          }
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/*  E2EE Toggle  */}
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGroupEncrypted((v) => !v);
-                      setGroupEncPassword('');
-                      setGroupEncPasswordConfirm('');
-                    }}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all',
-                      groupEncrypted
-                        ? 'border-primary/50 bg-primary/8'
-                        : 'border-white/10 bg-white/3 hover:bg-white/6'
+                    {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
+                      <p className="text-muted-foreground py-6 text-center text-xs">
+                        No users found.
+                      </p>
                     )}
-                  >
-                    <div
-                      className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                        groupEncrypted ? 'bg-primary/20' : 'bg-white/8'
-                      )}
-                    >
-                      <Lock
-                        className={cn(
-                          'h-4 w-4',
-                          groupEncrypted ? 'text-primary' : 'text-muted-foreground'
+                    {searchResults.map((user) => (
+                      <button
+                        key={user.username}
+                        onClick={() => openDM(user)}
+                        disabled={dmCreating}
+                        className="hover:bg-muted/60 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+                      >
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback
+                            className="text-xs font-bold"
+                            style={{
+                              background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                              color: 'var(--foreground)',
+                            }}
+                          >
+                            {initials(user.displayName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{user.displayName}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            @{user.username}
+                            {user.schoolName ? ` · ${user.schoolName}` : ''}
+                            {isFriend(user.username) ? ' · Friend' : ''}
+                          </p>
+                        </div>
+                        {dmCreating && (
+                          <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
                         )}
+                      </button>
+                    ))}
+                    {!searching && searchQuery.length < 2 && friends.length === 0 && (
+                      <p className="text-muted-foreground py-4 text-center text-xs">
+                        Add friends first to start conversations. Type to search users.
+                      </p>
+                    )}
+                    {!searching && searchQuery.length < 2 && friends.length > 0 && (
+                      <p className="text-muted-foreground py-2 text-center text-xs">
+                        Or search for anyone above.
+                      </p>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </AnimatePresence>
+
+          {/* ═══ New Group modal ═════════════════════════════════ */}
+          <AnimatePresence>
+            {showNewGroup && (
+              <Dialog
+                open
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setShowNewGroup(false);
+                    setGroupName('');
+                    setGroupDesc('');
+                    setGroupMembers([]);
+                    setGroupEncrypted(false);
+                    setGroupEncPassword('');
+                    setGroupEncPasswordConfirm('');
+                  }
+                }}
+              >
+                <DialogContent className="max-w-md gap-4 rounded-2xl p-6">
+                  <DialogDescription className="sr-only">
+                    Create a space for your classmates and study materials.
+                  </DialogDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="text-primary h-4 w-4" />
+                      <DialogTitle>New group chat</DialogTitle>
+                    </div>
+                  </div>
+                  <Separator className="bg-muted/60" />
+
+                  {/* Group name & description */}
+                  <div className="space-y-2">
+                    <Input
+                      autoFocus
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      placeholder="Group name…"
+                      maxLength={80}
+                      className="focus:border-primary/50 border-border bg-muted/60 text-sm"
+                    />
+                    <Input
+                      value={groupDesc}
+                      onChange={(e) => setGroupDesc(e.target.value)}
+                      placeholder="Description (optional)…"
+                      maxLength={200}
+                      className="focus:border-primary/50 border-border bg-muted/60 text-sm"
+                    />
+                  </div>
+
+                  {/* Member search */}
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-xs">Add members</p>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by username…"
+                        className="focus:border-primary/50 border-border bg-muted/60 pl-8 text-sm"
                       />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          'text-xs font-semibold',
-                          groupEncrypted ? 'text-primary' : 'text-foreground'
+                    <div className="max-h-36 space-y-1 overflow-y-auto">
+                      {searching && (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                        </div>
+                      )}
+                      {!searching &&
+                        searchQuery.length >= 2 &&
+                        searchResults.filter(
+                          (u) => !groupMembers.find((m) => m.username === u.username)
+                        ).length === 0 && (
+                          <p className="text-muted-foreground py-3 text-center text-xs">
+                            No more users found.
+                          </p>
                         )}
-                      >
-                        End-to-end encryption
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-[10px] leading-relaxed">
-                        Messages encrypted with AES-256-GCM. Password required to read.
-                      </p>
+                      {searchResults
+                        .filter((u) => !groupMembers.find((m) => m.username === u.username))
+                        .map((user) => (
+                          <button
+                            key={user.username}
+                            className="hover:bg-muted/60 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors"
+                            onClick={() => {
+                              setGroupMembers((prev) => [...prev, user]);
+                              setSearchQuery('');
+                              setSearchResults([]);
+                            }}
+                          >
+                            <Avatar className="h-7 w-7 shrink-0">
+                              <AvatarFallback
+                                className="text-xs font-bold"
+                                style={{
+                                  background:
+                                    'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                                  color: 'var(--foreground)',
+                                }}
+                              >
+                                {initials(user.displayName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-medium">{user.displayName}</p>
+                              <p className="text-muted-foreground text-xs">@{user.username}</p>
+                            </div>
+                          </button>
+                        ))}
                     </div>
-                    <div
+                  </div>
+
+                  {/* Selected members chips */}
+                  {groupMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {groupMembers.map((m) => (
+                        <span
+                          key={m.username}
+                          className="bg-primary/10 text-primary border-border flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
+                        >
+                          {m.displayName}
+                          <button
+                            onClick={() =>
+                              setGroupMembers((prev) =>
+                                prev.filter((x) => x.username !== m.username)
+                              )
+                            }
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/*  E2EE Toggle  */}
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGroupEncrypted((v) => !v);
+                        setGroupEncPassword('');
+                        setGroupEncPasswordConfirm('');
+                      }}
                       className={cn(
-                        'relative h-5 w-9 shrink-0 rounded-full transition-all',
-                        groupEncrypted ? 'bg-primary' : 'bg-white/15'
+                        'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all',
+                        groupEncrypted
+                          ? 'border-primary/50 bg-primary/8'
+                          : 'border-border bg-muted/60 hover:bg-muted/60'
                       )}
                     >
                       <div
                         className={cn(
-                          'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all',
-                          groupEncrypted ? 'left-[calc(100%-18px)]' : 'left-0.5'
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                          groupEncrypted ? 'bg-primary/20' : 'bg-muted/60'
                         )}
-                      />
-                    </div>
-                  </button>
-
-                  {groupEncrypted && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="space-y-2 overflow-hidden"
-                    >
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-2">
-                        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-                        <p className="text-[10px] leading-relaxed text-amber-300/90">
-                          All participantIds need this password to read messages. It is{' '}
-                          <strong>never</strong> sent to any server. Keep it safe — there is no
-                          recovery option.
-                        </p>
-                      </div>
-                      <div className="relative">
-                        <Input
-                          type={groupEncPasswordShow ? 'text' : 'password'}
-                          value={groupEncPassword}
-                          onChange={(e) => setGroupEncPassword(e.target.value)}
-                          placeholder="Set encryption password (min 8 chars)…"
-                          className="focus:border-primary/50 border-white/10 bg-white/5 pr-9 text-sm"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setGroupEncPasswordShow((v) => !v)}
-                          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
-                        >
-                          {groupEncPasswordShow ? (
-                            <EyeOff className="h-3.5 w-3.5" />
-                          ) : (
-                            <Eye className="h-3.5 w-3.5" />
+                      >
+                        <Lock
+                          className={cn(
+                            'h-4 w-4',
+                            groupEncrypted ? 'text-primary' : 'text-muted-foreground'
                           )}
-                        </button>
+                        />
                       </div>
-                      <Input
-                        type={groupEncPasswordShow ? 'text' : 'password'}
-                        value={groupEncPasswordConfirm}
-                        onChange={(e) => setGroupEncPasswordConfirm(e.target.value)}
-                        placeholder="Confirm password…"
-                        className={cn(
-                          'focus:border-primary/50 border-white/10 bg-white/5 text-sm',
-                          groupEncPasswordConfirm &&
-                            groupEncPasswordConfirm !== groupEncPassword &&
-                            'border-red-500/50'
-                        )}
-                        autoComplete="new-password"
-                      />
-                      {groupEncPasswordConfirm && groupEncPasswordConfirm !== groupEncPassword && (
-                        <p className="px-1 text-[10px] text-red-400">Passwords do not match.</p>
-                      )}
-                      {groupEncPassword.length > 0 && groupEncPassword.length < 8 && (
-                        <p className="px-1 text-[10px] text-amber-400">
-                          Password must be at least 8 characters.
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            'text-xs font-semibold',
+                            groupEncrypted ? 'text-primary' : 'text-foreground'
+                          )}
+                        >
+                          End-to-end encryption
                         </p>
-                      )}
-                      {/* Strength bar */}
-                      {groupEncPassword.length >= 8 && (
-                        <div className="space-y-1 px-1">
-                          <div className="flex h-1 gap-1">
-                            {[8, 12, 16, 20].map((threshold) => (
-                              <div
-                                key={threshold}
-                                className={cn(
-                                  'flex-1 rounded-full transition-all',
-                                  groupEncPassword.length >= threshold
-                                    ? groupEncPassword.length >= 20
-                                      ? 'bg-green-500'
-                                      : groupEncPassword.length >= 12
-                                        ? 'bg-amber-400'
-                                        : 'bg-amber-500/60'
-                                    : 'bg-white/10'
-                                )}
-                              />
-                            ))}
-                          </div>
-                          <p className="text-muted-foreground text-[9px]">
-                            {groupEncPassword.length >= 20
-                              ? 'Strong password'
-                              : groupEncPassword.length >= 12
-                                ? 'Good password'
-                                : 'Weak — use a longer password'}
+                        <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+                          Messages encrypted with AES-256-GCM. Password required to read.
+                        </p>
+                      </div>
+                      <div
+                        className={cn(
+                          'relative h-5 w-9 shrink-0 rounded-full transition-all',
+                          groupEncrypted ? 'bg-primary' : 'bg-muted/60'
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all',
+                            groupEncrypted ? 'left-[calc(100%-18px)]' : 'left-0.5'
+                          )}
+                        />
+                      </div>
+                    </button>
+
+                    {groupEncrypted && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="space-y-2 overflow-hidden"
+                      >
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-2">
+                          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                          <p className="text-xs leading-relaxed text-amber-300/90">
+                            All participantIds need this password to read messages. It is{' '}
+                            <strong>never</strong> sent to any server. Keep it safe — there is no
+                            recovery option.
                           </p>
                         </div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
+                        <div className="relative">
+                          <Input
+                            type={groupEncPasswordShow ? 'text' : 'password'}
+                            value={groupEncPassword}
+                            onChange={(e) => setGroupEncPassword(e.target.value)}
+                            placeholder="Set encryption password (min 8 chars)…"
+                            className="focus:border-primary/50 border-border bg-muted/60 pr-9 text-sm"
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setGroupEncPasswordShow((v) => !v)}
+                            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                          >
+                            {groupEncPasswordShow ? (
+                              <EyeOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <Eye className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                        <Input
+                          type={groupEncPasswordShow ? 'text' : 'password'}
+                          value={groupEncPasswordConfirm}
+                          onChange={(e) => setGroupEncPasswordConfirm(e.target.value)}
+                          placeholder="Confirm password…"
+                          className={cn(
+                            'focus:border-primary/50 border-border bg-muted/60 text-sm',
+                            groupEncPasswordConfirm &&
+                              groupEncPasswordConfirm !== groupEncPassword &&
+                              'border-red-500/50'
+                          )}
+                          autoComplete="new-password"
+                        />
+                        {groupEncPasswordConfirm &&
+                          groupEncPasswordConfirm !== groupEncPassword && (
+                            <p className="px-1 text-xs text-red-400">Passwords do not match.</p>
+                          )}
+                        {groupEncPassword.length > 0 && groupEncPassword.length < 8 && (
+                          <p className="px-1 text-xs text-amber-400">
+                            Password must be at least 8 characters.
+                          </p>
+                        )}
+                        {/* Strength bar */}
+                        {groupEncPassword.length >= 8 && (
+                          <div className="space-y-1 px-1">
+                            <div className="flex h-1 gap-1">
+                              {[8, 12, 16, 20].map((threshold) => (
+                                <div
+                                  key={threshold}
+                                  className={cn(
+                                    'flex-1 rounded-full transition-all',
+                                    groupEncPassword.length >= threshold
+                                      ? groupEncPassword.length >= 20
+                                        ? 'bg-green-500'
+                                        : groupEncPassword.length >= 12
+                                          ? 'bg-amber-400'
+                                          : 'bg-amber-500/60'
+                                      : 'bg-muted/60'
+                                  )}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-muted-foreground text-[11px]">
+                              {groupEncPassword.length >= 20
+                                ? 'Strong password'
+                                : groupEncPassword.length >= 12
+                                  ? 'Good password'
+                                  : 'Weak — use a longer password'}
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
 
-                <Button
-                  className="w-full"
-                  disabled={
-                    !groupName.trim() ||
-                    groupMembers.length === 0 ||
-                    groupCreating ||
-                    (groupEncrypted &&
-                      (groupEncPassword.length < 8 || groupEncPassword !== groupEncPasswordConfirm))
-                  }
-                  onClick={createGroup}
-                  style={{ background: 'var(--primary)' }}
-                >
-                  {groupCreating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : groupEncrypted ? (
-                    <>
-                      <Lock className="mr-2 h-3.5 w-3.5" />
-                      Create Encrypted Group ({groupMembers.length + 1} members)
-                    </>
-                  ) : (
-                    <>
-                      <Users className="mr-2 h-3.5 w-3.5" />
-                      Create Group ({groupMembers.length + 1} members)
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            </motion.div>
+                  <Button
+                    className="w-full"
+                    disabled={
+                      !groupName.trim() ||
+                      groupMembers.length === 0 ||
+                      groupCreating ||
+                      (groupEncrypted &&
+                        (groupEncPassword.length < 8 ||
+                          groupEncPassword !== groupEncPasswordConfirm))
+                    }
+                    onClick={createGroup}
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    {groupCreating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : groupEncrypted ? (
+                      <>
+                        <Lock className="mr-2 h-3.5 w-3.5" />
+                        Create Encrypted Group ({groupMembers.length + 1} members)
+                      </>
+                    ) : (
+                      <>
+                        <Users className="mr-2 h-3.5 w-3.5" />
+                        Create Group ({groupMembers.length + 1} members)
+                      </>
+                    )}
+                  </Button>
+                </DialogContent>
+              </Dialog>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ═══ Mobile action sheet ════════════════════════════ */}
+        <AnimatePresence>
+          {mobileActionMsg && (
+            <MobileActionSheet
+              msg={mobileActionMsg}
+              isMe={mobileActionMsg.senderUserId === username}
+              canDelete={
+                mobileActionMsg.senderUserId === username || activeConvo?.adminUserId === username
+              }
+              username={username}
+              displayContent={
+                activeConvo?.encrypted
+                  ? (decryptedCache[mobileActionMsg.id] ?? null)
+                  : mobileActionMsg.content
+              }
+              onClose={() => setMobileActionMsg(null)}
+              onEdit={() => {
+                setEditingId(mobileActionMsg.id);
+                setEditContent(
+                  activeConvo?.encrypted
+                    ? (decryptedCache[mobileActionMsg.id] ?? mobileActionMsg.content)
+                    : mobileActionMsg.content
+                );
+              }}
+              onDelete={() => deleteMsg(mobileActionMsg.id)}
+              onPin={() => togglePin(mobileActionMsg.id)}
+              onReply={() => {
+                setReplyingTo(mobileActionMsg);
+                inputRef.current?.focus();
+              }}
+              onReact={(emoji) => toggleReaction(mobileActionMsg.id, emoji)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* User profile modal */}
+        <AnimatePresence>
+          {viewProfileUsername && (
+            <UserProfileModal
+              username={viewProfileUsername}
+              onClose={() => setViewProfileUsername(null)}
+              onMessage={() => {
+                // Open DM with this user
+                const u: UserSearchResult = {
+                  username: viewProfileUsername,
+                  displayName:
+                    friendProfileMap[viewProfileUsername]?.displayName ?? viewProfileUsername,
+                  schoolName: friendProfileMap[viewProfileUsername]?.schoolName ?? '',
+                  userType: '',
+                };
+                openDM(u);
+                setViewProfileUsername(null);
+              }}
+              friendStatus={
+                isFriend(viewProfileUsername)
+                  ? 'friends'
+                  : sentTo(viewProfileUsername)
+                    ? 'pending_sent'
+                    : pendingFrom(viewProfileUsername)
+                      ? 'pending_received'
+                      : 'none'
+              }
+              onAddFriend={() => sendFriendReq(viewProfileUsername)}
+              onRespondFriend={(accept) => respondFriendReq(viewProfileUsername, accept)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ═══ E2EE Password Prompt Modal ═══════════════════════ */}
+        <AnimatePresence>
+          {encPromptConvoId && (
+            <Dialog
+              open
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEncPromptConvoId(null);
+                  setActiveConvo(null);
+                }
+              }}
+            >
+              <DialogContent className="max-w-md gap-4 rounded-2xl p-6">
+                <DialogDescription className="sr-only">
+                  Enter the group password to read and send encrypted messages.
+                </DialogDescription>
+                <DialogTitle className="sr-only">Unlock conversation</DialogTitle>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: 'color-mix(in oklch, var(--primary) 15%, transparent)' }}
+                  >
+                    <Lock className="text-primary h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold">Encrypted Group</h2>
+                    <p className="text-muted-foreground text-[11px]">
+                      Enter the group password to decrypt messages.
+                    </p>
+                  </div>
+                </div>
+                <Separator className="bg-muted/60" />
+                <div className="relative">
+                  <Input
+                    autoFocus
+                    type={encPromptShow ? 'text' : 'password'}
+                    value={encPromptPassword}
+                    onChange={(e) => {
+                      setEncPromptPassword(e.target.value);
+                      setEncPromptError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') unlockEncryptedConvo();
+                    }}
+                    placeholder="Group password…"
+                    className="focus:border-primary/50 border-border bg-muted/60 pr-9 text-sm"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEncPromptShow((v) => !v)}
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                  >
+                    {encPromptShow ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+                {encPromptError && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-red-400">
+                    <X className="h-3 w-3 shrink-0" />
+                    {encPromptError}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setEncPromptConvoId(null);
+                      setActiveConvo(null);
+                      setMobileShowChat(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    disabled={!encPromptPassword || encPromptDeriving}
+                    onClick={unlockEncryptedConvo}
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    {encPromptDeriving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                        Unlock
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="border-border bg-muted/60 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left">
+                  <Info className="text-muted-foreground mt-0.5 h-3 w-3 shrink-0" />
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    The password is used locally to decrypt messages. It is never sent to any
+                    server.
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </AnimatePresence>
+
+        {/* Group call encryption warning */}
+        <AnimatePresence>
+          {showEncCallWarning && (
+            <GroupCallEncryptionNotice
+              onCancel={() => setShowEncCallWarning(false)}
+              onConfirm={() => {
+                setShowEncCallWarning(false);
+                if (activeConvo?.type === 'group') {
+                  groupCall.startGroupCall(username, activeConvo.id);
+                }
+              }}
+            />
           )}
         </AnimatePresence>
       </div>
-
-      {/* ═══ Mobile action sheet ════════════════════════════ */}
-      <AnimatePresence>
-        {mobileActionMsg && (
-          <MobileActionSheet
-            msg={mobileActionMsg}
-            isMe={mobileActionMsg.senderUserId === username}
-            canDelete={
-              mobileActionMsg.senderUserId === username || activeConvo?.adminUserId === username
-            }
-            username={username}
-            displayContent={
-              activeConvo?.encrypted
-                ? (decryptedCache[mobileActionMsg.id] ?? null)
-                : mobileActionMsg.content
-            }
-            onClose={() => setMobileActionMsg(null)}
-            onEdit={() => {
-              setEditingId(mobileActionMsg.id);
-              setEditContent(
-                activeConvo?.encrypted
-                  ? (decryptedCache[mobileActionMsg.id] ?? mobileActionMsg.content)
-                  : mobileActionMsg.content
-              );
-            }}
-            onDelete={() => deleteMsg(mobileActionMsg.id)}
-            onPin={() => togglePin(mobileActionMsg.id)}
-            onReply={() => {
-              setReplyingTo(mobileActionMsg);
-              inputRef.current?.focus();
-            }}
-            onReact={(emoji) => toggleReaction(mobileActionMsg.id, emoji)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* User profile modal */}
-      <AnimatePresence>
-        {viewProfileUsername && (
-          <UserProfileModal
-            username={viewProfileUsername}
-            onClose={() => setViewProfileUsername(null)}
-            onMessage={() => {
-              // Open DM with this user
-              const u: UserSearchResult = {
-                username: viewProfileUsername,
-                displayName:
-                  friendProfileMap[viewProfileUsername]?.displayName ?? viewProfileUsername,
-                schoolName: friendProfileMap[viewProfileUsername]?.schoolName ?? '',
-                userType: '',
-              };
-              openDM(u);
-              setViewProfileUsername(null);
-            }}
-            friendStatus={
-              isFriend(viewProfileUsername)
-                ? 'friends'
-                : sentTo(viewProfileUsername)
-                  ? 'pending_sent'
-                  : pendingFrom(viewProfileUsername)
-                    ? 'pending_received'
-                    : 'none'
-            }
-            onAddFriend={() => sendFriendReq(viewProfileUsername)}
-            onRespondFriend={(accept) => respondFriendReq(viewProfileUsername, accept)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ═══ E2EE Password Prompt Modal ═══════════════════════ */}
-      <AnimatePresence>
-        {encPromptConvoId && (
-          <motion.div
-            key="enc-prompt-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.18 }}
-              className="bg-card w-full max-w-sm space-y-4 rounded-xl border border-white/10 p-5 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                  style={{ background: 'oklch(0.65 0.22 278 / 15%)' }}
-                >
-                  <Lock className="text-primary h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold">Encrypted Group</h2>
-                  <p className="text-muted-foreground text-[11px]">
-                    Enter the group password to decrypt messages.
-                  </p>
-                </div>
-              </div>
-              <Separator className="bg-white/7" />
-              <div className="relative">
-                <Input
-                  autoFocus
-                  type={encPromptShow ? 'text' : 'password'}
-                  value={encPromptPassword}
-                  onChange={(e) => {
-                    setEncPromptPassword(e.target.value);
-                    setEncPromptError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') unlockEncryptedConvo();
-                  }}
-                  placeholder="Group password…"
-                  className="focus:border-primary/50 border-white/10 bg-white/5 pr-9 text-sm"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setEncPromptShow((v) => !v)}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
-                >
-                  {encPromptShow ? (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-              {encPromptError && (
-                <p className="flex items-center gap-1.5 text-[11px] text-red-400">
-                  <X className="h-3 w-3 shrink-0" />
-                  {encPromptError}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    setEncPromptConvoId(null);
-                    setActiveConvo(null);
-                    setMobileShowChat(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  disabled={!encPromptPassword || encPromptDeriving}
-                  onClick={unlockEncryptedConvo}
-                  style={{ background: 'var(--primary)' }}
-                >
-                  {encPromptDeriving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
-                      Unlock
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="flex items-start gap-2 rounded-lg border border-white/8 bg-white/3 px-3 py-2.5 text-left">
-                <Info className="text-muted-foreground mt-0.5 h-3 w-3 shrink-0" />
-                <p className="text-muted-foreground text-[10px] leading-relaxed">
-                  The password is used locally to decrypt messages. It is never sent to any server.
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Group call encryption warning */}
-      <AnimatePresence>
-        {showEncCallWarning && (
-          <GroupCallEncryptionNotice
-            onCancel={() => setShowEncCallWarning(false)}
-            onConfirm={() => {
-              setShowEncCallWarning(false);
-              if (activeConvo?.type === 'group') {
-                groupCall.startGroupCall(username, activeConvo.id);
-              }
-            }}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+    </MotionConfig>
   );
 }
 
@@ -4060,8 +4434,7 @@ function ProfileGate() {
       <motion.div
         className="flex h-20 w-20 items-center justify-center rounded-3xl shadow-lg"
         style={{
-          background:
-            'linear-gradient(135deg, oklch(0.65 0.22 278 / 25%), oklch(0.55 0.25 295 / 25%))',
+          background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
         }}
         animate={{ scale: [1, 1.06, 1] }}
         transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
@@ -4073,7 +4446,7 @@ function ProfileGate() {
       <div className="max-w-sm">
         <h2 className="mb-2 text-xl font-bold tracking-tight">Set up your profile first</h2>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Messaging requires a profile so classmates know who they're talking to. It only takes a
+          Messaging requires a profile so classmates know who they are talking to. It only takes a
           few seconds.
         </p>
       </div>
@@ -4086,18 +4459,18 @@ function ProfileGate() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 + i * 0.1, duration: 0.35, type: 'spring', stiffness: 260 }}
-              className="text-muted-foreground flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium whitespace-nowrap"
+              className="text-muted-foreground border-border bg-muted/60 flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium whitespace-nowrap"
             >
               <div
                 className="text-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                style={{ background: 'oklch(0.65 0.22 278 / 15%)' }}
+                style={{ background: 'color-mix(in oklch, var(--primary) 15%, transparent)' }}
               >
                 <Icon className="h-3 w-3" />
               </div>
               {text}
             </motion.div>
             {i < STEPS.length - 1 && (
-              <div className="mx-1 hidden h-px w-6 shrink-0 bg-white/10 sm:block" />
+              <div className="bg-muted/60 mx-1 hidden h-px w-6 shrink-0 sm:block" />
             )}
           </div>
         ))}
@@ -4124,9 +4497,9 @@ function ProfileGate() {
       </motion.div>
 
       {/* Info note */}
-      <div className="flex max-w-xs items-start gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-3 text-left">
+      <div className="border-border bg-muted/60 flex max-w-xs items-start gap-2 rounded-xl border px-4 py-3 text-left">
         <Info className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <p className="text-muted-foreground text-[10px] leading-relaxed">
+        <p className="text-muted-foreground text-xs leading-relaxed">
           Your display name is what others see. Your SchoolSoft username stays private.
         </p>
       </div>
@@ -4177,14 +4550,15 @@ function FriendsPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Search bar */}
-      <div className="shrink-0 border-b border-white/7 px-3 py-2.5">
+      <div className="border-border shrink-0 border-b px-3 py-2.5">
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
+            aria-label="Search people by username"
             value={friendSearchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Add friend by username…"
-            className="focus:border-primary/40 h-8 border-white/10 bg-white/5 pl-8 text-xs"
+            className="focus:border-primary/40 border-border bg-muted/60 h-8 pl-8 text-xs"
           />
         </div>
         {/* Search results */}
@@ -4206,15 +4580,14 @@ function FriendsPanel({
                   return (
                     <div
                       key={u.username}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5"
+                      className="hover:bg-muted/60 flex items-center gap-2 rounded-lg px-2 py-1.5"
                     >
                       <Avatar className="h-7 w-7 shrink-0">
                         <AvatarFallback
-                          className="text-[10px] font-bold"
+                          className="text-xs font-bold"
                           style={{
-                            background:
-                              'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                            color: 'oklch(0.78 0.15 278)',
+                            background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                            color: 'var(--foreground)',
                           }}
                         >
                           {initials(u.displayName)}
@@ -4222,24 +4595,24 @@ function FriendsPanel({
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium">{u.displayName}</p>
-                        <p className="text-muted-foreground text-[9px]">@{u.username}</p>
+                        <p className="text-muted-foreground text-[11px]">@{u.username}</p>
                       </div>
                       {alreadyFriend ? (
-                        <span className="shrink-0 text-[10px] text-green-400">Friends</span>
+                        <span className="shrink-0 text-xs text-green-400">Friends</span>
                       ) : hasIncoming ? (
                         <button
                           onClick={() => onRespond(u.username, true)}
-                          className="text-primary shrink-0 text-[10px] hover:underline"
+                          className="text-primary shrink-0 text-xs hover:underline"
                         >
                           Accept
                         </button>
                       ) : hasSent ? (
-                        <span className="text-muted-foreground shrink-0 text-[10px]">Sent</span>
+                        <span className="text-muted-foreground shrink-0 text-xs">Sent</span>
                       ) : (
                         <button
                           onClick={() => onSendRequest(u.username)}
                           disabled={friendRequestSending === u.username}
-                          className="text-primary flex shrink-0 items-center gap-1 text-[10px] hover:underline"
+                          className="text-primary flex shrink-0 items-center gap-1 text-xs hover:underline"
                         >
                           {friendRequestSending === u.username ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -4260,8 +4633,8 @@ function FriendsPanel({
       <div className="flex-1 overflow-y-auto">
         {/* Pending requests */}
         {received.length > 0 && (
-          <div className="border-b border-white/7 px-3 py-2">
-            <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
+          <div className="border-border border-b px-3 py-2">
+            <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
               Pending ({received.length})
             </p>
             {received.map((f) => {
@@ -4272,11 +4645,10 @@ function FriendsPanel({
                   <Avatar className="h-8 w-8 shrink-0">
                     {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
                     <AvatarFallback
-                      className="text-[10px] font-bold"
+                      className="text-xs font-bold"
                       style={{
-                        background:
-                          'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                        color: 'oklch(0.78 0.15 278)',
+                        background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                        color: 'var(--foreground)',
                       }}
                     >
                       {initials(p?.displayName ?? other)}
@@ -4284,7 +4656,7 @@ function FriendsPanel({
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium">{p?.displayName ?? other}</p>
-                    <p className="text-muted-foreground text-[9px]">@{other}</p>
+                    <p className="text-muted-foreground text-[11px]">@{other}</p>
                   </div>
                   <div className="flex gap-0.5">
                     <button
@@ -4312,11 +4684,11 @@ function FriendsPanel({
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <Users className="text-muted-foreground/25 h-8 w-8" />
               <p className="text-muted-foreground text-xs">No friends yet.</p>
-              <p className="text-muted-foreground/60 text-[10px]">Search above to add friends.</p>
+              <p className="text-muted-foreground/60 text-xs">Search above to add friends.</p>
             </div>
           ) : (
             <>
-              <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
+              <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
                 Friends —{' '}
                 {
                   friends.filter((f) => {
@@ -4336,11 +4708,10 @@ function FriendsPanel({
                       <Avatar className="h-8 w-8">
                         {p?.pfpUrl && <AvatarImage src={p.pfpUrl} />}
                         <AvatarFallback
-                          className="text-[10px] font-bold"
+                          className="text-xs font-bold"
                           style={{
-                            background:
-                              'linear-gradient(135deg, oklch(0.65 0.22 278 / 30%), oklch(0.55 0.25 295 / 30%))',
-                            color: 'oklch(0.78 0.15 278)',
+                            background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                            color: 'var(--foreground)',
                           }}
                         >
                           {initials(p?.displayName ?? other)}
@@ -4355,20 +4726,21 @@ function FriendsPanel({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-medium">{p?.displayName ?? other}</p>
-                      <p className="text-[9px]" style={{ color: statusColor(st) }}>
+                      <p className="text-[11px]" style={{ color: statusColor(st) }}>
                         {statusLabel(st)}
                       </p>
                     </div>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
+                          aria-label="Message"
                           onClick={() => onOpenDM(other)}
                           className="text-muted-foreground hover:text-primary hover:bg-primary/10 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="left" className="text-[10px]">
+                      <TooltipContent side="left" className="text-xs">
                         Message
                       </TooltipContent>
                     </Tooltip>
@@ -4392,7 +4764,8 @@ function ConvoItem({
   subtitle,
   active,
   username,
-  index,
+  unread,
+  favorite,
   pfpCache,
   statusMap,
   onClick,
@@ -4402,27 +4775,24 @@ function ConvoItem({
   subtitle: string;
   active: boolean;
   username: string;
-  index: number;
+  unread: boolean;
+  favorite: boolean;
   pfpCache: Record<string, string>;
   statusMap: Record<string, UserStatus>;
   onClick: () => void;
 }) {
-  // No longer track unread for all conversations; only the current one
-
   const dmPartner = convo.type === 'dm' ? convo.participantIds.find((p) => p !== username) : null;
   const partnerStatus: UserStatus = dmPartner ? (statusMap[dmPartner] ?? 'offline') : 'offline';
 
   return (
     <motion.button
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.03, ease: [0.22, 1, 0.36, 1] }}
+      initial={false}
+      aria-current={active ? 'true' : undefined}
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors',
-        active ? 'bg-white/8' : 'hover:bg-white/5'
+        'mx-2 mb-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-colors',
+        active ? 'bg-primary/10' : 'hover:bg-muted/70'
       )}
-      style={active ? { boxShadow: 'inset 2px 0 0 var(--primary)' } : undefined}
     >
       <div className="relative shrink-0">
         <Avatar className="h-9 w-9">
@@ -4437,9 +4807,8 @@ function ConvoItem({
           <AvatarFallback
             className="text-xs font-bold"
             style={{
-              background:
-                'linear-gradient(135deg, oklch(0.65 0.22 278 / 35%), oklch(0.55 0.25 295 / 35%))',
-              color: 'oklch(0.78 0.15 278)',
+              background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+              color: 'var(--foreground)',
             }}
           >
             {convo.type === 'group' ? <Users className="h-4 w-4" /> : initials(name)}
@@ -4452,15 +4821,35 @@ function ConvoItem({
             style={{ background: statusColor(partnerStatus), borderColor: 'var(--card)' }}
           />
         )}
-        {/* unread indicator removed — only tracking current conversation */}
+        {/* Unread indicator — only tracking current conversation */}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className={cn('truncate text-sm', 'font-medium')}>{name}</span>
+          <span
+            className={cn(
+              'flex flex-row truncate text-sm',
+              unread ? 'font-semibold' : 'font-medium'
+            )}
+          >
+            {favorite && (
+              <Star
+                aria-label="Favorite conversation"
+                className="text-primary mt-1 mr-1 size-3 shrink-0 fill-current"
+              />
+            )}
+            {name}
+          </span>
+          {unread && (
+            <span className="bg-primary ml-2 size-2 shrink-0 rounded-full">
+              <span className="sr-only">Unread</span>
+            </span>
+          )}
           <div className="ml-1 flex shrink-0 items-center gap-1">
             {convo.encrypted && <Lock className="text-primary/60 h-2.5 w-2.5" />}
             {convo.lastAt > 0 && (
-              <span className="text-muted-foreground text-[9px]">{relativeTime(convo.lastAt)}</span>
+              <span className="text-muted-foreground text-[11px]">
+                {relativeTime(convo.lastAt)}
+              </span>
             )}
           </div>
         </div>
@@ -4521,69 +4910,35 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 function NoteFullModal({ card, onClose }: { card: NoteShareCard; onClose: () => void }) {
-  const dotColor = STATUS_DOT[card.status] ?? STATUS_DOT.draft;
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center"
-      onClick={onClose}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.97 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-card flex w-full flex-col overflow-hidden rounded-t-3xl border border-white/10 shadow-2xl sm:max-w-xl sm:rounded-2xl"
-        style={{ maxHeight: '88dvh' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex shrink-0 items-center gap-2.5 border-b px-4 py-3"
-          style={{ borderColor: 'oklch(1 0 0 / 8%)' }}
-        >
-          <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-50" />
-          <span className="flex-1 truncate text-sm font-semibold">{card.title || 'Untitled'}</span>
-          <span
-            className="mr-1 flex items-center gap-1 text-[10px] font-medium"
-            style={{ color: dotColor }}
-          >
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: dotColor }}
-            />
-            {card.status}
-          </span>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground rounded-lg p-1 transition-colors hover:bg-white/8"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <DialogContent className="max-w-xl gap-0 overflow-hidden p-0 sm:p-0">
+        <div className="border-border flex items-center gap-3 border-b px-5 py-4 pr-14">
+          <StickyNote className="text-muted-foreground size-4 shrink-0" />
+          <DialogTitle className="min-w-0 flex-1 truncate text-base">
+            {card.title || 'Untitled note'}
+          </DialogTitle>
+          <span className="text-muted-foreground text-xs capitalize">{card.status}</span>
         </div>
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <DialogDescription className="sr-only">
+          Shared note from this conversation.
+        </DialogDescription>
+        <div className="max-h-[70dvh] overflow-y-auto overscroll-contain px-5 py-5">
           {card.fullContent ? (
-            <div className="prose prose-invert prose-sm prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground/80 prose-p:leading-relaxed prose-code:bg-white/8 prose-code:px-1 prose-code:rounded prose-code:text-xs prose-pre:bg-white/6 prose-pre:rounded-xl prose-pre:p-3 prose-blockquote:border-l-primary/40 prose-blockquote:text-foreground/60 prose-a:text-primary prose-strong:text-foreground prose-li:text-foreground/80 max-w-none">
+            <div className="prose prose-sm prose-headings:text-foreground prose-p:text-foreground prose-code:text-foreground prose-pre:bg-muted prose-a:text-primary prose-strong:text-foreground prose-li:text-foreground max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{card.fullContent}</ReactMarkdown>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">{card.preview || 'No content.'}</p>
           )}
         </div>
-      </motion.div>
-    </motion.div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -4608,11 +4963,11 @@ function NoteCardBubble({ card, isMe }: { card: NoteShareCard; isMe: boolean }) 
           style={{ borderColor: isMe ? 'oklch(1 0 0 / 12%)' : 'oklch(1 0 0 / 7%)' }}
         >
           <StickyNote className="h-3 w-3 shrink-0 opacity-60" />
-          <span className="flex-1 text-[10px] font-semibold tracking-wider uppercase opacity-55">
+          <span className="flex-1 text-xs font-semibold tracking-wider uppercase opacity-55">
             Note
           </span>
           <span
-            className="flex items-center gap-1 text-[9px] font-medium"
+            className="flex items-center gap-1 text-[11px] font-medium"
             style={{ color: dotColor }}
           >
             <span
@@ -4631,7 +4986,7 @@ function NoteCardBubble({ card, isMe }: { card: NoteShareCard; isMe: boolean }) 
             <p className="line-clamp-2 text-[11px] leading-relaxed opacity-55">{card.preview}</p>
           )}
           <div
-            className="mt-2 flex items-center gap-1 text-[10px] opacity-0 transition-opacity group-hover/notecard:opacity-60"
+            className="mt-2 flex items-center gap-1 text-xs opacity-0 transition-opacity group-hover/notecard:opacity-60"
             style={{ color: 'oklch(0.72 0.18 148)' }}
           >
             <BookOpen className="h-2.5 w-2.5" />
@@ -4664,12 +5019,12 @@ function GradeCardBubble({ card, isMe }: { card: GradeShareCard; isMe: boolean }
         style={{ borderColor: isMe ? 'oklch(1 0 0 / 12%)' : 'oklch(1 0 0 / 7%)' }}
       >
         <BarChart2 className="h-3 w-3 shrink-0 opacity-60" />
-        <span className="flex-1 text-[10px] font-semibold tracking-wider uppercase opacity-55">
+        <span className="flex-1 text-xs font-semibold tracking-wider uppercase opacity-55">
           Grade
         </span>
         {card.confidence === 'estimated' && (
           <span
-            className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+            className="rounded-full px-1.5 py-0.5 text-[11px] font-medium"
             style={{ background: 'oklch(0.75 0.16 82 / 18%)', color: 'oklch(0.78 0.14 82)' }}
           >
             est.
@@ -4691,9 +5046,9 @@ function GradeCardBubble({ card, isMe }: { card: GradeShareCard; isMe: boolean }
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm leading-snug font-semibold">{card.assignmentTitle}</p>
-          <p className="mt-0.5 truncate text-[10px] opacity-55">{card.subjectName}</p>
+          <p className="mt-0.5 truncate text-xs opacity-55">{card.subjectName}</p>
           {card.totalPoints && (
-            <p className="mt-0.5 font-mono text-[9px] opacity-40">{card.totalPoints} pts</p>
+            <p className="mt-0.5 font-mono text-[11px] opacity-40">{card.totalPoints} pts</p>
           )}
         </div>
       </div>
@@ -4768,11 +5123,11 @@ function FlashDeckCardBubble({
         >
           <BookOpen className="h-3 w-3 text-white" />
         </div>
-        <span className="flex-1 text-[10px] font-semibold tracking-wider uppercase opacity-55">
+        <span className="flex-1 text-xs font-semibold tracking-wider uppercase opacity-55">
           Flashcard deck
         </span>
         <span
-          className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+          className="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium"
           style={{ background: `${c.from}22`, color: c.from }}
         >
           {card.cardCount} card{card.cardCount !== 1 ? 's' : ''}
@@ -4785,13 +5140,13 @@ function FlashDeckCardBubble({
         {card.description && (
           <p className="mt-0.5 line-clamp-2 text-[11px] opacity-55">{card.description}</p>
         )}
-        {card.subjectName && <p className="mt-1 text-[10px] opacity-40">{card.subjectName}</p>}
+        {card.subjectName && <p className="mt-1 text-xs opacity-40">{card.subjectName}</p>}
         {card.tags.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {card.tags.slice(0, 4).map((t) => (
               <span
                 key={t}
-                className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+                className="rounded-full px-1.5 py-0.5 text-[11px] font-medium"
                 style={{ background: `${c.from}15`, color: c.from }}
               >
                 {t}
@@ -4806,7 +5161,7 @@ function FlashDeckCardBubble({
         className="border-t px-3 pt-0.5 pb-3"
         style={{ borderColor: isMe ? 'oklch(1 0 0 / 8%)' : 'oklch(1 0 0 / 6%)' }}
       >
-        {importErr && <p className="mb-1.5 text-[10px] text-red-400">{importErr}</p>}
+        {importErr && <p className="mb-1.5 text-xs text-red-400">{importErr}</p>}
         <button
           onClick={importDeck}
           disabled={importing || imported}
@@ -4915,8 +5270,6 @@ function MessageBubble({
   onReply: () => void;
   onReact: (emoji: string) => void;
 }) {
-  const [hover, setHover] = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
@@ -4930,19 +5283,14 @@ function MessageBubble({
   return (
     <motion.div
       layout
-      initial={msg.isNew ? { opacity: 0, y: 14, scale: 0.96 } : false}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+      initial={msg.isNew ? { opacity: 0, transform: 'translateY(6px)' } : false}
+      animate={{ opacity: 1, transform: 'translateY(0)' }}
+      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
       className={cn(
         'group flex gap-2',
         isMe ? 'flex-row-reverse' : 'flex-row',
-        sameSender ? 'mt-0.5' : 'mt-3'
+        sameSender ? 'mt-1' : 'mt-5'
       )}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => {
-        setHover(false);
-        setShowPicker(false);
-      }}
     >
       {/* Avatar */}
       <div className="mt-0.5 w-7 shrink-0">
@@ -4960,12 +5308,10 @@ function MessageBubble({
           >
             {pfpUrl && <AvatarImage src={pfpUrl} alt={msg.senderDisplayName} />}
             <AvatarFallback
-              className="text-[10px] font-bold"
+              className="text-xs font-bold"
               style={{
-                background: isMe
-                  ? 'linear-gradient(135deg, oklch(0.65 0.22 278 / 50%), oklch(0.55 0.25 295 / 50%))'
-                  : 'linear-gradient(135deg, oklch(0.50 0.18 150 / 40%), oklch(0.45 0.20 160 / 40%))',
-                color: isMe ? 'oklch(0.82 0.15 278)' : 'oklch(0.82 0.12 150)',
+                background: 'color-mix(in oklch, var(--primary) 14%, var(--card))',
+                color: 'var(--foreground)',
               }}
             >
               {initials(msg.senderDisplayName)}
@@ -4975,25 +5321,28 @@ function MessageBubble({
       </div>
 
       {/* Content column */}
-      <div className={cn('flex max-w-[70%] min-w-0 flex-col', isMe ? 'items-end' : 'items-start')}>
+      <div
+        className={cn(
+          'flex max-w-[85%] min-w-0 flex-col sm:max-w-[75%]',
+          isMe ? 'items-end' : 'items-start'
+        )}
+      >
         {!sameSender && !isMe && (
-          <span className="text-muted-foreground mb-0.5 px-1 text-[10px]">
-            {msg.senderDisplayName}
-          </span>
+          <span className="text-muted-foreground mb-0.5 px-1 text-xs">{msg.senderDisplayName}</span>
         )}
 
         {/* Reply quote */}
         {msg.replyTo && (
           <div
-            className="mb-1 flex w-full min-w-0 items-start gap-1.5 rounded-lg border border-l-2 border-white/8 bg-white/5 px-2.5 py-1.5"
+            className="border-border bg-muted/60 mb-1 flex w-full min-w-0 items-start gap-1.5 rounded-lg border border-l-2 px-2.5 py-1.5"
             style={{ borderLeftColor: 'oklch(0.65 0.22 278 / 60%)' }}
           >
             <CornerUpLeft className="text-primary/60 mt-0.5 h-2.5 w-2.5 shrink-0" />
             <div className="min-w-0 overflow-hidden">
-              <p className="text-primary/80 truncate text-[9px] font-semibold">
+              <p className="text-primary/80 truncate text-[11px] font-semibold">
                 {msg.replyTo.senderDisplayName}
               </p>
-              <p className="text-muted-foreground truncate text-[10px]">
+              <p className="text-muted-foreground truncate text-xs">
                 {replyToDisplayContent ?? msg.replyTo.content}
               </p>
             </div>
@@ -5003,8 +5352,11 @@ function MessageBubble({
         <div className="relative w-full min-w-0">
           {isEditing ? (
             <div className="flex items-center gap-1.5">
-              <Input
+              <textarea
                 autoFocus
+                aria-label="Edit message"
+                rows={2}
+                maxLength={isEncryptedConvo ? E2EE_MAX_CHARS : MAX_CHARS}
                 value={editContent}
                 onChange={(e) => onEditChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -5014,7 +5366,7 @@ function MessageBubble({
                   }
                   if (e.key === 'Escape') onEditCancel();
                 }}
-                className="border-primary/40 min-w-50 bg-white/8 text-sm"
+                className="border-primary/40 bg-muted/60 w-full min-w-0 resize-y rounded-lg border p-2 text-sm outline-none"
               />
               <Button
                 size="icon"
@@ -5041,18 +5393,34 @@ function MessageBubble({
           ) : (
             <div
               className={cn(
-                'rounded-2xl px-3.5 py-2 text-sm wrap-break-word',
-                isMe ? 'rounded-tr-sm text-white' : 'text-foreground rounded-tl-sm bg-white/8',
-                isMobile && 'cursor-pointer transition-opacity select-none active:opacity-75',
+                'rounded-2xl px-4 py-3 text-sm leading-6 wrap-break-word whitespace-pre-wrap',
+                isMe
+                  ? 'text-primary-foreground rounded-tr-sm'
+                  : 'text-foreground bg-muted/60 rounded-tl-sm',
+                isMobile && 'cursor-pointer transition-opacity active:opacity-75',
                 msg.sending && 'opacity-60'
               )}
               style={isMe ? { background: 'var(--primary)' } : undefined}
-              onClick={() => {
-                if (isMobile) onMobileTap();
+              role={isMobile && !msg.sending ? 'button' : undefined}
+              tabIndex={isMobile && !msg.sending ? 0 : undefined}
+              aria-haspopup={isMobile && !msg.sending ? 'dialog' : undefined}
+              onKeyDown={(event) => {
+                if (!isMobile || msg.sending || event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onMobileTap();
+                }
+              }}
+              onClick={(event) => {
+                const target = event.target as HTMLElement;
+                if (target.closest('a, button, [data-message-interactive]')) return;
+                if (isMobile && !msg.sending) onMobileTap();
               }}
             >
               {msg.shareCard ? (
-                <ShareCardBubble card={msg.shareCard} isMe={isMe} messageId={msg.id} />
+                <div data-message-interactive>
+                  <ShareCardBubble card={msg.shareCard} isMe={isMe} messageId={msg.id} />
+                </div>
               ) : isEncryptedConvo && displayContent === null ? (
                 <span className="text-muted-foreground/60 flex items-center gap-1.5 text-xs italic">
                   <Loader2 className="h-3 w-3 animate-spin" /> Decrypting…
@@ -5066,66 +5434,52 @@ function MessageBubble({
             </div>
           )}
 
-          {/* Action toolbar — desktop hover only */}
-          <AnimatePresence>
-            {hover && !isEditing && !isMobile && !msg.sending && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.88 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.88 }}
-                transition={{ duration: 0.1 }}
-                className={cn(
-                  'bg-card absolute top-1/2 z-10 flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-white/10 px-1 py-0.5 shadow-lg',
-                  isMe ? 'right-full mr-2' : 'left-full ml-2'
-                )}
-              >
-                {/* Emoji picker trigger */}
-                <div className="relative">
-                  <ActionBtn icon={Smile} label="React" onClick={() => setShowPicker((v) => !v)} />
-                  <AnimatePresence>
-                    {showPicker && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.85, y: 4 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.85 }}
-                        transition={{ duration: 0.12 }}
-                        className={cn(
-                          'bg-card absolute bottom-full z-20 mb-1.5 flex gap-0.5 rounded-xl border border-white/10 p-1.5 shadow-xl',
-                          isMe ? 'right-0' : 'left-0'
-                        )}
-                      >
-                        {QUICK_REACTIONS.map((e) => (
-                          <button
-                            key={e}
-                            onClick={() => {
-                              onReact(e);
-                              setShowPicker(false);
-                            }}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-base transition-all hover:scale-125 hover:bg-white/10"
-                          >
-                            {e}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+          {!isMobile && !isEditing && !msg.sending && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Actions for message from ${msg.senderDisplayName}`}
+                  className="bg-card text-muted-foreground hover:text-foreground border-border absolute -top-3 right-0 z-10 flex size-8 items-center justify-center rounded-lg border opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="grid grid-cols-4 gap-1 p-1">
+                  {QUICK_REACTIONS.map((reaction) => (
+                    <DropdownMenuItem
+                      key={reaction}
+                      aria-label={`React with ${reaction}`}
+                      className="justify-center text-lg"
+                      onSelect={() => onReact(reaction)}
+                    >
+                      {reaction}
+                    </DropdownMenuItem>
+                  ))}
                 </div>
-                <ActionBtn icon={CornerUpLeft} label="Reply" onClick={onReply} />
-                <ActionBtn
-                  icon={copied ? Check : Copy}
-                  label={copied ? 'Copied!' : 'Copy'}
-                  onClick={copy}
-                />
-                <ActionBtn
-                  icon={msg.pinned ? PinOff : Pin}
-                  label={msg.pinned ? 'Unpin' : 'Pin'}
-                  onClick={onPin}
-                />
-                {isMe && <ActionBtn icon={Pencil} label="Edit" onClick={onEditStart} />}
-                {canDelete && <ActionBtn icon={Trash2} label="Delete" onClick={onDelete} danger />}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <DropdownMenuItem onSelect={onReply}>
+                  <CornerUpLeft /> Reply
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={copy}>
+                  <Copy /> {copied ? 'Copied' : 'Copy text'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={onPin}>
+                  {msg.pinned ? <PinOff /> : <Pin />} {msg.pinned ? 'Unpin message' : 'Pin message'}
+                </DropdownMenuItem>
+                {isMe && (
+                  <DropdownMenuItem onSelect={onEditStart}>
+                    <Pencil /> Edit message
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem onSelect={onDelete} className="text-destructive">
+                    <Trash2 /> Delete message
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Reactions */}
@@ -5151,7 +5505,7 @@ function MessageBubble({
                     'flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition-colors',
                     reacted
                       ? 'border-primary/40 bg-primary/10 text-foreground'
-                      : 'text-muted-foreground border-white/10 bg-white/5 hover:border-white/20'
+                      : 'text-muted-foreground border-border bg-muted/60 hover:border-border'
                   )}
                 >
                   <span>{emoji}</span>
@@ -5165,14 +5519,14 @@ function MessageBubble({
         <div className="mt-0.5 flex items-center gap-1 px-1">
           {isLastInGroup &&
             (msg.sending ? (
-              <span className="text-muted-foreground/50 flex items-center gap-1 text-[9px]">
+              <span className="text-muted-foreground/50 flex items-center gap-1 text-[11px]">
                 <Clock className="h-2.5 w-2.5 animate-pulse" /> Sending
               </span>
             ) : (
-              <span className="text-muted-foreground text-[9px]">{formatTime(msg.createdAt)}</span>
+              <span className="text-muted-foreground text-[11px]">{formatTime(msg.createdAt)}</span>
             ))}
           {msg.edited && !msg.sending && (
-            <span className="text-muted-foreground text-[9px] italic">(edited)</span>
+            <span className="text-muted-foreground text-[11px] italic">(edited)</span>
           )}
         </div>
       </div>
@@ -5181,70 +5535,33 @@ function MessageBubble({
 }
 
 /* 
-   ActionBtn
- */
-function ActionBtn({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: React.ElementType;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          onClick={onClick}
-          className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-md transition-colors',
-            danger
-              ? 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-              : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
-          )}
-        >
-          <Icon className="h-3 w-3" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-/* 
    EmptyChat
  */
 function EmptyChat({ onNew }: { onNew: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center"
-    >
-      <motion.div
-        className="bg-primary flex h-16 w-16 items-center justify-center rounded-2xl"
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-      >
-        <MessageSquare className="text-primary-foreground h-7 w-7" />
-      </motion.div>
-      <div>
-        <p className="text-sm font-semibold">Your messages</p>
-        <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-          Send private messages to other Schoolsoft+ users.
+    <div className="flex h-full flex-col items-center justify-center px-8">
+      <div className="w-full max-w-sm">
+        <MessageSquare className="text-primary mb-6 size-9" strokeWidth={1.5} />
+        <h2 className="text-2xl font-semibold tracking-tight">A little closer to your class.</h2>
+        <p className="text-muted-foreground mt-3 text-sm leading-7">
+          Pick a conversation to catch up, ask a question or share what you are working on.
         </p>
+        <Button className="mt-6 h-11 rounded-xl px-5" onClick={onNew}>
+          <Pencil className="mr-2 size-4" /> Start a conversation
+        </Button>
+        <div className="text-muted-foreground mt-10 space-y-4 text-sm">
+          <p className="flex items-center gap-3">
+            <Users className="size-4" /> Bring your study group together
+          </p>
+          <p className="flex items-center gap-3">
+            <BookOpen className="size-4" /> Keep notes and flashcards within reach
+          </p>
+          <p className="flex items-center gap-3">
+            <Phone className="size-4" /> Talk it through with a voice call
+          </p>
+        </div>
       </div>
-      <Button size="sm" onClick={onNew} style={{ background: 'var(--primary)' }}>
-        <UserPlus className="mr-2 h-3.5 w-3.5" />
-        New conversation
-      </Button>
-    </motion.div>
+    </div>
   );
 }
 
@@ -5340,40 +5657,24 @@ function MobileActionSheet({
   ];
 
   return (
-    <motion.div
-      key="sheet-backdrop"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      className="fixed inset-0 z-50 flex items-end"
-      onClick={onClose}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      {/* Scrim */}
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
-
-      <motion.div
-        key="sheet-panel"
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.8 }}
-        className="relative w-full overflow-hidden rounded-t-3xl border-t border-white/10"
-        style={{ background: 'oklch(0.13 0 0)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-9 rounded-full bg-white/20" />
-        </div>
-
+      <DialogContent className="top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-2 rounded-t-3xl rounded-b-none p-0 pt-6 pb-[env(safe-area-inset-bottom)] sm:max-w-none">
+        <DialogTitle className="sr-only">Message actions</DialogTitle>
+        <DialogDescription className="sr-only">
+          Reply, react, copy or manage this message.
+        </DialogDescription>
         {/* Message preview */}
         <div className="px-4 pt-1 pb-2">
           <div
-            className="rounded-xl border border-white/8 px-3.5 py-2.5"
-            style={{ background: 'oklch(1 0 0 / 4%)' }}
+            className="border-border rounded-xl border px-3.5 py-2.5"
+            style={{ background: 'var(--muted)' }}
           >
-            <p className="mb-1 text-[10px] font-semibold" style={{ color: 'oklch(0.72 0.16 263)' }}>
+            <p className="mb-1 text-xs font-semibold" style={{ color: 'oklch(0.72 0.16 263)' }}>
               {msg.senderDisplayName}
             </p>
             <p className="text-foreground/90 line-clamp-3 text-sm wrap-break-word">
@@ -5385,21 +5686,21 @@ function MobileActionSheet({
         {/* Quick reactions */}
         <div
           className="mx-4 mb-2 flex items-center justify-around rounded-2xl px-4 py-3"
-          style={{ background: 'oklch(1 0 0 / 4%)', border: '1px solid oklch(1 0 0 / 7%)' }}
+          style={{ background: 'var(--muted)' }}
         >
           {QUICK_REACTIONS.map((e) => {
             const reacted = (msg.reactions?.[e] ?? []).includes(username);
             return (
               <motion.button
                 key={e}
-                whileTap={{ scale: 0.75 }}
+                whileTap={{ transform: 'scale(0.97)' }}
                 onClick={() => {
                   onReact(e);
                   onClose();
                 }}
                 className={cn(
                   'relative flex h-11 w-11 items-center justify-center rounded-full text-2xl transition-colors',
-                  reacted ? 'bg-primary/20' : 'active:bg-white/10'
+                  reacted ? 'bg-primary/20' : 'active:bg-muted/60'
                 )}
               >
                 {e}
@@ -5414,7 +5715,7 @@ function MobileActionSheet({
         {/* Action rows */}
         <div
           className="mx-4 mb-8 overflow-hidden rounded-2xl"
-          style={{ background: 'oklch(1 0 0 / 4%)', border: '1px solid oklch(1 0 0 / 7%)' }}
+          style={{ background: 'var(--muted)' }}
         >
           {actions.map(({ icon: Icon, label, onClick, danger }, i) => (
             <motion.button
@@ -5424,7 +5725,7 @@ function MobileActionSheet({
               className={cn(
                 'flex w-full items-center gap-4 px-5 py-4 text-left text-sm font-medium transition-colors',
                 danger ? 'text-destructive' : 'text-foreground',
-                i > 0 && 'border-t border-white/7'
+                i > 0 && 'border-border border-t'
               )}
             >
               <Icon className="h-4.5 w-4.5 shrink-0" />
@@ -5432,7 +5733,7 @@ function MobileActionSheet({
             </motion.button>
           ))}
         </div>
-      </motion.div>
-    </motion.div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -38,134 +38,107 @@ curl -i -b cookies.txt -c cookies.txt -X POST \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 ```ts
-req.headers.get('x-school')
+req.headers.get('x-school');
 ```
 
-
 ```ts
-req.cookies.get('ssp_ref')
+req.cookies.get('ssp_ref');
 ```
-
 
 #### Parsed body and local type
-
 
 ```ts
 const body = await readRouteBody(req);
 ```
 
-
 #### Response branches
 
+```ts
+NextResponse.json(
+  { success: false, message: 'Username and password are required.' },
+  { status: 400 }
+);
+```
 
 ```ts
 NextResponse.json(
-      { success: false, message: 'Username and password are required.' },
-      { status: 400 }
-    )
+  { success: false, message: 'Login failed. Check your credentials.' },
+  { status: 401 }
+);
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, message: 'Login failed. Check your credentials.' },
-      { status: 401 }
-    )
+NextResponse.json({ success: false, message: 'Login failed.' }, { status: 401 });
 ```
-
 
 ```ts
-NextResponse.json({ success: false, message: 'Login failed.' }, { status: 401 })
+NextResponse.json({ success: false, message: 'Account verification failed.' }, { status: 401 });
 ```
-
 
 ```ts
-NextResponse.json(
-      { success: false, message: 'Account verification failed.' },
-      { status: 401 }
-    )
+NextResponse.json({ success: true, userId });
 ```
-
-
-```ts
-NextResponse.json({ success: true, userId })
-```
-
 
 #### Cookie writes
 
-
 ```ts
-response.cookies.set('ssp_jsessionid', jsessionid, options)
+response.cookies.set('ssp_jsessionid', jsessionid, options);
 ```
 
-
 ```ts
-response.cookies.set('ssp_hash', hash, options)
+response.cookies.set('ssp_hash', hash, options);
 ```
 
-
 ```ts
-response.cookies.set('ssp_usertype', usertype, options)
+response.cookies.set('ssp_usertype', usertype, options);
 ```
 
-
 ```ts
-response.cookies.set('ssp_userid', userId, options)
+response.cookies.set('ssp_userid', userId, options);
 ```
 
-
 ```ts
-response.cookies.set('ssp_ss_orgid', String(data.organization?.id ?? ''), options)
+response.cookies.set('ssp_ss_orgid', String(data.organization?.id ?? ''), options);
 ```
 
-
 ```ts
-response.cookies.set('ssp_school', school, { ...options, httpOnly: false })
+response.cookies.set('ssp_school', school, { ...options, httpOnly: false });
 ```
-
 
 ```ts
 response.cookies.set('ssp_username', data.user.userName.toLowerCase(), {
-    ...options,
-    httpOnly: false,
-  })
+  ...options,
+  httpOnly: false,
+});
 ```
-
 
 ```ts
-response.cookies.set(name, '', { ...options, maxAge: 0 })
+response.cookies.set(name, '', { ...options, maxAge: 0 });
 ```
-
 
 #### Direct upstream calls
 
-
 ```ts
 axios.post(loginUrl, form.toString(), {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0',
-      Referer: loginUrl,
-    },
-    timeout: 8_000,
-    maxRedirects: 0,
-    validateStatus: () => true,
-  })
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0',
+    Referer: loginUrl,
+  },
+  timeout: 8_000,
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
 ```
-
 
 ```ts
 createSchoolsoftClient(school).get('/rest-api/session', {
-    headers: { Cookie: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}` },
-    responseType: 'json',
-  })
+  headers: { Cookie: `JSESSIONID=${jsessionid}; hash=${hash}; usertype=${usertype}` },
+  responseType: 'json',
+});
 ```
-

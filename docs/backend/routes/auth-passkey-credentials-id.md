@@ -40,26 +40,21 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 })
+NextResponse.json({ success: false, error: 'Not authenticated.' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Missing credential ID.' }, { status: 400 })
+NextResponse.json({ success: false, error: 'Missing credential ID.' }, { status: 400 });
 ```
 
-
 ```ts
-NextResponse.json({ success: false, error: 'Credential not found.' }, { status: 404 })
+NextResponse.json({ success: false, error: 'Credential not found.' }, { status: 404 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true })
+NextResponse.json({ success: true });
 ```
-
 
 #### Cookie writes
 

@@ -62,9 +62,5 @@ export function applyAuthV2Cookies(res: NextResponse, session: AuthV2SessionData
 ## syncPasskeyRefreshToken
 
 ```ts
-export async function syncPasskeyRefreshToken(
-  userId: string,
-  school: string,
-  refreshToken: string
-);
+export async function syncPasskeyRefreshToken(userId: string, school: string, refreshToken: string);
 ```

@@ -41,16 +41,13 @@ No direct body declaration. See shared helpers for delegated parsing.
 
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
-
 ```ts
-NextResponse.json({ success: true, finalGrades: doc })
+NextResponse.json({ success: true, finalGrades: doc });
 ```
-
 
 #### Cookie writes
 
@@ -79,45 +76,36 @@ curl -i -b cookies.txt -c cookies.txt -X PUT \
 
 #### Request reads
 
-
 ```ts
-readRouteBody(req)
+readRouteBody(req);
 ```
 
-
 #### Parsed body and local type
-
 
 ```ts
 const body = (await readRouteBody(req)) as { subjects?: unknown };
 ```
 
-
 #### Response branches
 
-
 ```ts
-NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
-
 
 ```ts
 NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Invalid subjects' },
-      { status: 400 }
-    )
+  { error: error instanceof Error ? error.message : 'Invalid subjects' },
+  { status: 400 }
+);
 ```
-
 
 ```ts
-NextResponse.json({ error: 'Subjects must be an array' }, { status: 400 })
+NextResponse.json({ error: 'Subjects must be an array' }, { status: 400 });
 ```
-
 
 ```ts
-NextResponse.json({ success: true, finalGrades })
+NextResponse.json({ success: true, finalGrades });
 ```
-
 
 #### Cookie writes
 
