@@ -4,6 +4,7 @@ import {
   InputError,
   isObject,
   nonEmptyText,
+  nullable,
   oneOf,
   readJsonObject,
   text,
@@ -66,7 +67,7 @@ const schemas: Record<string, Record<string, (value: unknown) => boolean>> = {
     groupName: nonEmptyText(80),
     groupDescription: text(200),
     targetUsername: userId,
-    replyTo: (value) => isObject(value) && documentId(value.messageId),
+    replyTo: nullable((value) => isObject(value) && documentId(value.messageId)),
     shareCard: (value) =>
       isObject(value) &&
       ['note', 'grade', 'flashdeck'].includes(String(value.type)) &&
