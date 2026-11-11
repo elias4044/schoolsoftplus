@@ -1,5 +1,5 @@
 import { assertCurrentAccountReferences } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { InputError } from './validation';
 
 /* 
@@ -52,7 +52,7 @@ function docToInvite(doc: FirebaseFirestore.DocumentSnapshot): GroupInvite {
  */
 
 export async function getPendingInvitesForUser(username: string): Promise<GroupInvite[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection(INV_COL)
     .where('invitedUserId', '==', username)
     .where('status', '==', 'pending')
@@ -62,7 +62,7 @@ export async function getPendingInvitesForUser(username: string): Promise<GroupI
 }
 
 export async function getInviteById(id: string): Promise<GroupInvite | null> {
-  const doc = await db.collection(INV_COL).doc(id).get();
+  const doc = await getDb().collection(INV_COL).doc(id).get();
   if (!doc.exists) return null;
   return docToInvite(doc);
 }
@@ -76,18 +76,18 @@ export async function sendGroupInvite(
   invitedUserId: string,
   invitedById: string
 ): Promise<GroupInvite | null> {
-  const conversationRef = db.collection(CONV_COL).doc(conversationId);
-  return db.runTransaction(async (transaction) => {
+  const conversationRef = getDb().collection(CONV_COL).doc(conversationId);
+  return getDb().runTransaction(async (transaction) => {
     await assertCurrentAccountReferences(transaction, [invitedUserId, invitedById]);
     const matches = await transaction.get(
-      db.collection(INV_COL).where('invitedUserId', '==', invitedUserId)
+      getDb().collection(INV_COL).where('invitedUserId', '==', invitedUserId)
     );
     const previous = matches.docs.find((doc) => doc.data().conversationId === conversationId);
-    const ref = previous?.ref ?? db.collection(INV_COL).doc(`${conversationId}_${invitedUserId}`);
+    const ref = previous?.ref ?? getDb().collection(INV_COL).doc(`${conversationId}_${invitedUserId}`);
     const conversation = (await transaction.get(conversationRef)).data();
     const existing = await transaction.get(ref);
-    const inviter = (await transaction.get(db.collection(PROF_COL).doc(invitedById))).data();
-    const invitee = await transaction.get(db.collection(PROF_COL).doc(invitedUserId));
+    const inviter = (await transaction.get(getDb().collection(PROF_COL).doc(invitedById))).data();
+    const invitee = await transaction.get(getDb().collection(PROF_COL).doc(invitedUserId));
     if (
       !invitee.exists ||
       !conversation ||
@@ -121,16 +121,16 @@ export async function respondToGroupInvite(
   responder: string,
   accept: boolean
 ): Promise<{ invite: GroupInvite; joined: boolean }> {
-  const ref = db.collection(INV_COL).doc(inviteId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(INV_COL).doc(inviteId);
+  return getDb().runTransaction(async (transaction) => {
     const document = await transaction.get(ref);
     if (!document.exists) throw new InputError('Invite not found', 404);
     const invite = docToInvite(document);
     if (invite.invitedUserId !== responder) throw new InputError('Invite not found', 404);
     if (invite.status !== 'pending') throw new InputError('Invite already resolved', 409);
-    const conversationRef = db.collection(CONV_COL).doc(invite.conversationId);
+    const conversationRef = getDb().collection(CONV_COL).doc(invite.conversationId);
     const conversation = (await transaction.get(conversationRef)).data();
-    const profile = (await transaction.get(db.collection(PROF_COL).doc(responder))).data();
+    const profile = (await transaction.get(getDb().collection(PROF_COL).doc(responder))).data();
     if (accept) {
       if (!conversation || conversation.type !== 'group')
         throw new InputError('Group no longer exists', 404);

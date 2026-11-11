@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 
 import { resolveAccountReference } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { normalizeUserId } from './identity';
 
 export interface ReferredUserEntry {
@@ -37,11 +37,11 @@ function generateCode(length = 8): string {
 }
 
 export async function getOrCreateReferralCode(userId: string): Promise<ReferralData> {
-  const ref = db.collection(COL).doc(userId);
+  const ref = getDb().collection(COL).doc(userId);
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = generateCode();
-    const codeRef = db.collection(CODES_COL).doc(code);
-    const result = await db.runTransaction(async (transaction) => {
+    const codeRef = getDb().collection(CODES_COL).doc(code);
+    const result = await getDb().runTransaction(async (transaction) => {
       const existing = await transaction.get(ref);
       const reservation = await transaction.get(codeRef);
       if (existing.exists) return existing.data() as ReferralData;
@@ -64,7 +64,7 @@ export async function getOrCreateReferralCode(userId: string): Promise<ReferralD
 }
 
 export async function getReferralData(userId: string): Promise<ReferralData | null> {
-  const doc = await db.collection(COL).doc(userId.toLowerCase()).get();
+  const doc = await getDb().collection(COL).doc(userId.toLowerCase()).get();
   if (!doc.exists) return null;
   const d = doc.data()!;
   return {
@@ -87,7 +87,7 @@ export async function getReferralData(userId: string): Promise<ReferralData | nu
  */
 export async function getUserIdByCode(code: string): Promise<string | null> {
   if (!code || !/^[A-Z0-9]{6,12}$/.test(code.toUpperCase())) return null;
-  const doc = await db.collection(CODES_COL).doc(code.toUpperCase()).get();
+  const doc = await getDb().collection(CODES_COL).doc(code.toUpperCase()).get();
   if (!doc.exists) return null;
   const owner = doc.data()!.userId ?? doc.data()!.username;
   return typeof owner === 'string' ? resolveAccountReference(owner) : null;
@@ -104,22 +104,22 @@ export async function creditReferral(
 ): Promise<boolean> {
   const lower = await resolveAccountReference(referrerUsername);
   const newLower = await resolveAccountReference(newUsername);
-  return db.runTransaction(async (tx) => {
+  return getDb().runTransaction(async (tx) => {
     let ownerId = lower;
     let legacyNames: string[];
     if (normalizeUserId(lower)) {
-      const aliases = await tx.get(db.collection('account_aliases').where('userId', '==', lower));
+      const aliases = await tx.get(getDb().collection('account_aliases').where('userId', '==', lower));
       legacyNames = aliases.docs.map((alias) => alias.id);
     } else {
-      const alias = await tx.get(db.collection('account_aliases').doc(lower));
+      const alias = await tx.get(getDb().collection('account_aliases').doc(lower));
       ownerId = alias.data()?.userId ?? lower;
       legacyNames = [lower];
     }
     if (ownerId === newLower) return false;
-    let doc = await tx.get(db.collection(COL).doc(ownerId));
+    let doc = await tx.get(getDb().collection(COL).doc(ownerId));
     for (const name of legacyNames) {
       if (doc.exists) break;
-      doc = await tx.get(db.collection(COL).doc(name));
+      doc = await tx.get(getDb().collection(COL).doc(name));
     }
     if (!doc.exists) return false;
 
@@ -145,7 +145,7 @@ export async function creditReferral(
 }
 
 export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection(COL)
     .where('totalReferrals', '>', 0)
     .orderBy('totalReferrals', 'desc')

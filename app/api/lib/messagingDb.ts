@@ -3,7 +3,7 @@ import { FieldPath } from 'firebase-admin/firestore';
 import { normalizeMessageIdentity, type AccountAliases } from '@/lib/accountReferences';
 
 import { assertCurrentAccountReferences } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { InputError } from './validation';
 
 /* 
@@ -152,7 +152,7 @@ function docToMessage(
  */
 
 export async function getConversationsForUser(username: string): Promise<Conversation[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection(CONV_COL)
     .where('participantIds', 'array-contains', username)
     .orderBy('lastAt', 'desc')
@@ -162,7 +162,7 @@ export async function getConversationsForUser(username: string): Promise<Convers
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {
-  const doc = await db.collection(CONV_COL).doc(id).get();
+  const doc = await getDb().collection(CONV_COL).doc(id).get();
   if (!doc.exists) return null;
   return docToConversation(doc);
 }
@@ -177,13 +177,13 @@ export async function findOrCreateDM(
   pfpUrlB = ''
 ): Promise<{ conversation: Conversation; created: boolean }> {
   const participantIds = [usernameA, usernameB].sort();
-  const query = db
+  const query = getDb()
     .collection(CONV_COL)
     .where('participantIds', '==', participantIds)
     .where('type', '==', 'dm')
     .limit(1);
-  const ref = db.collection(CONV_COL).doc(`dm-${participantIds.join('-')}`);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CONV_COL).doc(`dm-${participantIds.join('-')}`);
+  return getDb().runTransaction(async (transaction) => {
     await assertCurrentAccountReferences(transaction, participantIds);
     const matches = await transaction.get(query);
     if (!matches.empty) return { conversation: docToConversation(matches.docs[0]), created: false };
@@ -212,12 +212,12 @@ export async function findOrCreateDM(
 
 /* Update participant display name snapshot if the user edits their profile */
 export async function updateParticipantName(username: string, displayName: string) {
-  const snap = await db
+  const snap = await getDb()
     .collection(CONV_COL)
     .where('participantIds', 'array-contains', username)
     .get();
   for (let offset = 0; offset < snap.docs.length; offset += 400) {
-    const batch = db.batch();
+    const batch = getDb().batch();
     for (const doc of snap.docs.slice(offset, offset + 400))
       batch.update(doc.ref, { [`participantNames.${username}`]: displayName });
     await batch.commit();
@@ -226,12 +226,12 @@ export async function updateParticipantName(username: string, displayName: strin
 
 /* Update participant pfp URL snapshot if the user changes their avatar */
 export async function updateParticipantPfp(username: string, pfpUrl: string) {
-  const snap = await db
+  const snap = await getDb()
     .collection(CONV_COL)
     .where('participantIds', 'array-contains', username)
     .get();
   for (let offset = 0; offset < snap.docs.length; offset += 400) {
-    const batch = db.batch();
+    const batch = getDb().batch();
     for (const doc of snap.docs.slice(offset, offset + 400))
       batch.update(doc.ref, { [`participantPfpUrls.${username}`]: pfpUrl });
     await batch.commit();
@@ -244,7 +244,7 @@ export async function updateParticipantPfp(username: string, pfpUrl: string) {
 
 export async function getMessages(conversationId: string, limit = 60): Promise<Message[]> {
   const aliases = (await getConversation(conversationId))?.participantAliases ?? {};
-  const snap = await db
+  const snap = await getDb()
     .collection(MSG_COL)
     .where('conversationId', '==', conversationId)
     .orderBy('createdAt', 'asc')
@@ -257,7 +257,7 @@ export async function getReplyMessage(
   messageId: string,
   conversationId: string
 ): Promise<Message | null> {
-  const document = await db.collection(MSG_COL).doc(messageId).get();
+  const document = await getDb().collection(MSG_COL).doc(messageId).get();
   if (!document.exists) return null;
   const aliases = (await getConversation(conversationId))?.participantAliases ?? {};
   const message = docToMessage(document, aliases);
@@ -266,7 +266,7 @@ export async function getReplyMessage(
 
 export async function getPinnedMessages(conversationId: string): Promise<Message[]> {
   const aliases = (await getConversation(conversationId))?.participantAliases ?? {};
-  const snap = await db
+  const snap = await getDb()
     .collection(MSG_COL)
     .where('conversationId', '==', conversationId)
     .where('pinned', '==', true)
@@ -284,7 +284,7 @@ export async function createMessage(
   shareCard?: ShareCard | null
 ): Promise<Message> {
   const now = Date.now();
-  const ref = db.collection(MSG_COL).doc();
+  const ref = getDb().collection(MSG_COL).doc();
   const data = {
     conversationId,
     senderUserId,
@@ -299,8 +299,8 @@ export async function createMessage(
     replyTo: replyTo ?? null,
     shareCard: shareCard ?? null,
   };
-  const conversationRef = db.collection(CONV_COL).doc(conversationId);
-  await db.runTransaction(async (transaction) => {
+  const conversationRef = getDb().collection(CONV_COL).doc(conversationId);
+  await getDb().runTransaction(async (transaction) => {
     const conversation = (await transaction.get(conversationRef)).data();
     if (!conversation?.participantIds?.includes(senderUserId))
       throw new InputError('Conversation not found', 404);
@@ -327,9 +327,9 @@ async function mutateMessage(
   userId: string,
   mutate: (message: Message, conversation: Conversation) => Partial<Message> | null
 ): Promise<Message | null> {
-  const ref = db.collection(MSG_COL).doc(messageId);
-  const conversationRef = db.collection(CONV_COL).doc(conversationId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(MSG_COL).doc(messageId);
+  const conversationRef = getDb().collection(CONV_COL).doc(conversationId);
+  return getDb().runTransaction(async (transaction) => {
     const messageDoc = await transaction.get(ref);
     const conversationDoc = await transaction.get(conversationRef);
     if (!messageDoc.exists || !conversationDoc.exists) return null;
@@ -427,14 +427,14 @@ export async function searchUsers(
   if (!q) return [];
 
   const searches = await Promise.all([
-    db
+    getDb()
       .collection(PROF_COL)
       .orderBy('loginUsername')
       .startAt(q)
       .endAt(q + '\uf8ff')
       .limit(15)
       .get(),
-    db
+    getDb()
       .collection(PROF_COL)
       .orderBy('__name__')
       .startAt(q)
@@ -493,8 +493,8 @@ export async function createGroupChat(input: CreateGroupInput): Promise<Conversa
     participantPfpUrls[m.userId] = m.pfpUrl ?? '';
   }
 
-  const ref = db.collection(CONV_COL).doc();
-  await db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CONV_COL).doc();
+  await getDb().runTransaction(async (transaction) => {
     await assertCurrentAccountReferences(transaction, participantIds);
     transaction.set(ref, {
       type: 'group',
@@ -521,8 +521,8 @@ async function mutateGroup(
   userId: string,
   mutate: (conversation: Conversation) => Partial<Conversation> | null
 ): Promise<Conversation | null> {
-  const ref = db.collection(CONV_COL).doc(conversationId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CONV_COL).doc(conversationId);
+  return getDb().runTransaction(async (transaction) => {
     const document = await transaction.get(ref);
     if (!document.exists) return null;
     const conversation = docToConversation(document);
@@ -594,8 +594,8 @@ export async function markConversationRead(
   conversationId: string,
   username: string
 ): Promise<void> {
-  const ref = db.collection(CONV_COL).doc(conversationId);
-  await db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CONV_COL).doc(conversationId);
+  await getDb().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
     const conversation = snapshot.data();
     if (!conversation || !conversation.participantIds?.includes(username)) return;

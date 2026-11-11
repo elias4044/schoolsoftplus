@@ -4,22 +4,30 @@
  * a full transaction and never block the HTTP response.
  */
 
-import admin from 'firebase-admin';
-import { FieldPath } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue } from 'firebase-admin/firestore';
+import { after } from 'next/server';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 
-const inc = admin.firestore.FieldValue.increment;
-const STATS_REF = () => db.collection('stats').doc('loginStats');
+const inc = FieldValue.increment;
+const STATS_REF = () => getDb().collection('stats').doc('loginStats');
+
+function updateStats(write: () => Promise<unknown>): void {
+  after(async () => {
+    try {
+      await write();
+    } catch {
+      console.error('[stats] Counter update failed');
+    }
+  });
+}
 
 /**
  * Bump a flat numeric counter (e.g. total_ai_messages).
  * Silently swallows errors so a stats failure never breaks the real request.
  */
 export function bumpCounter(field: string, by = 1): void {
-  STATS_REF()
-    .update({ [field]: inc(by), total_api_calls: inc(1) })
-    .catch(() => console.error('[stats] Counter update failed'));
+  updateStats(() => STATS_REF().update({ [field]: inc(by), total_api_calls: inc(1) }));
 }
 
 /**
@@ -27,9 +35,7 @@ export function bumpCounter(field: string, by = 1): void {
  * Creates the field if it doesn't exist thanks to dot-notation + FieldValue.
  */
 export function bumpHistogram(bucket: string, key: string | number): void {
-  STATS_REF()
-    .update(new FieldPath(bucket, String(key)), inc(1))
-    .catch(() => console.error('[stats] Counter update failed'));
+  updateStats(() => STATS_REF().update(new FieldPath(bucket, String(key)), inc(1)));
 }
 
 /**
@@ -45,14 +51,14 @@ export function trackLoginEvent(school: string): void {
   const day = now.getUTCDay(); // 0 (Sun) – 6 (Sat)
   const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
-  STATS_REF()
-    .update({
+  updateStats(() =>
+    STATS_REF().update({
       [`login_hours.${hour}`]: inc(1),
       [`login_days.${day}`]: inc(1),
       [`schools.${school}`]: inc(1),
       [`peak_dates.${date}`]: inc(1),
     })
-    .catch(() => console.error('[stats] Counter update failed'));
+  );
 }
 
 /**
@@ -62,13 +68,13 @@ export function trackLoginEvent(school: string): void {
  */
 export function trackAiMessage(): void {
   const hour = new Date().getUTCHours();
-  STATS_REF()
-    .update({
+  updateStats(() =>
+    STATS_REF().update({
       total_ai_messages: inc(1),
       [`ai_hours.${hour}`]: inc(1),
       total_api_calls: inc(1),
     })
-    .catch(() => console.error('[stats] Counter update failed'));
+  );
 }
 
 /**
@@ -111,13 +117,13 @@ export function trackNewsFetch(): void {
  */
 export function trackMessageSent(): void {
   const hour = new Date().getUTCHours();
-  STATS_REF()
-    .update({
+  updateStats(() =>
+    STATS_REF().update({
       total_messages_sent: inc(1),
       [`message_hours.${hour}`]: inc(1),
       total_api_calls: inc(1),
     })
-    .catch(() => console.error('[stats] Counter update failed'));
+  );
 }
 
 /**

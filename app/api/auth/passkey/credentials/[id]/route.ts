@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { db } from '@/app/api/lib/firebaseAdmin';
+import { getDb } from '@/app/api/lib/firebaseAdmin';
 import {
   countCredentials,
   deleteCredential,
@@ -43,7 +43,7 @@ export const DELETE = withValidation(async function DELETE(
   // If no credentials remain, clean up the parent user document
   const remaining = await countCredentials(userHandle);
   if (remaining === 0) {
-    await db.collection('passkey_users').doc(userHandle).delete();
+    await getDb().collection('passkey_users').doc(userHandle).delete();
   }
 
   return NextResponse.json({ success: true });

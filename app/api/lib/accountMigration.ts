@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import { isAccountReference } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { assertSchool, assertUserId } from './identity';
 import { InputError } from './validation';
 
@@ -48,7 +48,7 @@ async function changeRecord(
   ref: FirebaseFirestore.DocumentReference,
   transform: (data: RecordData) => Promise<RecordData> | RecordData
 ) {
-  await db.runTransaction(async (transaction) => {
+  await getDb().runTransaction(async (transaction) => {
     const document = await transaction.get(ref);
     if (!document.exists) return;
     const data = document.data()!;
@@ -63,14 +63,14 @@ async function moveRecord(
   transform: (data: RecordData) => RecordData
 ) {
   if (source.path === target.path) return;
-  await db.runTransaction(async (transaction) => {
+  await getDb().runTransaction(async (transaction) => {
     const old = await transaction.get(source);
     const current = await transaction.get(target);
     if (!old.exists) return;
     // Existing ID-owned values win. Keep a private copy if both versions exist.
     if (current.exists && !isDeepStrictEqual(transform(old.data()!), current.data())) {
       transaction.set(
-        db
+        getDb()
           .collection('account_migration_conflicts')
           .doc(Buffer.from(source.path).toString('base64url')),
         {
@@ -93,7 +93,7 @@ async function migratePrivateRecords({ userId, username, school }: AccountIdenti
     'flashcard_decks_v1',
     'flashcard_cards_v1',
   ]) {
-    await visit(db.collection(collection).where('username', '==', username), (ref) =>
+    await visit(getDb().collection(collection).where('username', '==', username), (ref) =>
       changeRecord(ref, (data) => {
         assertLegacyOwner(data, { userId, username, school });
         const next: RecordData = { ...data, userId };
@@ -110,8 +110,8 @@ async function migratePrivateRecords({ userId, username, school }: AccountIdenti
     'referrals_v1',
   ]) {
     await moveRecord(
-      db.collection(collection).doc(username),
-      db.collection(collection).doc(userId),
+      getDb().collection(collection).doc(username),
+      getDb().collection(collection).doc(userId),
       (data) => {
         assertLegacyOwner(data, { userId, username, school });
         const next: RecordData = { ...data, userId };
@@ -121,12 +121,12 @@ async function migratePrivateRecords({ userId, username, school }: AccountIdenti
       }
     );
   }
-  await visit(db.collection('grade_tracker_v1').where('username', '==', username), async (ref) => {
+  await visit(getDb().collection('grade_tracker_v1').where('username', '==', username), async (ref) => {
     const data = (await ref.get()).data();
     if (!data) return;
     await moveRecord(
       ref,
-      db.collection('grade_tracker_v1').doc(`${userId}_${data.subjectId}`),
+      getDb().collection('grade_tracker_v1').doc(`${userId}_${data.subjectId}`),
       (data) => {
         assertLegacyOwner(data, { userId, username, school });
         const next: RecordData = { ...data, userId };
@@ -162,11 +162,11 @@ async function migrateSharedRecords(
   for (const [collection, fields] of Object.entries(shared)) {
     const queries: FirebaseFirestore.Query[] = [];
     for (const field of new Set([...Object.keys(fields), ...Object.values(fields)]))
-      queries.push(db.collection(collection).where(field, '==', username));
+      queries.push(getDb().collection(collection).where(field, '==', username));
     if (collection === 'conversations_v1' || collection === 'group_calls_v2') {
       for (const field of ['participants', 'participantIds'])
-        queries.push(db.collection(collection).where(field, 'array-contains', username));
-      queries.push(db.collection(collection).where('participantIds', 'array-contains', userId));
+        queries.push(getDb().collection(collection).where(field, 'array-contains', username));
+      queries.push(getDb().collection(collection).where('participantIds', 'array-contains', userId));
     }
     for (const query of queries)
       await visit(query, (ref) =>
@@ -224,10 +224,10 @@ async function migratePasskeys({ userId, username, school }: AccountIdentity) {
   // Credential IDs remain discoverable even when authenticators send the old handle.
   const oldHandle = Buffer.from(`${username}@${school}`).toString('base64url');
   const newHandle = Buffer.from(`${userId}@${school}`).toString('base64url');
-  const oldPasskey = db.collection('passkey_users').doc(oldHandle);
-  const newPasskey = db.collection('passkey_users').doc(newHandle);
+  const oldPasskey = getDb().collection('passkey_users').doc(oldHandle);
+  const newPasskey = getDb().collection('passkey_users').doc(newHandle);
   await visit(oldPasskey.collection('credentials'), async (ref) => {
-    await db.runTransaction(async (transaction) => {
+    await getDb().runTransaction(async (transaction) => {
       const credential = await transaction.get(ref);
       const target = newPasskey.collection('credentials').doc(ref.id);
       const current = await transaction.get(target);
@@ -236,7 +236,7 @@ async function migratePasskeys({ userId, username, school }: AccountIdentity) {
       if (!credential.exists || !oldUser.exists) return;
       if (!newUser.exists) transaction.set(newPasskey, { ...oldUser.data(), userId });
       if (!current.exists) transaction.set(target, credential.data()!);
-      transaction.set(db.collection('passkey_credential_index').doc(ref.id), {
+      transaction.set(getDb().collection('passkey_credential_index').doc(ref.id), {
         userHandle: newHandle,
       });
       transaction.delete(ref);
@@ -249,12 +249,12 @@ async function finishMigration(
   { userId, username, school }: AccountIdentity,
   aliasRef: FirebaseFirestore.DocumentReference
 ) {
-  await db.runTransaction(async (transaction) => {
-    const statsRef = db.collection('stats').doc('loginStats');
+  await getDb().runTransaction(async (transaction) => {
+    const statsRef = getDb().collection('stats').doc('loginStats');
     const stats = (await transaction.get(statsRef)).data();
-    const archiveRef = db.collection('legacy_user_data').doc(userId);
+    const archiveRef = getDb().collection('legacy_user_data').doc(userId);
     const archive = await transaction.get(archiveRef);
-    const loginRef = db.collection('login_users').doc(userId);
+    const loginRef = getDb().collection('login_users').doc(userId);
     const login = await transaction.get(loginRef);
     const users: RecordData[] = stats?.users ?? [];
     const own = users.filter((user) => user.username === username || user.userId === userId);
@@ -277,7 +277,7 @@ async function finishMigration(
 
 async function migrateAccount(identity: AccountIdentity) {
   const { userId, username, school } = identity;
-  const aliasRef = db.collection('account_aliases').doc(username);
+  const aliasRef = getDb().collection('account_aliases').doc(username);
   const existingAlias = (await aliasRef.get()).data();
   if (
     existingAlias?.migrationVersion === migrationVersion &&
@@ -287,7 +287,7 @@ async function migrateAccount(identity: AccountIdentity) {
     return;
   }
 
-  const complete = await db.runTransaction(async (transaction) => {
+  const complete = await getDb().runTransaction(async (transaction) => {
     const alias = (await transaction.get(aliasRef)).data();
     if (alias && (alias.userId !== userId || alias.school !== school))
       throw new InputError(
@@ -304,7 +304,7 @@ async function migrateAccount(identity: AccountIdentity) {
     if (!value) return value;
     if (value === username) return userId;
     if (!isAccountReference(value)) return value;
-    return (await db.collection('account_aliases').doc(value).get()).data()?.userId ?? value;
+    return (await getDb().collection('account_aliases').doc(value).get()).data()?.userId ?? value;
   };
   await migratePrivateRecords(identity);
   await migrateSharedRecords(identity, resolve);

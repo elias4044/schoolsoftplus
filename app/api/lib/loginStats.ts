@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { assertUserId } from './identity';
 
 export async function recordLogin(
@@ -9,9 +9,9 @@ export async function recordLogin(
   method: string
 ): Promise<boolean> {
   assertUserId(userId);
-  const userRef = db.collection('login_users').doc(userId);
-  const totalsRef = db.collection('stats').doc('loginStats');
-  return db.runTransaction(async (transaction) => {
+  const userRef = getDb().collection('login_users').doc(userId);
+  const totalsRef = getDb().collection('stats').doc('loginStats');
+  return getDb().runTransaction(async (transaction) => {
     const existing = await transaction.get(userRef);
     const now = Date.now();
     transaction.set(userRef, {

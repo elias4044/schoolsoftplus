@@ -103,7 +103,7 @@ SchoolSoft+ is an independent, open-source web app that gives your existing **Sc
 | AI            | Google Gemini via `@google/genai`                                         |
 | HTML parsing  | Cheerio + iconv-lite (ISO-8859-1 → UTF-8)                                 |
 | Drag and drop | @dnd-kit                                                                  |
-| Deployment    | Vercel                                                                    |
+| Deployment    | Vercel or Cloudflare Workers                                              |
 
 ---
 
@@ -146,9 +146,7 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ```env
 # Firebase Admin SDK (server-side)
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_SERVICE_ACCOUNT_KEY=base64-encoded-service-account-json
 
 # Google Gemini AI (optional — AI Assistant won't work without it)
 GEMINI_API_KEY=your-gemini-key
@@ -156,6 +154,38 @@ GEMINI_API_KEY=your-gemini-key
 # App base URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+### Cloudflare Workers
+
+The Workers deployment uses vinext to run the App Router and its API routes.
+Use Node.js 22.18 or later and install dependencies with `bun install --frozen-lockfile`.
+
+```bash
+bun run dev:vinext       # Worker development server on http://localhost:3001
+bun run build:vinext     # Build the production Worker
+bun run start:vinext     # Run the production build in the local Workers runtime
+bun run deploy:vinext    # Build and deploy to the configured Worker
+```
+
+- For local development, put the server bindings in `.dev.vars` or use the
+  existing `.env` files. If `.dev.vars` exists, include every local server secret
+  there. A mode-specific file such as `.dev.vars.production` takes precedence.
+- Set the `NEXT_PUBLIC_*` variables in the build environment or `.env.production`.
+  These include the Firebase Web settings and the public app URL. Set the local
+  app URL to `http://localhost:3001` when using the Worker development server.
+- For production, configure the Worker secrets declared in `cloudflare.config.ts`.
+  `FIREBASE_SERVICE_ACCOUNT_KEY` is required for database access. Preserve the
+  existing `PASSKEY_ENCRYPTION_KEY` and `MOBILE_JWT_SECRET` when moving an
+  installation that uses those features. Remove declarations for integrations
+  you leave disabled.
+- Set the production passkey RP ID and origin in `cloudflare.config.ts`.
+  Keep the existing RP ID to continue using credentials already registered for
+  that RP, and use an HTTPS app URL on a matching domain.
+
+For a first deploy, you can upload the secrets with the built Worker. Create a
+local `.dev.vars.deploy` containing only the secrets you want to upload, then run
+`bun run build:vinext` followed by
+`npx --no-install cf deploy --prebuilt --secrets-file .dev.vars.deploy`.
 
 ---
 

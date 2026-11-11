@@ -1,5 +1,5 @@
 import { resolveAccountReference } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { assertUserId } from './identity';
 
 const COL = 'profiles_v1';
@@ -69,7 +69,7 @@ function docToProfile(doc: FirebaseFirestore.DocumentSnapshot): UserProfile {
 
 export async function getProfile(userId: string): Promise<UserProfile | null> {
   userId = await resolveAccountReference(userId);
-  const doc = await db.collection(COL).doc(userId).get();
+  const doc = await getDb().collection(COL).doc(userId).get();
   if (!doc.exists) return null;
   return docToProfile(doc);
 }
@@ -102,8 +102,8 @@ export interface ProfileUpdate {
 
 export async function upsertProfile(userId: string, update: ProfileUpdate): Promise<UserProfile> {
   assertUserId(userId);
-  const ref = db.collection(COL).doc(userId);
-  await db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(userId);
+  await getDb().runTransaction(async (transaction) => {
     const existing = await transaction.get(ref);
     const payload: Record<string, unknown> = { ...update, userId, updatedAt: Date.now() };
     // Set joinedAt only on first creation

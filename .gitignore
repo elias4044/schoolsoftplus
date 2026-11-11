@@ -44,3 +44,7 @@ adding_widgets.md
 .taste-skill
 skills-lock.json
 .impeccable
+/dist/
+.vinext/
+.cloudflare/
+.dev.vars*

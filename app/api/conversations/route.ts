@@ -125,9 +125,9 @@ export const POST = withValidation(async function POST(req: NextRequest) {
   }
 
   // Check if a DM already exists — if so, allow opening it regardless of friend status
-  const { db } = await import('@/app/api/lib/firebaseAdmin');
+  const { getDb } = await import('@/app/api/lib/firebaseAdmin');
   const participantIds = [userId, targetUsername].sort();
-  const existingSnap = await db
+  const existingSnap = await getDb()
     .collection('conversations_v1')
     .where('participantIds', '==', participantIds)
     .where('type', '==', 'dm')

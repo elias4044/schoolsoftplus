@@ -1,6 +1,6 @@
 import type { FinalGradesDoc, FinalGradeSubject } from '@/lib/final-grades/types';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 
 const COL = 'final_grades_v1';
 
@@ -18,7 +18,7 @@ function docToFinalGrades(doc: FirebaseFirestore.DocumentSnapshot): FinalGradesD
 }
 
 export async function getFinalGrades(userId: string): Promise<FinalGradesDoc | null> {
-  const doc = await db.collection(COL).doc(docId(userId)).get();
+  const doc = await getDb().collection(COL).doc(docId(userId)).get();
   if (!doc.exists) return null;
   return docToFinalGrades(doc);
 }
@@ -33,6 +33,6 @@ export async function saveFinalGrades(
     subjects,
     updatedAt: now,
   };
-  await db.collection(COL).doc(docId(userId)).set(payload);
+  await getDb().collection(COL).doc(docId(userId)).set(payload);
   return payload;
 }

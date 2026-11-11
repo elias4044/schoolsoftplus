@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
 
 import { fetchSchoolsoftSession } from '@/app/api/lib/mobileAuth';
 import { getPasskeyUser, makeUserHandle, updatePasskeyToken } from '@/app/api/lib/passkeyDb';
+import { requestSchoolsoftCookies } from '@/app/api/lib/schoolsoftCookies';
 import { encrypt } from '@/app/api/lib/serverCrypto';
 
 const CLIENT_ID = 'eApp';
@@ -108,8 +108,7 @@ export async function refreshAuthV2Session({
   let usertype = '1';
 
   try {
-    const sessionRes = await axios.get(sessionUrl, {
-      timeout: 8_000,
+    const sessionRes = await requestSchoolsoftCookies(sessionUrl, {
       signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -123,16 +122,9 @@ export async function refreshAuthV2Session({
         useros: 'android',
         ...(userId ? { userid: userId } : {}),
       },
-      maxRedirects: 0,
-      validateStatus: () => true,
     });
 
-    const setCookie = sessionRes.headers['set-cookie'];
-    const rawCookies: string[] = Array.isArray(setCookie)
-      ? setCookie
-      : setCookie
-        ? [setCookie]
-        : [];
+    const rawCookies = sessionRes.cookies;
 
     const cookieMap: Record<string, string> = {};
     for (const cookie of rawCookies) {

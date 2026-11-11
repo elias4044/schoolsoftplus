@@ -1,5 +1,5 @@
 import { assertCurrentAccountReferences } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { InputError } from './validation';
 
 /* 
@@ -51,7 +51,7 @@ function docToFriendship(doc: FirebaseFirestore.DocumentSnapshot): Friendship {
 
 export async function getFriendship(a: string, b: string): Promise<Friendship | null> {
   const [firstId, secondId] = canonical(a, b);
-  const doc = await db.collection(COL).doc(`${firstId}_${secondId}`).get();
+  const doc = await getDb().collection(COL).doc(`${firstId}_${secondId}`).get();
   if (doc.exists) return docToFriendship(doc);
   const matches = await findExistingFriendship(a, b);
   return matches ? docToFriendship(matches) : null;
@@ -63,7 +63,7 @@ async function findExistingFriendship(
   transaction?: FirebaseFirestore.Transaction
 ) {
   for (const field of ['userAId', 'userBId']) {
-    const query = db.collection(COL).where(field, '==', a);
+    const query = getDb().collection(COL).where(field, '==', a);
     const matches = transaction ? await transaction.get(query) : await query.get();
     const match = matches.docs.find((doc) => {
       const data = doc.data();
@@ -83,8 +83,8 @@ export async function areFriends(a: string, b: string): Promise<boolean> {
 
 export async function getFriends(userId: string): Promise<Friendship[]> {
   const [asA, asB] = await Promise.all([
-    db.collection(COL).where('userAId', '==', userId).where('status', '==', 'accepted').get(),
-    db.collection(COL).where('userBId', '==', userId).where('status', '==', 'accepted').get(),
+    getDb().collection(COL).where('userAId', '==', userId).where('status', '==', 'accepted').get(),
+    getDb().collection(COL).where('userBId', '==', userId).where('status', '==', 'accepted').get(),
   ]);
   return [...asA.docs.map(docToFriendship), ...asB.docs.map(docToFriendship)];
 }
@@ -92,15 +92,15 @@ export async function getFriends(userId: string): Promise<Friendship[]> {
 export async function getPendingRequestsReceived(userId: string): Promise<Friendship[]> {
   // requests where I am the target (not the requester)
   const [asA, asB] = await Promise.all([
-    db.collection(COL).where('userAId', '==', userId).where('status', '==', 'pending').get(),
-    db.collection(COL).where('userBId', '==', userId).where('status', '==', 'pending').get(),
+    getDb().collection(COL).where('userAId', '==', userId).where('status', '==', 'pending').get(),
+    getDb().collection(COL).where('userBId', '==', userId).where('status', '==', 'pending').get(),
   ]);
   const all = [...asA.docs.map(docToFriendship), ...asB.docs.map(docToFriendship)];
   return all.filter((f) => f.requestedById !== userId);
 }
 
 export async function getPendingRequestsSent(userId: string): Promise<Friendship[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection(COL)
     .where('requestedById', '==', userId)
     .where('status', '==', 'pending')
@@ -115,10 +115,10 @@ export async function getPendingRequestsSent(userId: string): Promise<Friendship
 export async function sendFriendRequest(from: string, to: string): Promise<Friendship> {
   if (from === to) throw new InputError('Cannot send a friend request to yourself');
   const [userAId, userBId] = canonical(from, to);
-  return db.runTransaction(async (transaction) => {
+  return getDb().runTransaction(async (transaction) => {
     await assertCurrentAccountReferences(transaction, [from, to]);
     const match = await findExistingFriendship(from, to, transaction);
-    const ref = match?.ref ?? db.collection(COL).doc(`${userAId}_${userBId}`);
+    const ref = match?.ref ?? getDb().collection(COL).doc(`${userAId}_${userBId}`);
     const doc = await transaction.get(ref);
     const existing = doc.exists ? docToFriendship(doc) : null;
     if (existing?.status === 'accepted') throw new InputError('Already friends', 409);
@@ -143,9 +143,9 @@ export async function respondToFriendRequest(
   accept: boolean
 ): Promise<Friendship | null> {
   const [firstId, secondId] = canonical(responder, requesterUserId);
-  return db.runTransaction(async (transaction) => {
+  return getDb().runTransaction(async (transaction) => {
     const match = await findExistingFriendship(responder, requesterUserId, transaction);
-    const ref = match?.ref ?? db.collection(COL).doc(`${firstId}_${secondId}`);
+    const ref = match?.ref ?? getDb().collection(COL).doc(`${firstId}_${secondId}`);
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToFriendship(doc);
@@ -161,6 +161,6 @@ export async function respondToFriendRequest(
 
 export async function removeFriend(a: string, b: string): Promise<boolean> {
   const friendship = await getFriendship(a, b);
-  if (friendship) await db.collection(COL).doc(friendship.id).delete();
+  if (friendship) await getDb().collection(COL).doc(friendship.id).delete();
   return true;
 }
