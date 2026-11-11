@@ -4,24 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type UserStatus = 'online' | 'idle' | 'offline';
 
-interface PresenceRecord {
-  status: UserStatus;
-  lastSeen: number;
-}
-
-const ONLINE_MS = 3 * 60 * 1000;
-const IDLE_MS = 15 * 60 * 1000;
-const HEARTBEAT_MS = 2 * 60 * 1000;
-const PRESENCE_POLL_MS = 60 * 1000;
-
-function computeStatus(record: PresenceRecord | null): UserStatus {
-  if (!record) return 'offline';
-  if (record.status === 'offline') return 'offline';
-  const age = Date.now() - record.lastSeen;
-  if (age < ONLINE_MS) return record.status;
-  if (age < IDLE_MS) return 'idle';
-  return 'offline';
-}
+const HEARTBEAT_MS = 150_000;
+const PRESENCE_POLL_MS = 120_000;
 
 /* -----------------------------------------------------------
    Shared presence manager
@@ -40,69 +24,63 @@ const manager = {
   subs: new Map<number, Subscriber>(),
   nextId: 1,
   union: new Set<string>(),
-  timer: 0 as unknown as ReturnType<typeof setInterval> | null,
+  timer: null as ReturnType<typeof setTimeout> | null,
   abort: null as AbortController | null,
+  lastPollAt: null as number | null,
 };
 
-async function fetchForUnion() {
-  const users = [...manager.union];
-  if (users.length === 0) return {} as Record<string, PresenceRecord>;
-
-  manager.abort?.abort();
-  manager.abort = new AbortController();
-  const timeout = setTimeout(() => manager.abort?.abort(), 10_000);
+async function fetchForUnion(users: string[]) {
+  const request = new AbortController();
+  manager.abort = request;
+  const timeout = setTimeout(() => request.abort(), 10_000);
 
   try {
     const res = await fetch(`/api/presence?users=${encodeURIComponent(users.join(','))}`, {
-      signal: manager.abort.signal,
+      signal: request.signal,
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) return {};
+    const data = (await res.json()) as {
+      success?: boolean;
+      presences?: Record<string, UserStatus>;
+    };
+    if (!res.ok || !data.success || manager.abort !== request) return;
 
-    const now = Date.now();
-    const out: Record<string, PresenceRecord> = {};
-    for (const u of users) {
-      const status = (data.presences?.[u] ?? 'offline') as UserStatus;
-      const lastSeen =
-        status === 'online' ? now : status === 'idle' ? now - ONLINE_MS - 1 : now - IDLE_MS - 1;
-      out[u] = { status, lastSeen };
+    for (const sub of manager.subs.values()) {
+      const statuses = sub.usernames.map((user) => [
+        user,
+        data.presences?.[user] ?? 'offline',
+      ]);
+      sub.cb(Object.fromEntries(statuses));
     }
-    return out;
   } catch {
-    return {};
+    // Keep the previous status if a poll fails.
   } finally {
     clearTimeout(timeout);
+    if (manager.abort === request) manager.abort = null;
   }
 }
 
-function startManagerIfNeeded() {
-  if (manager.timer) return;
-  // poll immediately then on interval
-  let running = false;
-  const run = async () => {
-    if (running || document.hidden || manager.union.size === 0) return;
-    running = true;
-    const records = await fetchForUnion();
-    // notify subscribers
-    for (const sub of manager.subs.values()) {
-      const map: Record<string, UserStatus> = {};
-      for (const u of sub.usernames) map[u] = computeStatus(records[u] ?? null);
-      sub.cb(map);
-    }
-    running = false;
-  };
-  void run();
-  manager.timer = setInterval(() => void run(), PRESENCE_POLL_MS);
+function pollPresence() {
+  if (manager.timer !== null) clearTimeout(manager.timer);
+  manager.timer = null;
+  if (document.hidden || manager.union.size === 0) return;
+
+  const now = Date.now();
+  const wait = manager.lastPollAt === null ? 0 : PRESENCE_POLL_MS - (now - manager.lastPollAt);
+  if (wait <= 0 && !manager.abort) {
+    manager.lastPollAt = now;
+    void fetchForUnion([...manager.union]);
+  }
+  manager.timer = setTimeout(pollPresence, wait > 0 ? wait : PRESENCE_POLL_MS);
 }
 
 function stopManagerIfIdle() {
-  if (manager.subs.size === 0 && manager.timer) {
-    clearInterval(manager.timer as unknown as number);
-    manager.timer = null;
-    manager.abort?.abort();
-    manager.abort = null;
-    manager.union.clear();
-  }
+  if (manager.subs.size !== 0) return;
+  if (manager.timer !== null) clearTimeout(manager.timer);
+  manager.timer = null;
+  manager.abort?.abort();
+  manager.abort = null;
+  manager.lastPollAt = null;
+  document.removeEventListener('visibilitychange', pollPresence);
 }
 
 function recomputeUnion() {
@@ -111,10 +89,14 @@ function recomputeUnion() {
 }
 
 function subscribeToPresence(usernames: string[], cb: Subscriber['cb']) {
+  if (usernames.length === 0) return;
   const id = manager.nextId++;
   manager.subs.set(id, { id, usernames, cb });
   recomputeUnion();
-  startManagerIfNeeded();
+  if (manager.subs.size === 1) {
+    document.addEventListener('visibilitychange', pollPresence);
+    pollPresence();
+  }
   return () => {
     manager.subs.delete(id);
     recomputeUnion();
@@ -123,8 +105,7 @@ function subscribeToPresence(usernames: string[], cb: Subscriber['cb']) {
 }
 
 export function useMyPresence(username: string) {
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSentRef = useRef<{ status: UserStatus; at: number } | null>(null);
+  const lastSentRef = useRef<{ username: string; status: UserStatus; at: number } | null>(null);
   const inFlightRef = useRef(false);
 
   const sendHeartbeat = useCallback(
@@ -132,10 +113,14 @@ export function useMyPresence(username: string) {
       if (!username || inFlightRef.current) return;
       const now = Date.now();
       const lastSent = lastSentRef.current;
-      if (lastSent && lastSent.status === status && now - lastSent.at < HEARTBEAT_MS - 5_000) {
+      if (
+        lastSent?.username === username &&
+        lastSent.status === status &&
+        now - lastSent.at < HEARTBEAT_MS
+      ) {
         return;
       }
-      lastSentRef.current = { status, at: now };
+      lastSentRef.current = { username, status, at: now };
       inFlightRef.current = true;
       try {
         await fetch('/api/presence', {
@@ -156,16 +141,28 @@ export function useMyPresence(username: string) {
 
   useEffect(() => {
     if (!username) return;
-    if (!document.hidden) void sendHeartbeat('online');
-    intervalRef.current = setInterval(() => {
-      if (!document.hidden) void sendHeartbeat('online');
-    }, HEARTBEAT_MS);
-    const onVisibility = () => void sendHeartbeat(document.hidden ? 'idle' : 'online');
+    let timer: ReturnType<typeof setTimeout>;
+    const renew = () => {
+      if (document.hidden) return;
+      void sendHeartbeat('online');
+      const lastSent = lastSentRef.current;
+      const dueAt =
+        lastSent?.username === username && lastSent.status === 'online'
+          ? lastSent.at + HEARTBEAT_MS
+          : Date.now();
+      timer = setTimeout(renew, Math.max(1_000, dueAt - Date.now()));
+    };
+    const onVisibility = () => {
+      clearTimeout(timer);
+      if (document.hidden) void sendHeartbeat('idle');
+      else renew();
+    };
+    renew();
     document.addEventListener('visibilitychange', onVisibility);
     const onUnload = () => void sendHeartbeat('offline');
     window.addEventListener('beforeunload', onUnload);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('beforeunload', onUnload);
     };

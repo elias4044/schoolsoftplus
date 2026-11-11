@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import gradesPreview from '@/public/preview_grades.png';
 import newsPreview from '@/public/preview_news.png';
-import { ArrowRight, ChevronDown, GripVertical, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown, GripVertical, Sparkles, TriangleAlert } from 'lucide-react';
 
 import {
   DayPreview,
@@ -29,7 +29,11 @@ const questions = [
     'Choose Sign in and follow the login flow for your school. If you get stuck, the login help page explains the available methods.',
   ],
 ];
+
+const isBackupServerValue = process.env.NEXT_PUBLIC_BACKUP_SERVER;
+
 export default function LandingPage() {
+  const isBackupServer = isBackupServerValue ? true : false;
   return (
     <div className="bg-background text-foreground [&_a]:focus-visible:outline-brand-strong [&_button]:focus-visible:outline-brand-strong [&_summary]:focus-visible:outline-brand-strong [&_input]:focus-visible:outline-brand-strong min-w-0 [&_a]:focus-visible:outline-2 [&_a]:focus-visible:outline-offset-4 [&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-4 [&_h1]:font-[550] [&_h1]:tracking-[-0.045em] [&_h1]:text-balance [&_h2]:font-[550] [&_h2]:tracking-[-0.045em] [&_h2]:text-balance [&_h3]:font-[550] [&_h3]:tracking-[-0.045em] [&_h3]:text-balance [&_input]:focus-visible:outline-2 [&_input]:focus-visible:outline-offset-4 [&_p]:leading-relaxed [&_p]:text-pretty [&_section]:scroll-mt-8 [&_summary]:focus-visible:outline-2 [&_summary]:focus-visible:outline-offset-4">
       <LandingShortcuts />
@@ -60,7 +64,15 @@ export default function LandingPage() {
       </header>
       <main id="main">
         <section className="mx-auto grid w-full max-w-[1440px] min-w-0 items-center gap-10 px-5 pt-10 pb-8 min-[901px]:grid-cols-[minmax(0,1fr)_minmax(0,1.06fr)] min-[901px]:gap-8 min-[901px]:pb-22 min-[1051px]:gap-[clamp(2rem,5vw,5rem)] min-[1051px]:pt-18 sm:px-8 xl:px-14">
-          <div className="motion-safe:animate-landing-enter min-w-0 [&_h1]:text-[clamp(2.25rem,10.5vw,3.75rem)] [&_h1]:leading-[1.04] min-[901px]:[&_h1]:text-[clamp(3.25rem,5.35vw,4.875rem)] [&>p:first-of-type]:mt-7 [&>p:first-of-type]:max-w-[500px] [&>p:first-of-type]:text-base min-[901px]:[&>p:first-of-type]:mt-8 min-[901px]:[&>p:first-of-type]:max-w-[440px] min-[901px]:[&>p:first-of-type]:text-lg">
+          <div className="motion-safe:animate-landing-enter min-w-0 [&_h1]:text-[clamp(2.25rem,10.5vw,3.75rem)] [&_h1]:leading-[1.04] min-[901px]:[&_h1]:text-[clamp(3.25rem,5.35vw,4.875rem)] [&>p:first-of-type]:mt-7 [&>p:first-of-type]:max-w-[500px] [&>p:first-of-type]:text-base min-[901px]:[&>p:first-of-type]:mt-8 min-[901px]:[&>p:first-of-type]:max-w-110 min-[901px]:[&>p:first-of-type]:text-lg">
+            {isBackupServer && (
+              <div className="bg-warning/20 flex align-middle color-warning p-2 max-w-100 my-5 border-2 rounded-md border-warning">
+                <TriangleAlert className='w-10 mt-1.5 mr-1 text-warning' />
+                <p className='text-warning text-xs'>
+                  Main server is down and SchoolSoft+ is now running on the backup server. Old passkeys won't work due to security.
+                </p>
+              </div>
+            )}
             <h1>
               Your school day.
               <br />

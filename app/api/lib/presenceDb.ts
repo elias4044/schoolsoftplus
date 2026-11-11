@@ -1,8 +1,8 @@
 import { db } from './firebaseAdmin';
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Types
-───────────────────────────────────────────────────────────── */
+ */
 
 export type UserStatus = 'online' | 'idle' | 'offline';
 
@@ -13,15 +13,15 @@ export interface PresenceRecord {
   updatedAt: number;
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Collection
-───────────────────────────────────────────────────────────── */
+ */
 
 const COL = 'presence_v1';
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Status thresholds (ms)
-───────────────────────────────────────────────────────────── */
+ */
 
 const ONLINE_THRESHOLD = 3 * 60 * 1000; // 3 minutes → online (green)
 const IDLE_THRESHOLD = 15 * 60 * 1000; // 15 minutes → idle/in-app (yellow)
@@ -36,9 +36,9 @@ export function computeStatus(record: PresenceRecord | null): UserStatus {
   return 'offline';
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Writes (called server-side via API routes)
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function updatePresence(userId: string, status: UserStatus): Promise<void> {
   const now = Date.now();
@@ -56,9 +56,9 @@ export async function updatePresence(userId: string, status: UserStatus): Promis
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* 
    Reads
-───────────────────────────────────────────────────────────── */
+ */
 
 export async function getPresence(userId: string): Promise<PresenceRecord | null> {
   const doc = await db.collection(COL).doc(userId).get();
@@ -76,23 +76,19 @@ export async function getPresenceForUsers(
   userIds: string[]
 ): Promise<Record<string, PresenceRecord>> {
   if (!userIds.length) return {};
-  const results: Record<string, PresenceRecord> = {};
-  const chunks: string[][] = [];
-  for (let i = 0; i < userIds.length; i += 10) chunks.push(userIds.slice(i, i + 10));
-  for (const chunk of chunks) {
-    const refs = chunk.map((u) => db.collection(COL).doc(u));
-    const docs = await db.getAll(...refs);
-    for (const doc of docs) {
-      if (doc.exists) {
-        const d = doc.data()!;
-        results[doc.id] = {
-          userId: doc.id,
-          status: d.status ?? 'offline',
-          lastSeen: d.lastSeen ?? 0,
-          updatedAt: d.updatedAt ?? 0,
-        };
-      }
-    }
+  const results: Record<string, PresenceRecord> = Object.create(null);
+  const collection = db.collection(COL);
+  const refs = [...new Set(userIds)].map((id) => collection.doc(id));
+  const docs = await db.getAll(...refs);
+  for (const doc of docs) {
+    const data = doc.data();
+    if (!data) continue;
+    results[doc.id] = {
+      userId: doc.id,
+      status: data.status ?? 'offline',
+      lastSeen: data.lastSeen ?? 0,
+      updatedAt: data.updatedAt ?? 0,
+    };
   }
   return results;
 }

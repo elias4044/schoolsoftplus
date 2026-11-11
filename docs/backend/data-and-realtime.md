@@ -49,7 +49,7 @@ Times below are Unix milliseconds unless identified as Firestore Timestamp. See 
 
 ## Progressive migration
 
-`ensureAccountMigration` normalizes username/school, checks the canonical ID, and shares an in-flight promise per identity in the current process. Each invocation still consults the alias record; completed migrationVersion 1 skips the remaining work. Failure removes the pending promise and leaves unfinished work retryable.
+`ensureAccountMigration` normalizes username/school, checks the canonical ID, and shares an in-flight promise per identity in the current process. A matching alias with the current migration version skips the transaction and is cached in the current process for up to five minutes. Failure removes the pending promise and leaves unfinished work retryable.
 
 1. Claim `account_aliases/{username}` transactionally. A different user ID or school already claiming the name is 409.
 2. Find notes/countdowns/decks/cards owned through the legacy username field and replace that ownership with userId, rejecting conflicting stored account/school metadata.
