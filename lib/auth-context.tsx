@@ -1,13 +1,13 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 
 import { clearCache } from './cache';
-import { prefetch } from './cache/prefetch';
 import { clientAuth } from './firebase';
-import { useSession } from './useSession';
+import { refreshSessionToken } from './session-refresh';
+import { resetSession, useSession } from './useSession';
 
 export interface AuthSession {
   school: string;
@@ -21,6 +21,9 @@ export interface AuthSession {
 interface AuthContextValue {
   session: AuthSession | null;
   isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
   login: () => void;
   logout: () => void;
   isAuthenticated: boolean;
@@ -30,6 +33,9 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   isLoading: true,
+  isRefreshing: false,
+  error: null,
+  refresh: async () => {},
   login: () => {},
   logout: () => {},
   isAuthenticated: false,
@@ -51,27 +57,29 @@ function isAuthV2(): boolean {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session: sessionData, loading, error } = useSession();
+  const { session: sessionData, loading, refreshing, error, refresh } = useSession();
 
   // Derive AuthSession from the /api/session response
-  const session: AuthSession | null =
-    !loading && !error && sessionData
-      ? {
-          school: sessionData.school,
-          userId: sessionData.userId,
-          username: sessionData.username ?? sessionData.user.userName,
-          name: `${sessionData.user.firstName} ${sessionData.user.lastName}`.trim() || undefined,
-          theme: sessionData.theme ?? 'light',
-          authType: isAuthV2() ? 'authv2' : 'classic',
-        }
-      : null;
-
-  const refreshInFlight = useRef(false);
+  const session = useMemo<AuthSession | null>(
+    () =>
+      sessionData
+        ? {
+            school: sessionData.school,
+            userId: sessionData.userId,
+            username: sessionData.username ?? sessionData.user.userName,
+            name: `${sessionData.user.firstName} ${sessionData.user.lastName}`.trim() || undefined,
+            theme: sessionData.theme ?? 'light',
+            authType: isAuthV2() ? 'authv2' : 'classic',
+          }
+        : null,
+    [sessionData]
+  );
 
   // login() is a no-op — the browser already has the cookies set by the auth flow.
   // Callers should simply redirect to /dashboard after authentication succeeds.
   const login = useCallback(() => {
-    void prefetch();
+    resetSession();
+    clearCache();
     router.replace('/dashboard');
   }, [router]);
 
@@ -79,31 +87,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetch('/api/logout', { method: 'POST' });
     await signOut(clientAuth).catch(() => console.error('[auth] Firebase sign-out failed'));
     clearCache();
+    resetSession();
     router.replace('/login');
   }, [router]);
 
   useEffect(() => {
-    if (!session || session.authType !== 'authv2') return;
+    if (session?.authType !== 'authv2') return;
 
     async function maybeRefresh() {
-      // Avoid concurrent refresh attempts
-      if (refreshInFlight.current) return;
-
       const expiresAt = getAuthV2ExpiresAt();
       if (!expiresAt) return;
 
       const secsLeft = expiresAt - Math.floor(Date.now() / 1000);
       if (secsLeft < 300) {
-        refreshInFlight.current = true;
         try {
-          const res = await fetch('/api/auth/v2/token-refresh', { method: 'POST' });
-          if (!res.ok) {
-            console.warn('[auth] token-refresh failed:', res.status);
+          const refreshed = await refreshSessionToken();
+          if (!refreshed) {
+            resetSession();
+            router.replace('/login');
+            return;
           }
-        } catch (err) {
-          console.error('[auth] token-refresh error:', err);
-        } finally {
-          refreshInFlight.current = false;
+          await refresh();
+        } catch {
+          await refresh();
         }
       }
     }
@@ -116,24 +122,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       clearInterval(interval);
-      refreshInFlight.current = false;
     };
-  }, [session]);
+  }, [session?.authType, router, refresh]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        session,
-        isLoading: loading,
-        login,
-        logout,
-        isAuthenticated: session !== null,
-        theme: session?.theme ?? 'light',
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      session,
+      isLoading: loading,
+      isRefreshing: refreshing,
+      error,
+      refresh,
+      login,
+      logout,
+      isAuthenticated: session !== null,
+      theme: session?.theme ?? 'light',
+    }),
+    [session, loading, refreshing, error, refresh, login, logout]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuthContext = () => useContext(AuthContext);

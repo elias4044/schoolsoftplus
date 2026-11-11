@@ -1,32 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, easeOut, motion } from 'framer-motion';
-import {
-  CalendarDays,
-  Check,
-  ClipboardList,
-  MessageSquare,
-  Moon,
-  Pencil,
-  Plus,
-  RotateCcw,
-  StickyNote,
-  Sun,
-  Sunrise,
-  type LucideIcon,
-} from 'lucide-react';
+import { Check, Moon, Pencil, Plus, RotateCcw, Sun, Sunrise, type LucideIcon } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth-context';
-import { prefetch } from '@/lib/cache/prefetch';
-import { prefetchSchedulePage } from '@/lib/cache/schedule';
-import { prefetchSubjectsPage } from '@/lib/cache/subjects';
 import { useWidgetLayout } from '@/lib/widgets/useWidgetLayout';
 import { Button } from '@/components/ui/button';
 import { AddWidgetPanel } from '@/components/widgets/AddWidgetPanel';
 import { DashboardGrid } from '@/components/widgets/DashboardGrid';
+
+const MemoizedDashboardGrid = memo(DashboardGrid);
 
 export default function DashboardPage() {
   const { session } = useAuth();
@@ -35,16 +19,9 @@ export default function DashboardPage() {
   const [addOpen, setAddOpen] = useState(false);
   const now = useNow(1000);
 
-  // Preload on login
-  const searchParams = useSearchParams();
-  if (searchParams.has('init')) {
-    prefetch();
-  }
-
   if (!hydrated) return null;
 
   const { greeting, Icon } = getGreeting(now, session?.name ?? session?.username);
-  const week = getWeekProgress(now);
 
   return (
     <div className="relative mx-auto max-w-350 p-6">
@@ -125,7 +102,7 @@ export default function DashboardPage() {
             exit={{ opacity: 0, height: 0 }}
             className="border-primary/40 bg-primary/5 text-primary mb-4 overflow-hidden rounded-lg border border-dashed px-4 py-2 text-center text-xs"
           >
-            Drag widgets to reorder, resize them, or remove ones you don't need.
+            Drag widgets to reorder, resize them, or remove ones you do not need.
           </motion.p>
         )}
       </AnimatePresence>
@@ -140,7 +117,7 @@ export default function DashboardPage() {
             : 'transition-shadow'
         }
       >
-        <DashboardGrid
+        <MemoizedDashboardGrid
           widgets={layout.widgets}
           editing={editing}
           onReorder={reorder}
@@ -183,18 +160,4 @@ function getGreeting(d: Date, name?: string): { greeting: string; Icon: LucideIc
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-SE', { weekday: 'long', month: 'long', day: 'numeric' });
-}
-
-/** ISO week number plus how far through the Mon-Sun week we are (my teacher was lwk right — math is useful)*/
-function getWeekProgress(d: Date): { number: number; pct: number } {
-  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = target.getUTCDay() || 7;
-  target.setUTCDate(target.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-  const number = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-
-  const dow = (d.getDay() + 6) % 7; // Mon = 0
-  const msIntoDay = d.getHours() * 3600e3 + d.getMinutes() * 60e3 + d.getSeconds() * 1e3;
-  const pct = ((dow * 86400e3 + msIntoDay) / (7 * 86400e3)) * 100;
-  return { number, pct };
 }

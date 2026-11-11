@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth-context';
+import { clearCache } from '@/lib/cache';
+import { resetSession } from '@/lib/useSession';
 
 const DEFAULT_SCHOOL_ID = 'engelska';
 const DEFAULT_SCHOOL_NAME = 'Internationella Engelska Skolan - IES Halmstad';
@@ -320,7 +322,6 @@ function LoginPageInner() {
   const [advancedLoginOpen, setAdvancedLoginOpen] = useState(false);
   const [refreshTokenValue, setRefreshTokenValue] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
-  const hasAttemptedRefreshRef = useRef(false);
   const tokenInputRef = useRef<HTMLTextAreaElement>(null);
   const anyLoading =
     isAuthV2Loading || isAuthV2ExternalLoading || isRefreshTokenLoading || isPasskeyLoading;
@@ -332,20 +333,6 @@ function LoginPageInner() {
       router.replace('/dashboard');
       return;
     }
-    if (authV2ErrorParam || hasAttemptedRefreshRef.current) return;
-    hasAttemptedRefreshRef.current = true;
-    async function attemptForceRefresh() {
-      try {
-        const res = await fetch('/api/auth/v2/token-refresh', { method: 'POST' });
-        if (!res.ok) return;
-        const data = await res.json().catch(() => null);
-        if (data && data.success === false) return;
-        router.replace('/dashboard');
-      } catch {
-        /* No active session. Keep the sign-in form available. */
-      }
-    }
-    void attemptForceRefresh();
   }, [isAuthenticated, authLoading, authV2ErrorParam, router]);
 
   const checkServiceStatus = useCallback(async () => {
@@ -425,6 +412,8 @@ function LoginPageInner() {
       });
       const completeData = await completeRes.json();
       if (!completeData.success) throw new Error(completeData.error ?? 'Passkey login failed.');
+      clearCache();
+      resetSession();
       router.replace('/dashboard');
     } catch (err) {
       setPasskeyError((err as Error).message);
@@ -460,6 +449,8 @@ function LoginPageInner() {
         return;
       }
       setRefreshTokenValue('');
+      clearCache();
+      resetSession();
       router.replace('/dashboard');
     } catch {
       setTokenError('Network error. Please try again.');

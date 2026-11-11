@@ -115,14 +115,25 @@ function MobileHeader({
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const [aiOpen, setAiOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isRefreshing, error, refresh } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !error) {
       router.replace('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, error, router]);
+
+  if (!isLoading && !isAuthenticated && error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4" role="alert">
+        <p>{error}</p>
+        <button className="underline" onClick={() => void refresh()}>
+          Retry session
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !isAuthenticated) {
     return <LoadingScreen />;
@@ -152,7 +163,19 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       </div> */}
 
       {/* Main content */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0">{children}</main>
+      <main className="flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0">
+        {(isRefreshing || error) && (
+          <div role="status" className="bg-muted px-4 py-2 text-sm">
+            {error || 'Refreshing session...'}
+            {error && (
+              <button className="ml-3 underline" onClick={() => void refresh()}>
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Global floating layers */}
       <NotificationToasts />
