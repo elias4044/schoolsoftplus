@@ -175,9 +175,12 @@ bun run deploy:vinext    # Build and deploy to the configured Worker
   app URL to `http://localhost:3001` when using the Worker development server.
 - For production, configure the Worker secrets declared in `cloudflare.config.ts`.
   `FIREBASE_SERVICE_ACCOUNT_KEY` is required for database access. Preserve the
-  existing `PASSKEY_ENCRYPTION_KEY` and `MOBILE_JWT_SECRET` when moving an
-  installation that uses those features. Remove declarations for integrations
-  you leave disabled.
+  existing `PASSKEY_ENCRYPTION_KEY` when migrating passkeys. Remove declarations
+  for integrations you leave disabled.
+- If you use the native mobile token endpoint, add `MOBILE_JWT_SECRET` to the
+  deployed Worker as a runtime secret. Reuse the existing value when migrating
+  an installation. To test that endpoint with local vinext, also declare the
+  binding in `cloudflare.config.ts` and set the value in `.dev.vars`.
 - Set the production passkey RP ID and origin in `cloudflare.config.ts`.
   Keep the existing RP ID to continue using credentials already registered for
   that RP, and use an HTTPS app URL on a matching domain.

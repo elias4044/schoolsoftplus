@@ -18,7 +18,6 @@ export default defineConfig({
       GITHUB_TOKEN: bindings.secret(),
       GIPHY_API_KEY: bindings.secret(),
       IMAGE_HOST_API_TOKEN: bindings.secret(),
-      MOBILE_JWT_SECRET: bindings.secret(),
       PASSKEY_ENCRYPTION_KEY: bindings.secret(),
       PASSKEY_RP_ID: bindings.text("ssp.elias4044.com"),
       PASSKEY_RP_NAME: bindings.text("SchoolSoft+"),

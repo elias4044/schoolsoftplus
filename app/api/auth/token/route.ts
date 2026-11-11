@@ -57,6 +57,13 @@ export const POST = withValidation(async function POST(req: NextRequest) {
     );
   }
 
+  if (!process.env.MOBILE_JWT_SECRET) {
+    return NextResponse.json(
+      { success: false, error: 'Mobile sign-in is unavailable on this deployment.' },
+      { status: 503 }
+    );
+  }
+
   const school = (body.school ?? req.headers.get('x-school') ?? 'engelska').trim();
 
   /* ── Exchange code + verifier for SchoolSoft token ─────── */
