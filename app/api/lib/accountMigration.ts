@@ -12,6 +12,9 @@ interface AccountIdentity {
 }
 
 const migrationVersion = 1;
+const COMPLETED_TTL_MS = 5 * 60_000;
+const MAX_COMPLETED_ACCOUNTS = 1024;
+const completedAccounts = new Map<string, number>();
 const pending = new Map<string, Promise<void>>();
 type RecordData = FirebaseFirestore.DocumentData;
 
@@ -275,6 +278,15 @@ async function finishMigration(
 async function migrateAccount(identity: AccountIdentity) {
   const { userId, username, school } = identity;
   const aliasRef = db.collection('account_aliases').doc(username);
+  const existingAlias = (await aliasRef.get()).data();
+  if (
+    existingAlias?.migrationVersion === migrationVersion &&
+    existingAlias.userId === userId &&
+    existingAlias.school === school
+  ) {
+    return;
+  }
+
   const complete = await db.runTransaction(async (transaction) => {
     const alias = (await transaction.get(aliasRef)).data();
     if (alias && (alias.userId !== userId || alias.school !== school))
@@ -310,9 +322,22 @@ export function ensureAccountMigration(identity: AccountIdentity): Promise<void>
   assertSchool(identity.school);
   if (!isAccountReference(identity.username)) throw new InputError('Invalid SchoolSoft username');
   const key = `${identity.userId}:${identity.username}:${identity.school}`;
+  const completedUntil = completedAccounts.get(key);
+  if (completedUntil !== undefined) {
+    if (completedUntil > Date.now()) return Promise.resolve();
+    completedAccounts.delete(key);
+  }
+
   let result = pending.get(key);
   if (!result) {
-    result = migrateAccount(identity).finally(() => pending.delete(key));
+    result = migrateAccount(identity)
+      .then(() => {
+        if (completedAccounts.size >= MAX_COMPLETED_ACCOUNTS) {
+          completedAccounts.delete(completedAccounts.keys().next().value!);
+        }
+        completedAccounts.set(key, Date.now() + COMPLETED_TTL_MS);
+      })
+      .finally(() => pending.delete(key));
     pending.set(key, result);
   }
   return result;

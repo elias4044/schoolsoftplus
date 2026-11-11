@@ -218,12 +218,9 @@ test('returning accounts migrate independently while shared IDs, messages, and o
   assert.equal(data.get('stats/loginStats').users.length, 1);
   assert.equal(data.get('legacy_user_data/123456').entries[0].data.notes[0], 'legacy');
   assert.equal(data.get('login_users/123456').loginCount, 3);
-  const before = commits.reduce((total, writes) => total + writes.length, 0);
+  const before = commits.length;
   await migration.ensureAccountMigration(first);
-  assert.equal(
-    commits.reduce((total, writes) => total + writes.length, 0),
-    before
-  );
+  assert.equal(commits.length, before);
 
   await migration.ensureAccountMigration(second);
   const conversation = data.get('conversations_v1/encryption-salt');
@@ -240,6 +237,30 @@ test('returning accounts migrate independently while shared IDs, messages, and o
   assert.equal(data.get('group_invites_v1/legacy-invite').invitedById, '654321');
   assert.equal(await load('app/api/lib/referralDb.ts').creditReferral('123456', '654321'), false);
   assert.equal(data.get('stats/loginStats').total_logins, 5);
+});
+
+test('completed migration uses one alias read and caches only the matching account', async () => {
+  const identity = { username: 'first.last', userId: '123456', school: 'engelska' };
+  let reads = 0;
+  const db = {
+    collection: (name) => ({
+      doc: (id) => ({
+        get: async () => {
+          assert.equal(name, 'account_aliases');
+          assert.equal(id, identity.username);
+          reads++;
+          return { data: () => ({ ...identity, migrationVersion: 1 }) };
+        },
+      }),
+    }),
+    runTransaction: async () => assert.fail('completed account opened a transaction'),
+  };
+  const { ensureAccountMigration } = createLoader({ './firebaseAdmin': { db } })(
+    'app/api/lib/accountMigration.ts'
+  );
+  await Promise.all([ensureAccountMigration(identity), ensureAccountMigration(identity)]);
+  await ensureAccountMigration({ ...identity, username: 'First.Last', school: 'Engelska' });
+  assert.equal(reads, 1);
 });
 
 test('lazy migration resumes after failure, preserves newer records, and rejects conflicting claims', async () => {
