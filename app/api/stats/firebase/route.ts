@@ -1,6 +1,6 @@
 import { withValidation } from '@/app/api/lib/routeValidation';
 
-import { db } from '../../lib/firebaseAdmin';
+import { getDb } from '../../lib/firebaseAdmin';
 
 // app/api/firebase/route.ts
 export const runtime = 'nodejs';
@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 
 export const GET = withValidation(async function GET() {
   try {
-    const ref = db.doc('service_status/firestore');
+    const ref = getDb().doc('service_status/firestore');
     const snap = await ref.get();
 
     if (!snap.exists) {

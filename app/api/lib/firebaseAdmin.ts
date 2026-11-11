@@ -1,44 +1,37 @@
-import admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { initializeFirestore, type Firestore } from 'firebase-admin/firestore';
 
-const rawBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+const globalWithFirestore = globalThis as typeof globalThis & {
+  __firestoreDb?: Firestore;
+};
 
-if (!rawBase64) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+function getAdminApp() {
+  const existing = getApps().find((app) => app.name === '[DEFAULT]');
+  if (existing) return existing;
+
+  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!key) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+
+  const { project_id, client_email, private_key } = JSON.parse(
+    Buffer.from(key, 'base64').toString('utf8')
+  );
+  return initializeApp({
+    credential: cert({ projectId: project_id, clientEmail: client_email, privateKey: private_key }),
+  });
 }
 
-const raw = JSON.parse(Buffer.from(rawBase64, 'base64').toString('utf8'));
+export function getDb() {
+  if (globalWithFirestore.__firestoreDb) return globalWithFirestore.__firestoreDb;
 
-const serviceAccount: admin.ServiceAccount = {
-  projectId: raw.project_id,
-  clientEmail: raw.client_email,
-  privateKey: raw.private_key,
-};
-
-const globalWithFirestore = global as typeof globalThis & {
-  __firestoreDb?: admin.firestore.Firestore;
-};
-
-function getDb() {
-  if (globalWithFirestore.__firestoreDb) {
-    return globalWithFirestore.__firestoreDb;
-  }
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
-
-  const db = admin.firestore();
-
-  try {
-    db.settings({ ignoreUndefinedProperties: true });
-  } catch {
-    // Already configured elsewhere (e.g. concurrent hot-reload import) — safe to ignore.
-  }
-
+  // The server only uses one-shot operations. Workers do not support Firestore's gRPC transport.
+  const useWorkersRuntime = globalThis.navigator?.userAgent === 'Cloudflare-Workers';
+  const db = initializeFirestore(getAdminApp(), useWorkersRuntime ? { preferRest: true } : {});
+  db.settings({ ignoreUndefinedProperties: true });
   globalWithFirestore.__firestoreDb = db;
   return db;
 }
 
-export const db = getDb();
+export function createFirebaseCustomToken(userId: string) {
+  return getAuth(getAdminApp()).createCustomToken(userId, { identityVersion: 2 });
+}

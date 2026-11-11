@@ -2,7 +2,7 @@ import { createSnapshot, mergeScannedEntries } from '@/lib/grades/analytics';
 import { DEFAULT_SETTINGS } from '@/lib/grades/constants';
 import type { GradeTrackerDoc } from '@/lib/grades/types';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import type { GradeUpdates } from './gradeValidation';
 
 const collectionName = 'grade_tracker_v1';
@@ -25,7 +25,7 @@ export async function getGradeTracker(
   userId: string,
   subjectId: number
 ): Promise<GradeTrackerDoc | null> {
-  const document = await db.collection(collectionName).doc(`${userId}_${subjectId}`).get();
+  const document = await getDb().collection(collectionName).doc(`${userId}_${subjectId}`).get();
   return document.exists ? toTracker(document) : null;
 }
 
@@ -34,8 +34,8 @@ export async function updateGradeTracker(
   subjectId: number,
   updates: GradeUpdates
 ): Promise<GradeTrackerDoc> {
-  const ref = db.collection(collectionName).doc(`${userId}_${subjectId}`);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(collectionName).doc(`${userId}_${subjectId}`);
+  return getDb().runTransaction(async (transaction) => {
     const document = await transaction.get(ref);
     const tracker: GradeTrackerDoc = document.exists
       ? toTracker(document)

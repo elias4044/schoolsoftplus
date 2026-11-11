@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 
 export type CountdownCategory = 'exam' | 'holiday' | 'birthday' | 'event' | 'deadline' | 'custom';
 
@@ -44,12 +44,12 @@ function docToCountdown(doc: FirebaseFirestore.DocumentSnapshot): Countdown {
 }
 
 export async function getCountdownsByUser(userId: string): Promise<Countdown[]> {
-  const snap = await db.collection(COL).where('userId', '==', userId).get();
+  const snap = await getDb().collection(COL).where('userId', '==', userId).get();
   return snap.docs.map(docToCountdown).sort((a, b) => a.targetDate - b.targetDate);
 }
 
 export async function getCountdownById(id: string, userId: string): Promise<Countdown | null> {
-  const doc = await db.collection(COL).doc(id).get();
+  const doc = await getDb().collection(COL).doc(id).get();
   if (!doc.exists) return null;
   const c = docToCountdown(doc);
   if (c.userId !== userId) return null;
@@ -68,7 +68,7 @@ export async function createCountdown(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection(COL).doc(id).set(data);
+  await getDb().collection(COL).doc(id).set(data);
   return { id, ...data };
 }
 
@@ -77,8 +77,8 @@ export async function updateCountdown(
   userId: string,
   patch: Partial<Omit<Countdown, 'id' | 'userId' | 'createdAt'>>
 ): Promise<Countdown | null> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToCountdown(doc);
@@ -93,8 +93,8 @@ export async function updateCountdown(
 }
 
 export async function deleteCountdown(id: string, userId: string): Promise<boolean> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
     if (docToCountdown(doc).userId !== userId) return false;

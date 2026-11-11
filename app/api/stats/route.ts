@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { db } from '@/app/api/lib/firebaseAdmin';
+import { getDb } from '@/app/api/lib/firebaseAdmin';
 import { withValidation } from '@/app/api/lib/routeValidation';
 
 export const GET = withValidation(async function GET() {
   try {
-    const statsDoc = await db.collection('stats').doc('loginStats').get();
+    const statsDoc = await getDb().collection('stats').doc('loginStats').get();
 
     if (!statsDoc.exists) {
       return NextResponse.json(

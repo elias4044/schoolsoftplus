@@ -12,8 +12,8 @@ export function isAccountReference(value: unknown): value is string {
 export async function resolveAccountReference(value: string): Promise<string> {
   if (!isAccountReference(value)) throw new InputError('Invalid account reference');
   if (normalizeUserId(value)) return value;
-  const { db } = await import('./firebaseAdmin');
-  const alias = await db.collection('account_aliases').doc(value.toLowerCase()).get();
+  const { getDb } = await import('./firebaseAdmin');
+  const alias = await getDb().collection('account_aliases').doc(value.toLowerCase()).get();
   return alias.data()?.userId ?? value.toLowerCase();
 }
 
@@ -23,9 +23,9 @@ export async function assertCurrentAccountReferences(
 ) {
   const legacy = [...new Set(references)].filter((value) => !normalizeUserId(value));
   if (!legacy.length) return;
-  const { db } = await import('./firebaseAdmin');
+  const { getDb } = await import('./firebaseAdmin');
   for (const value of legacy) {
-    const alias = (await transaction.get(db.collection('account_aliases').doc(value))).data();
+    const alias = (await transaction.get(getDb().collection('account_aliases').doc(value))).data();
     if (alias && alias.userId !== value)
       throw new InputError('An account was updated. Refresh and try again.', 409);
   }

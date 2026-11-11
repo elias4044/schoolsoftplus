@@ -31,7 +31,7 @@
 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { assertUserId } from './identity';
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -87,7 +87,7 @@ export interface PasskeyChallenge {
 ───────────────────────────────────────────────────────────── */
 
 export async function getPasskeyUser(userHandle: string): Promise<PasskeyUserDoc | null> {
-  const doc = await db.collection('passkey_users').doc(userHandle).get();
+  const doc = await getDb().collection('passkey_users').doc(userHandle).get();
   if (!doc.exists) return null;
   return doc.data() as PasskeyUserDoc;
 }
@@ -103,7 +103,7 @@ export async function upsertPasskeyUser(
     userId: string;
   }
 ): Promise<void> {
-  await db
+  await getDb()
     .collection('passkey_users')
     .doc(userHandle)
     .set({ ...data, lastTokenUpdate: FieldValue.serverTimestamp() }, { merge: true });
@@ -114,7 +114,7 @@ export async function updatePasskeyToken(
   encryptedRefreshToken: string,
   encryptedRefreshTokenIV: string
 ): Promise<void> {
-  await db.collection('passkey_users').doc(userHandle).update({
+  await getDb().collection('passkey_users').doc(userHandle).update({
     encryptedRefreshToken,
     encryptedRefreshTokenIV,
     lastTokenUpdate: FieldValue.serverTimestamp(),
@@ -129,7 +129,7 @@ export async function getCredential(
   userHandle: string,
   credentialId: string
 ): Promise<PasskeyCredential | null> {
-  const doc = await db
+  const doc = await getDb()
     .collection('passkey_users')
     .doc(userHandle)
     .collection('credentials')
@@ -146,7 +146,7 @@ export async function getCredential(
 export async function findCredentialByIdGlobal(
   credentialId: string
 ): Promise<{ userHandle: string; credential: PasskeyCredential } | null> {
-  const indexDoc = await db.collection('passkey_credential_index').doc(credentialId).get();
+  const indexDoc = await getDb().collection('passkey_credential_index').doc(credentialId).get();
   if (!indexDoc.exists) return null;
   const { userHandle } = indexDoc.data() as { userHandle: string };
   const credential = await getCredential(userHandle, credentialId);
@@ -155,13 +155,13 @@ export async function findCredentialByIdGlobal(
 }
 
 export async function saveCredential(userHandle: string, cred: PasskeyCredential): Promise<void> {
-  const batch = db.batch();
+  const batch = getDb().batch();
   batch.set(
-    db.collection('passkey_users').doc(userHandle).collection('credentials').doc(cred.credentialId),
+    getDb().collection('passkey_users').doc(userHandle).collection('credentials').doc(cred.credentialId),
     cred
   );
   // Flat index: credentialId -> userHandle (no collection-group query needed)
-  batch.set(db.collection('passkey_credential_index').doc(cred.credentialId), { userHandle });
+  batch.set(getDb().collection('passkey_credential_index').doc(cred.credentialId), { userHandle });
   await batch.commit();
 }
 
@@ -170,7 +170,7 @@ export async function updateCredentialSignCount(
   credentialId: string,
   signCount: number
 ): Promise<void> {
-  await db
+  await getDb()
     .collection('passkey_users')
     .doc(userHandle)
     .collection('credentials')
@@ -179,7 +179,7 @@ export async function updateCredentialSignCount(
 }
 
 export async function listCredentials(userHandle: string): Promise<PasskeyCredential[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection('passkey_users')
     .doc(userHandle)
     .collection('credentials')
@@ -189,17 +189,17 @@ export async function listCredentials(userHandle: string): Promise<PasskeyCreden
 }
 
 export async function deleteCredential(userHandle: string, credentialId: string): Promise<void> {
-  const batch = db.batch();
+  const batch = getDb().batch();
   batch.delete(
-    db.collection('passkey_users').doc(userHandle).collection('credentials').doc(credentialId)
+    getDb().collection('passkey_users').doc(userHandle).collection('credentials').doc(credentialId)
   );
-  batch.delete(db.collection('passkey_credential_index').doc(credentialId));
+  batch.delete(getDb().collection('passkey_credential_index').doc(credentialId));
   await batch.commit();
 }
 
 /** Returns the number of credentials for a user. */
 export async function countCredentials(userHandle: string): Promise<number> {
-  const snap = await db
+  const snap = await getDb()
     .collection('passkey_users')
     .doc(userHandle)
     .collection('credentials')
@@ -218,7 +218,7 @@ export async function saveChallenge(
   type: 'registration' | 'authentication',
   userHandle: string
 ): Promise<void> {
-  await db.collection('passkey_challenges').doc(challengeId).set({
+  await getDb().collection('passkey_challenges').doc(challengeId).set({
     challenge,
     type,
     userHandle,
@@ -232,8 +232,8 @@ export async function saveChallenge(
  * Always deletes the challenge document (single-use).
  */
 export async function consumeChallenge(challengeId: string): Promise<PasskeyChallenge | null> {
-  const ref = db.collection('passkey_challenges').doc(challengeId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection('passkey_challenges').doc(challengeId);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     transaction.delete(ref);

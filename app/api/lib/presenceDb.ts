@@ -1,4 +1,4 @@
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 
 /* 
    Types
@@ -42,8 +42,8 @@ export function computeStatus(record: PresenceRecord | null): UserStatus {
 
 export async function updatePresence(userId: string, status: UserStatus): Promise<void> {
   const now = Date.now();
-  const ref = db.collection(COL).doc(userId);
-  await db.runTransaction(
+  const ref = getDb().collection(COL).doc(userId);
+  await getDb().runTransaction(
     async (transaction) => {
       const snapshot = await transaction.get(ref);
       const previous = snapshot.data();
@@ -61,7 +61,7 @@ export async function updatePresence(userId: string, status: UserStatus): Promis
  */
 
 export async function getPresence(userId: string): Promise<PresenceRecord | null> {
-  const doc = await db.collection(COL).doc(userId).get();
+  const doc = await getDb().collection(COL).doc(userId).get();
   if (!doc.exists) return null;
   const d = doc.data()!;
   return {
@@ -77,9 +77,9 @@ export async function getPresenceForUsers(
 ): Promise<Record<string, PresenceRecord>> {
   if (!userIds.length) return {};
   const results: Record<string, PresenceRecord> = Object.create(null);
-  const collection = db.collection(COL);
+  const collection = getDb().collection(COL);
   const refs = [...new Set(userIds)].map((id) => collection.doc(id));
-  const docs = await db.getAll(...refs);
+  const docs = await getDb().getAll(...refs);
   for (const doc of docs) {
     const data = doc.data();
     if (!data) continue;

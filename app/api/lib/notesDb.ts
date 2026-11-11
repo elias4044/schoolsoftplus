@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 
 export type NoteStatus = 'draft' | 'published' | 'archived';
 
@@ -34,12 +34,12 @@ function docToNote(doc: FirebaseFirestore.DocumentSnapshot): Note {
 }
 
 export async function getNotesByUser(userId: string): Promise<Note[]> {
-  const snap = await db.collection(COL).where('userId', '==', userId).get();
+  const snap = await getDb().collection(COL).where('userId', '==', userId).get();
   return snap.docs.map(docToNote).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function getNoteById(id: string, userId: string): Promise<Note | null> {
-  const doc = await db.collection(COL).doc(id).get();
+  const doc = await getDb().collection(COL).doc(id).get();
   if (!doc.exists) return null;
   const note = docToNote(doc);
   if (note.userId !== userId) return null;
@@ -47,7 +47,7 @@ export async function getNoteById(id: string, userId: string): Promise<Note | nu
 }
 
 export async function getNoteByShareToken(token: string): Promise<Note | null> {
-  const snap = await db.collection(COL).where('shareToken', '==', token).limit(1).get();
+  const snap = await getDb().collection(COL).where('shareToken', '==', token).limit(1).get();
   if (snap.empty) return null;
   return docToNote(snap.docs[0]);
 }
@@ -59,7 +59,7 @@ export async function createNote(
   status: NoteStatus = 'draft'
 ): Promise<Note> {
   const now = Date.now();
-  const ref = db.collection(COL).doc();
+  const ref = getDb().collection(COL).doc();
   const data = {
     userId,
     title,
@@ -78,8 +78,8 @@ export async function updateNote(
   userId: string,
   updates: Partial<Pick<Note, 'title' | 'content' | 'status'>>
 ): Promise<Note | null> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToNote(doc);
@@ -93,8 +93,8 @@ export async function updateNote(
 }
 
 export async function deleteNote(id: string, userId: string): Promise<boolean> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
     if (docToNote(doc).userId !== userId) return false;
@@ -104,8 +104,8 @@ export async function deleteNote(id: string, userId: string): Promise<boolean> {
 }
 
 export async function generateShareToken(id: string, userId: string): Promise<string | null> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     if (docToNote(doc).userId !== userId) return null;
@@ -116,8 +116,8 @@ export async function generateShareToken(id: string, userId: string): Promise<st
 }
 
 export async function revokeShareToken(id: string, userId: string): Promise<boolean> {
-  const ref = db.collection(COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return false;
     if (docToNote(doc).userId !== userId) return false;

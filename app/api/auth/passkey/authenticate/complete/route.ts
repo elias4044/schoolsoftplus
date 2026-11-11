@@ -3,7 +3,6 @@ import {
   verifyAuthenticationResponse,
   type AuthenticationResponseJSON,
 } from '@simplewebauthn/server';
-import axios from 'axios';
 
 import { fetchSchoolsoftSession } from '@/app/api/lib/mobileAuth';
 import {
@@ -17,6 +16,7 @@ import {
 } from '@/app/api/lib/passkeyDb';
 import { readRouteBody } from '@/app/api/lib/requestBody';
 import { withValidation } from '@/app/api/lib/routeValidation';
+import { requestSchoolsoftCookies } from '@/app/api/lib/schoolsoftCookies';
 import { decrypt, encrypt } from '@/app/api/lib/serverCrypto';
 
 const CLIENT_ID = 'eApp';
@@ -237,8 +237,7 @@ export const POST = withValidation(async function POST(req: NextRequest) {
   let usertype = '1';
 
   try {
-    const sessionRes = await axios.get(sessionUrl, {
-      timeout: 8_000,
+    const sessionRes = await requestSchoolsoftCookies(sessionUrl, {
       signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -252,16 +251,9 @@ export const POST = withValidation(async function POST(req: NextRequest) {
         useros: 'android',
         ...(userId ? { userid: userId } : {}),
       },
-      maxRedirects: 0,
-      validateStatus: () => true,
     });
 
-    const setCookie = sessionRes.headers['set-cookie'];
-    const rawCookies: string[] = Array.isArray(setCookie)
-      ? setCookie
-      : setCookie
-        ? [setCookie]
-        : [];
+    const rawCookies = sessionRes.cookies;
     const extractValue = (raw: string) => raw.split(';')[0].split('=').slice(1).join('=');
     const cookieMap: Record<string, string> = {};
     for (const c of rawCookies) {

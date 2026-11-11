@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 
 import { assertSchool, normalizeUserId } from './identity';
+import { requestSchoolsoftCookies } from './schoolsoftCookies';
 
 /* ─────────────────────────────────────────────────────────────
    Base64url helpers
@@ -166,10 +167,10 @@ export async function fetchSchoolsoftSession(
   };
   try {
     // The REST session endpoint authenticates with browser cookies, not the OAuth token.
-    const exchange = await axios.get(
+    const { cookies } = await requestSchoolsoftCookies(
       `https://sms.schoolsoft.se/${school}/eva-apps/auth/login/student`,
       {
-        ...options,
+        signal: AbortSignal.timeout(options.timeout),
         headers: {
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           token: accessToken,
@@ -183,8 +184,6 @@ export async function fetchSchoolsoftSession(
         },
       }
     );
-    const setCookie = exchange.headers['set-cookie'];
-    const cookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
     const cookiePairs = cookies.map((value: string) => value.split(';')[0].trim());
     if (!cookiePairs.some((pair: string) => /^JSESSIONID=.+$/.test(pair))) return null;
     const response = await axios.get(sessionUrl, {

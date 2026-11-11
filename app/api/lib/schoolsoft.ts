@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
+import iconv from 'iconv-lite';
 
 import { assertSchool, normalizeUserId } from './identity';
+import { requestSchoolsoftCookies } from './schoolsoftCookies';
 import { InputError } from './validation';
 
 const DEFAULT_USER_AGENT = 'Schoolsoft+/1.0 (https://ssp.elias4044.com; +)';
@@ -81,8 +83,6 @@ export function getSessionCookies(req: NextRequest): {
 
 /** Decodes SchoolSoft's ISO-8859-1 HTML responses into a UTF-8 string. */
 export function decodeHtmlResponse(buffer: Buffer | ArrayBuffer): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iconv = require('iconv-lite') as typeof import('iconv-lite');
   const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
   return iconv.decode(buf, 'ISO-8859-1');
 }
@@ -179,8 +179,7 @@ async function resolveSession(req: NextRequest): Promise<{
   let usertype = '1';
 
   try {
-    const sessionRes = await axios.get(sessionUrl, {
-      timeout: 5_000,
+    const sessionRes = await requestSchoolsoftCookies(sessionUrl, {
       signal: AbortSignal.timeout(5_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -193,16 +192,9 @@ async function resolveSession(req: NextRequest): Promise<{
         theme: 'dark',
         useros: 'android',
       },
-      maxRedirects: 0,
-      validateStatus: () => true,
     });
 
-    const setCookie = sessionRes.headers['set-cookie'];
-    const rawCookies: string[] = Array.isArray(setCookie)
-      ? setCookie
-      : setCookie
-        ? [setCookie]
-        : [];
+    const rawCookies = sessionRes.cookies;
     const extractVal = (raw: string) => raw.split(';')[0].split('=').slice(1).join('=');
     const cookieMap: Record<string, string> = {};
     for (const c of rawCookies) {

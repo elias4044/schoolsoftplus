@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
 
 import { assertSchool, normalizeUserId } from '@/app/api/lib/identity';
 import { recordLogin } from '@/app/api/lib/loginStats';
@@ -7,6 +6,7 @@ import { creditReferral, getUserIdByCode } from '@/app/api/lib/referralDb';
 import { readRouteBody } from '@/app/api/lib/requestBody';
 import { withValidation } from '@/app/api/lib/routeValidation';
 import { createSchoolsoftClient } from '@/app/api/lib/schoolsoft';
+import { requestSchoolsoftCookies } from '@/app/api/lib/schoolsoftCookies';
 import { trackLoginEvent } from '@/app/api/lib/statsHelper';
 
 export const POST = withValidation(async function POST(req: NextRequest) {
@@ -29,15 +29,15 @@ export const POST = withValidation(async function POST(req: NextRequest) {
     sspassword: body.password,
     usertype: typeof body.usertype === 'string' ? body.usertype : '1',
   });
-  const login = await axios.post(loginUrl, form.toString(), {
+  const login = await requestSchoolsoftCookies(loginUrl, {
+    method: 'POST',
+    body: form.toString(),
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': 'Mozilla/5.0',
       Referer: loginUrl,
     },
-    timeout: 8_000,
-    maxRedirects: 0,
-    validateStatus: () => true,
+    signal: AbortSignal.timeout(8_000),
   });
   if (login.status !== 302)
     return NextResponse.json(
@@ -45,7 +45,7 @@ export const POST = withValidation(async function POST(req: NextRequest) {
       { status: 401 }
     );
   const cookieMap = new Map<string, string>();
-  for (const cookie of login.headers['set-cookie'] ?? []) {
+  for (const cookie of login.cookies) {
     const pair = cookie.split(';')[0];
     const separator = pair.indexOf('=');
     if (separator > 0) cookieMap.set(pair.slice(0, separator), pair.slice(separator + 1));

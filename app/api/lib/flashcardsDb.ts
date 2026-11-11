@@ -1,5 +1,5 @@
 import { resolveAccountReference } from './accountRegistry';
-import { db } from './firebaseAdmin';
+import { getDb } from './firebaseAdmin';
 import { normalizeUserId } from './identity';
 
 export type DeckColor = 'violet' | 'rose' | 'amber' | 'emerald' | 'sky' | 'slate';
@@ -82,12 +82,12 @@ function docToCard(doc: FirebaseFirestore.DocumentSnapshot): FlashCard {
 }
 
 export async function getDecksByUser(userId: string): Promise<FlashDeck[]> {
-  const snap = await db.collection(DECK_COL).where('userId', '==', userId).get();
+  const snap = await getDb().collection(DECK_COL).where('userId', '==', userId).get();
   return snap.docs.map(docToDeck).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function getDeckById(id: string, userId: string): Promise<FlashDeck | null> {
-  const doc = await db.collection(DECK_COL).doc(id).get();
+  const doc = await getDb().collection(DECK_COL).doc(id).get();
   if (!doc.exists) return null;
   const deck = docToDeck(doc);
   if (deck.userId !== userId) return null;
@@ -102,7 +102,7 @@ export async function createDeck(
   >
 ): Promise<FlashDeck> {
   const now = Date.now();
-  const ref = db.collection(DECK_COL).doc();
+  const ref = getDb().collection(DECK_COL).doc();
   const payload = { userId, ...data, cardCount: 0, createdAt: now, updatedAt: now };
   await ref.set(payload);
   return { id: ref.id, ...payload };
@@ -118,8 +118,8 @@ export async function updateDeck(
     >
   >
 ): Promise<FlashDeck | null> {
-  const ref = db.collection(DECK_COL).doc(id);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(DECK_COL).doc(id);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const existing = docToDeck(doc);
@@ -137,14 +137,14 @@ export async function updateDeck(
 }
 
 export async function deleteDeck(id: string, userId: string): Promise<boolean> {
-  const ref = db.collection(DECK_COL).doc(id);
-  const cardsQuery = db
+  const ref = getDb().collection(DECK_COL).doc(id);
+  const cardsQuery = getDb()
     .collection(CARD_COL)
     .where('deckId', '==', id)
     .where('userId', '==', userId)
     .limit(400);
   while (true) {
-    const result = await db.runTransaction(async (transaction) => {
+    const result = await getDb().runTransaction(async (transaction) => {
       const doc = await transaction.get(ref);
       if (!doc.exists || docToDeck(doc).userId !== userId) return 'missing';
       const cards = await transaction.get(cardsQuery);
@@ -165,7 +165,7 @@ export async function deleteDeck(id: string, userId: string): Promise<boolean> {
 }
 
 export async function getCardsByDeck(deckId: string, userId: string): Promise<FlashCard[]> {
-  const snap = await db
+  const snap = await getDb()
     .collection(CARD_COL)
     .where('deckId', '==', deckId)
     .where(normalizeUserId(userId) ? 'userId' : 'username', '==', userId)
@@ -201,9 +201,9 @@ export async function updateCard(
     >
   >
 ): Promise<FlashCard | null> {
-  const ref = db.collection(CARD_COL).doc(id);
-  const deckRef = db.collection(DECK_COL).doc(deckId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CARD_COL).doc(id);
+  const deckRef = getDb().collection(DECK_COL).doc(deckId);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     const deck = await transaction.get(deckRef);
     if (!doc.exists || !deck.exists || docToDeck(deck).userId !== userId) return null;
@@ -222,9 +222,9 @@ export async function updateCard(
 }
 
 export async function deleteCard(id: string, deckId: string, userId: string): Promise<boolean> {
-  const ref = db.collection(CARD_COL).doc(id);
-  const deckRef = db.collection(DECK_COL).doc(deckId);
-  return db.runTransaction(async (transaction) => {
+  const ref = getDb().collection(CARD_COL).doc(id);
+  const deckRef = getDb().collection(DECK_COL).doc(deckId);
+  return getDb().runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
     const deckDoc = await transaction.get(deckRef);
     if (!doc.exists || !deckDoc.exists) return false;
@@ -241,7 +241,7 @@ export async function deleteCard(id: string, deckId: string, userId: string): Pr
 }
 
 export async function getDeckByIdAny(id: string): Promise<FlashDeck | null> {
-  const doc = await db.collection(DECK_COL).doc(id).get();
+  const doc = await getDb().collection(DECK_COL).doc(id).get();
   if (!doc.exists) return null;
   return docToDeck(doc);
 }
@@ -254,7 +254,7 @@ export async function canImportDeck(
   if (deck.userId === userId) return true;
   if (!messageId) return false;
 
-  const message = (await db.collection('messages_v1').doc(messageId).get()).data();
+  const message = (await getDb().collection('messages_v1').doc(messageId).get()).data();
   if (
     !message ||
     message.deletedAt != null ||
@@ -267,7 +267,7 @@ export async function canImportDeck(
     return false;
 
   const conversation = (
-    await db.collection('conversations_v1').doc(message.conversationId).get()
+    await getDb().collection('conversations_v1').doc(message.conversationId).get()
   ).data();
   const sender = message.senderUserId ?? message.senderUsername;
   if (typeof sender !== 'string' || (await resolveAccountReference(sender)) !== deck.userId)
@@ -283,13 +283,13 @@ export async function bulkCreateCards(
   cards: Pick<FlashCard, 'front' | 'back' | 'hint' | 'tags'>[]
 ): Promise<FlashCard[] | null> {
   if (cards.length === 0) return [];
-  const deckRef = db.collection(DECK_COL).doc(deckId);
+  const deckRef = getDb().collection(DECK_COL).doc(deckId);
   const created: FlashCard[] = [];
   // Leave room for the parent count update in every transaction.
   for (let offset = 0; offset < cards.length; offset += 400) {
     const now = Date.now();
     const chunk = cards.slice(offset, offset + 400).map((card) => ({
-      ref: db.collection(CARD_COL).doc(),
+      ref: getDb().collection(CARD_COL).doc(),
       data: {
         deckId,
         userId,
@@ -303,7 +303,7 @@ export async function bulkCreateCards(
         updatedAt: now,
       },
     }));
-    const saved = await db.runTransaction(async (transaction) => {
+    const saved = await getDb().runTransaction(async (transaction) => {
       const doc = await transaction.get(deckRef);
       if (!doc.exists) return false;
       const deck = docToDeck(doc);

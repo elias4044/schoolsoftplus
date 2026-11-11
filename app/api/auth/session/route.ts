@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
 
 import { normalizeUserId } from '@/app/api/lib/identity';
 import { withValidation } from '@/app/api/lib/routeValidation';
+import { requestSchoolsoftCookies } from '@/app/api/lib/schoolsoftCookies';
 import { createSchoolsoftClient } from '@/app/api/lib/schoolsoft';
 
 /* -------------------------------------------------------------
@@ -33,8 +33,7 @@ export const GET = withValidation(async function GET(req: NextRequest) {
 
   let rawCookies: string[];
   try {
-    const res = await axios.get(sessionUrl, {
-      timeout: 8_000,
+    const res = await requestSchoolsoftCookies(sessionUrl, {
       signal: AbortSignal.timeout(8_000),
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -48,12 +47,9 @@ export const GET = withValidation(async function GET(req: NextRequest) {
         useros: useros,
         ...(userId ? { userid: userId } : {}),
       },
-      maxRedirects: 0,
-      validateStatus: () => true,
     });
 
-    const setCookie = res.headers['set-cookie'];
-    rawCookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
+    rawCookies = res.cookies;
 
     if (rawCookies.length === 0) {
       console.warn(`[mobile/session] no cookies in response (status ${res.status})`);
