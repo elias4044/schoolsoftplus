@@ -19,7 +19,10 @@ export async function saveLayout(userId: string, layout: DashboardLayout): Promi
     if (
       current &&
       current.version === layout.version &&
-      JSON.stringify(current.widgets) === JSON.stringify(layout.widgets)
+      JSON.stringify(current.widgets) === JSON.stringify(layout.widgets) &&
+      current.appearance?.accent === layout.appearance?.accent &&
+      current.appearance?.density === layout.appearance?.density &&
+      current.appearance?.showPlanner === layout.appearance?.showPlanner
     )
       return;
     transaction.set(ref, { ...layout, userId, updatedAt: Date.now() });

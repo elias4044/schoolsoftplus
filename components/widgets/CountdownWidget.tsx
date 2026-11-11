@@ -2,236 +2,126 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Maximize2, Plus, Timer } from 'lucide-react';
+import { Pin, Plus } from 'lucide-react';
 
-import { apiFetch } from '@/lib/api-client';
-import { cn } from '@/lib/utils';
 import type { WidgetSize } from '@/lib/widgets/types';
 
-/* ---------------------------------------------------------- */
-/*  Types (minimal mirror)                                      */
-/* ---------------------------------------------------------- */
-
-type CountdownTheme = 'violet' | 'rose' | 'amber' | 'emerald' | 'sky' | 'slate';
+import { listData, useWidgetResource, WidgetContent, WidgetRow, WidgetTag } from './WidgetContent';
 
 interface Countdown {
   id: string;
   title: string;
-  description: string;
   targetDate: number;
-  theme: CountdownTheme;
-  emoji: string;
   pinned: boolean;
   archived: boolean;
 }
 
-interface TimeLeft {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-  total: number;
+const dateFormat = new Intl.DateTimeFormat('en-GB', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+function timeUnits(target: number, now: number) {
+  const seconds = Math.max(0, Math.ceil((target - now) / 1000));
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days)
+    return [
+      { value: days, label: 'days' },
+      { value: hours, label: 'hrs' },
+    ];
+  if (hours)
+    return [
+      { value: hours, label: 'hrs' },
+      { value: minutes, label: 'min' },
+    ];
+  return [
+    { value: minutes, label: 'min' },
+    { value: seconds % 60, label: 'sec' },
+  ];
 }
 
-/* ---------------------------------------------------------- */
-/*  Helpers                                                     */
-/* ---------------------------------------------------------- */
-
-const THEME_COLORS: Record<CountdownTheme, string> = {
-  violet: 'oklch(0.65 0.22 278)',
-  rose: 'oklch(0.68 0.22 10)',
-  amber: 'oklch(0.78 0.17 75)',
-  emerald: 'oklch(0.70 0.18 148)',
-  sky: 'oklch(0.72 0.17 220)',
-  slate: 'oklch(0.60 0.04 255)',
-};
-
-function calcTimeLeft(target: number): TimeLeft {
-  const total = target - Date.now();
-  const abs = Math.max(0, total);
-  return {
-    total,
-    days: Math.floor(abs / 86_400_000),
-    hours: Math.floor((abs % 86_400_000) / 3_600_000),
-    minutes: Math.floor((abs % 3_600_000) / 60_000),
-    seconds: Math.floor((abs % 60_000) / 1_000),
-  };
-}
-
-function pad(n: number) {
-  return String(n).padStart(2, '0');
-}
-
-/* ---------------------------------------------------------- */
-/*  Widget                                                      */
-/* ---------------------------------------------------------- */
-
-interface Props {
-  size: WidgetSize;
-}
-
-export default function CountdownWidget({ size }: Props) {
-  const [countdowns, setCountdowns] = useState<Countdown[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    apiFetch<{ countdowns: Countdown[] }>('/api/countdowns')
-      .then((d) => {
-        const cs = Array.isArray(d.countdowns) ? d.countdowns : [];
-        // Sort: pinned first, then soonest
-        cs.sort((a, b) => {
-          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-          return a.targetDate - b.targetDate;
-        });
-        setCountdowns(cs.filter((c) => !c.archived));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Tick every second
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const isTiny = size === '1x1';
-  const isWide = size.startsWith('4');
-  const maxItems = isTiny ? 1 : isWide ? 4 : size === '2x2' ? 2 : 1;
-  const visible = countdowns.slice(0, maxItems);
-
-  if (loading) {
-    return (
-      <div className="flex h-full flex-col gap-2">
-        {Array.from({ length: maxItems }).map((_, i) => (
-          <div key={i} className="flex-1 animate-pulse rounded-xl bg-white/5" />
-        ))}
-      </div>
-    );
-  }
-
-  if (countdowns.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-        <Timer className="text-muted-foreground/30 h-7 w-7" />
-        <p className="text-muted-foreground text-xs">No countdowns</p>
-        <Link
-          href="/countdown"
-          className="text-primary flex items-center gap-1 text-[10px] hover:underline"
-        >
-          <Plus className="h-3 w-3" /> Add one
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn('flex h-full gap-2', isWide ? 'flex-row' : 'flex-col')}>
-      {visible.map((c) => (
-        <CountdownItem key={c.id + tick} countdown={c} compact={isTiny} flex={isWide} />
-      ))}
-    </div>
+export default function CountdownWidget({ size }: { size: WidgetSize }) {
+  const resource = useWidgetResource(
+    '/api/countdowns',
+    (data) => listData<Countdown>(data, 'countdowns'),
+    0
   );
-}
+  const [now, setNow] = useState(Date.now);
+  const hasUpcoming = resource.data?.some((item) => !item.archived && item.targetDate > now);
 
-/* ---------------------------------------------------------- */
-/*  Single countdown item                                       */
-/* ---------------------------------------------------------- */
-
-function CountdownItem({
-  countdown,
-  compact,
-  flex,
-}: {
-  countdown: Countdown;
-  compact: boolean;
-  flex: boolean;
-}) {
-  const time = calcTimeLeft(countdown.targetDate);
-  const color = THEME_COLORS[countdown.theme] ?? THEME_COLORS.violet;
-  const past = time.total <= 0;
+  useEffect(() => {
+    if (!hasUpcoming) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasUpcoming]);
 
   return (
-    <div
-      className={cn(
-        'relative flex flex-col justify-between overflow-hidden rounded-xl border border-white/8 p-3',
-        flex ? 'flex-1' : 'w-full'
-      )}
-      style={{
-        background: 'oklch(0.10 0.01 260 / 70%)',
-        boxShadow: `0 0 0 1px ${color}20`,
-      }}
-    >
-      {/* Top accent */}
-      <div
-        className="absolute inset-x-0 top-0 h-0.5 opacity-60"
-        style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
-      />
-
-      {/* Header */}
-      <div className="mb-2 flex items-center gap-2">
-        <span className={cn('shrink-0', compact ? 'text-lg' : 'text-xl')}>{countdown.emoji}</span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium">{countdown.title}</p>
-          {!compact && (
-            <p className="text-muted-foreground truncate text-[10px]">
-              {new Date(countdown.targetDate).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-              })}
-            </p>
-          )}
-        </div>
-        <Link
-          href="/countdown"
-          className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-        >
-          <Maximize2 className="h-3 w-3" />
-        </Link>
-      </div>
-
-      {/* Timer */}
-      {past ? (
-        <p className="text-center text-sm">🎉 Now!</p>
-      ) : compact ? (
-        <p className="text-center text-sm font-bold tabular-nums" style={{ color }}>
-          {time.days > 0
-            ? `${time.days}d ${pad(time.hours)}h`
-            : `${pad(time.hours)}:${pad(time.minutes)}:${pad(time.seconds)}`}
-        </p>
-      ) : (
-        <div className="flex justify-center gap-2">
-          {(
-            [
-              ['d', time.days],
-              ['h', time.hours],
-              ['m', time.minutes],
-              ['s', time.seconds],
-            ] as [string, number][]
-          ).map(([label, val]) => (
-            <div key={label} className="flex flex-col items-center">
-              <AnimatePresence mode="popLayout">
-                <motion.span
-                  key={val}
-                  initial={{ y: -6, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 6, opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="text-base leading-none font-bold tabular-nums"
-                  style={{ color }}
-                >
-                  {pad(val)}
-                </motion.span>
-              </AnimatePresence>
-              <span className="text-muted-foreground text-[8px] tracking-wider uppercase">
-                {label}
-              </span>
+    <WidgetContent resource={resource} empty="No countdowns yet.">
+      {(data) => {
+        const items = data
+          .filter((item) => !item.archived && Number.isFinite(new Date(item.targetDate).getTime()))
+          .sort(
+            (a, b) =>
+              Number(b.targetDate > now) - Number(a.targetDate > now) ||
+              Number(b.pinned) - Number(a.pinned) ||
+              (a.targetDate > now ? a.targetDate - b.targetDate : b.targetDate - a.targetDate)
+          );
+        if (!items.length)
+          return (
+            <Link
+              href="/countdown"
+              className="widgetFeatureLink flex min-h-16 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold"
+            >
+              <Plus aria-hidden className="size-5 shrink-0" /> Add a countdown
+            </Link>
+          );
+        const [first, ...rest] = items;
+        return (
+          <>
+            <div className="widgetFeature rounded-lg px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-sm font-semibold">
+                {first.pinned && <Pin aria-label="Pinned" className="size-3.5 shrink-0" />}
+                <span className="truncate">{first.title}</span>
+              </p>
+              {first.targetDate > now ? (
+                <div className="my-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 tabular-nums">
+                  {timeUnits(first.targetDate, now).map(({ value, label }) => (
+                    <span key={label} className="whitespace-nowrap">
+                      <span className="text-xl font-semibold tracking-tight">{value}</span>
+                      <span className="text-muted-foreground ml-1 text-xs">{label}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="my-1">
+                  <WidgetTag>Ended</WidgetTag>
+                </p>
+              )}
+              <p className="text-muted-foreground text-xs">{dateFormat.format(first.targetDate)}</p>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            {(size.endsWith('x2') || size.startsWith('4')) &&
+              rest.map((item) => (
+                <WidgetRow
+                  key={item.id}
+                  title={item.title}
+                  detail={dateFormat.format(item.targetDate)}
+                  aside={
+                    item.targetDate <= now ? (
+                      <WidgetTag>Ended</WidgetTag>
+                    ) : (
+                      timeUnits(item.targetDate, now)
+                        .map(({ value, label }) => value + ' ' + label)
+                        .join(' ')
+                    )
+                  }
+                />
+              ))}
+          </>
+        );
+      }}
+    </WidgetContent>
   );
 }

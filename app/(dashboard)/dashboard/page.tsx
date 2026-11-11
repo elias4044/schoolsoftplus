@@ -1,163 +1,204 @@
 'use client';
 
-import { memo, useEffect, useState } from 'react';
-import { AnimatePresence, easeOut, motion } from 'framer-motion';
-import { Check, Moon, Pencil, Plus, RotateCcw, Sun, Sunrise, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Check, LayoutGrid, Palette, Plus, SlidersHorizontal } from 'lucide-react';
 
-import { useAuth } from '@/lib/auth-context';
-import { useWidgetLayout } from '@/lib/widgets/useWidgetLayout';
+import { useAuth, type AuthSession } from '@/lib/auth-context';
+import { DEFAULT_DASHBOARD_APPEARANCE } from '@/lib/widgets/types';
+import {
+  DASHBOARD_PRESETS,
+  useWidgetLayout,
+  type DashboardPreset,
+} from '@/lib/widgets/useWidgetLayout';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { AddWidgetPanel } from '@/components/widgets/AddWidgetPanel';
+import { DashboardAppearancePanel } from '@/components/widgets/DashboardAppearancePanel';
 import { DashboardGrid } from '@/components/widgets/DashboardGrid';
+import { SchoolWeekPlanner } from '@/components/widgets/SchoolWeekPlanner';
 
-const MemoizedDashboardGrid = memo(DashboardGrid);
+import './dashboard.css';
 
 export default function DashboardPage() {
   const { session } = useAuth();
-  const { layout, hydrated, reorder, resize, remove, add, reset } = useWidgetLayout();
+  return session ? <StudentDashboard key={session.userId} session={session} /> : null;
+}
+
+function StudentDashboard({ session }: { session: AuthSession }) {
+  const {
+    layout,
+    ready,
+    status,
+    reorder,
+    resize,
+    remove,
+    add,
+    applyPreset,
+    retry,
+    setAppearance,
+    toggleHighlight,
+  } = useWidgetLayout(session.userId);
   const [editing, setEditing] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const now = useNow(1000);
-
-  if (!hydrated) return null;
-
-  const { greeting, Icon } = getGreeting(now, session?.name ?? session?.username);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [preset, setPreset] = useState<DashboardPreset | null>(null);
+  const reducedMotion = useReducedMotion();
+  const name = (session.name ?? session.username)?.trim().split(/\s+/)[0];
+  const appearance = layout.appearance ?? DEFAULT_DASHBOARD_APPEARANCE;
 
   return (
-    <div className="relative mx-auto max-w-350 p-6">
-      {/* Hero header */}
-      <motion.section
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: easeOut }}
-        className="bg-card/60 relative mb-6 overflow-hidden rounded-2xl border border-white/10 p-5 backdrop-blur-md"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-primary flex items-center gap-2 text-xs font-medium">
-              <Icon className="h-3.5 w-3.5" />
-              <span>{formatDate(now)}</span>
-            </div>
-            <h1 className="from-foreground to-foreground/60 mt-1 bg-linear-to-r bg-clip-text text-3xl font-bold tracking-tight text-transparent">
-              {greeting}
-            </h1>
-          </div>
+    <div
+      className="studentDashboard mx-auto max-w-[83rem] px-4 pt-5 pb-12 sm:px-7 sm:pt-8 lg:px-9"
+      data-accent={appearance.accent}
+      data-density={appearance.density}
+    >
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:mb-5">
+        <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-[1.75rem]">
+          Dashboard
+        </h1>
+        <Button
+          variant={editing ? 'default' : 'outline'}
+          size="lg"
+          disabled={!ready}
+          onClick={() => {
+            setEditing(!editing);
+            setPreset(null);
+            setAppearanceOpen(false);
+          }}
+        >
+          {editing ? <Check /> : <SlidersHorizontal />}
+          {editing ? 'Done' : 'Customize'}
+        </Button>
+      </header>
 
-          <div className="flex flex-col items-end gap-2 pr-10">
-            <div className="mt-2 font-mono text-5xl font-semibold tracking-tight tabular-nums">
-              {now.toLocaleTimeString('en-SE', { hour: '2-digit', minute: '2-digit' })}
-              <span className="text-muted-foreground/50 ml-1 text-base">
-                {String(now.getSeconds()).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="mt-4 flex items-center justify-end gap-2 border-t border-white/5 pt-3 pr-10">
-          <AnimatePresence>
+      {(editing || status === 'error' || status === 'load-error') && (
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.2 }}
+          className="bg-card border-border mb-4 grid gap-3 rounded-2xl border p-3 sm:p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
             {editing && (
-              <motion.div
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                className="flex items-center gap-2"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-xs text-white"
-                  onClick={() => setAddOpen(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add widget
+              <div className="flex flex-wrap gap-1.5">
+                <Button size="lg" variant="soft" onClick={() => setLibraryOpen(true)}>
+                  <Plus /> Add widgets
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="lg" variant="ghost">
+                      <LayoutGrid /> Layout presets
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {(Object.keys(DASHBOARD_PRESETS) as DashboardPreset[]).map((option) => (
+                      <DropdownMenuItem key={option} onSelect={() => setPreset(option)}>
+                        {option}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-xs text-white"
-                  onClick={reset}
+                  size="lg"
+                  variant={appearanceOpen ? 'outline' : 'ghost'}
+                  aria-expanded={appearanceOpen}
+                  aria-controls={appearanceOpen ? 'dashboard-appearance' : undefined}
+                  onClick={() => setAppearanceOpen(!appearanceOpen)}
                 >
-                  <RotateCcw className="h-3.5 w-3.5" /> Reset
+                  <Palette /> Appearance
                 </Button>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-          <Button
-            size="sm"
-            onClick={() => setEditing((e) => !e)}
-            className="bg-primary/60 hover:bg-primary/80 gap-1.5 text-xs text-white"
-          >
-            {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-            {editing ? 'Done' : 'Edit layout'}
-          </Button>
+            <p role="status" className="text-muted-foreground px-1 text-xs">
+              {status === 'saving' && 'Saving layout...'}
+              {status === 'saved' && 'Layout saved'}
+              {status === 'loading' && 'Checking saved layout...'}
+              {status === 'error' && 'Could not sync your layout.'}
+              {status === 'load-error' && 'Could not load your saved layout.'}
+              {status === 'ready' && editing && 'Drag a widget or use its options to move it.'}
+              {(status === 'error' || status === 'load-error') && (
+                <button
+                  className="text-foreground ml-2 min-h-9 underline underline-offset-4"
+                  onClick={retry}
+                >
+                  Retry
+                </button>
+              )}
+            </p>
+          </div>
+          {editing && appearanceOpen && (
+            <DashboardAppearancePanel appearance={appearance} onChange={setAppearance} />
+          )}
+          {preset && (
+            <div className="border-border flex w-full flex-wrap items-center gap-2 border-t pt-2">
+              <p className="min-w-40 flex-1 text-sm">Replace this layout with {preset}?</p>
+              <Button variant="ghost" size="sm" onClick={() => setPreset(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  applyPreset(preset);
+                  setPreset(null);
+                }}
+              >
+                Apply preset
+              </Button>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {ready && appearance.showPlanner && <SchoolWeekPlanner name={name} />}
+
+      {!ready ? (
+        <div role="status" className="grid gap-3.5 @min-[38rem]:grid-cols-2">
+          <span className="sr-only">Loading dashboard layout</span>
+          {[0, 1].map((item) => (
+            <div key={item} className="bg-card border-border h-44 rounded-2xl border" />
+          ))}
         </div>
-      </motion.section>
-
-      {/* Edit hint */}
-      <AnimatePresence>
-        {editing && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="border-primary/40 bg-primary/5 text-primary mb-4 overflow-hidden rounded-lg border border-dashed px-4 py-2 text-center text-xs"
-          >
-            Drag widgets to reorder, resize them, or remove ones you do not need.
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className={
-          editing
-            ? 'ring-primary/30 rounded-2xl ring-1 ring-offset-8 ring-offset-transparent transition-shadow'
-            : 'transition-shadow'
-        }
-      >
-        <MemoizedDashboardGrid
+      ) : layout.widgets.length ? (
+        <DashboardGrid
           widgets={layout.widgets}
           editing={editing}
           onReorder={reorder}
           onResize={resize}
           onRemove={remove}
+          onToggleHighlight={toggleHighlight}
         />
-      </motion.div>
+      ) : (
+        <div className="border-border rounded-2xl border border-dashed px-5 py-10 text-center">
+          <h2 className="text-base font-semibold">Your dashboard is empty</h2>
+          <p className="text-muted-foreground mt-1 text-sm">Choose what you want to see here.</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              setEditing(true);
+              setLibraryOpen(true);
+            }}
+          >
+            <Plus /> Add widgets
+          </Button>
+        </div>
+      )}
 
-      <AddWidgetPanel
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        existingWidgets={layout.widgets}
-        onAdd={add}
-      />
+      {libraryOpen && (
+        <AddWidgetPanel
+          open
+          onClose={() => setLibraryOpen(false)}
+          existingWidgets={layout.widgets}
+          onAdd={add}
+        />
+      )}
     </div>
   );
-}
-
-function useNow(intervalMs: number): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
-function getGreeting(d: Date, name?: string): { greeting: string; Icon: LucideIcon } {
-  const hour = d.getHours();
-  const [greet, Icon] =
-    hour < 5
-      ? (['Still up', Moon] as const)
-      : hour < 12
-        ? (['Good morning', Sunrise] as const)
-        : hour < 17
-          ? (['Good afternoon', Sun] as const)
-          : (['Good evening', Moon] as const);
-  return { greeting: name ? `${greet}, ${name.split(' ')[0]}!` : `${greet}!`, Icon };
-}
-
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('en-SE', { weekday: 'long', month: 'long', day: 'numeric' });
 }

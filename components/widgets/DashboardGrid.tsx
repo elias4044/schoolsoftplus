@@ -1,14 +1,22 @@
 'use client';
 
+import { useId } from 'react';
 import {
   closestCenter,
   DndContext,
-  DragEndEvent,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core';
-import { arrayMove, rectSortingStrategy, SortableContext } from '@dnd-kit/sortable';
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { useReducedMotion } from 'framer-motion';
 
 import type { WidgetId, WidgetInstance, WidgetSize } from '@/lib/widgets/types';
 
@@ -18,11 +26,12 @@ import LunchWidget from './LunchWidget';
 import MessagesWidget from './MessagesWidget';
 import NewsWidget from './NewsWidget';
 import NotesWidget from './NotesWidget';
-import ScheduleWidget from './ScheduleWidget';
+import ScheduleWidget, { NextLessonWidget } from './ScheduleWidget';
+import { BookingsWidget, ResultsWidget } from './SchoolUpdatesWidgets';
+import ShortcutsWidget from './ShortcutsWidget';
 import WeatherWidget from './WeatherWidget';
 import { WidgetShell } from './WidgetShell';
 
-// Map widgetId → component
 const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<{ size: WidgetSize }>> = {
   homework: HomeworkWidget,
   schedule: ScheduleWidget,
@@ -32,6 +41,10 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<{ size: WidgetSize
   weather: WeatherWidget,
   countdown: CountdownWidget,
   messages: MessagesWidget,
+  'next-lesson': NextLessonWidget,
+  results: ResultsWidget,
+  bookings: BookingsWidget,
+  shortcuts: ShortcutsWidget,
 };
 
 interface Props {
@@ -40,36 +53,58 @@ interface Props {
   onReorder: (widgets: WidgetInstance[]) => void;
   onResize: (instanceId: string, size: WidgetSize) => void;
   onRemove: (instanceId: string) => void;
+  onToggleHighlight: (instanceId: string) => void;
 }
 
-export function DashboardGrid({ widgets, editing, onReorder, onResize, onRemove }: Props) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+export function DashboardGrid({
+  widgets,
+  editing,
+  onReorder,
+  onResize,
+  onRemove,
+  onToggleHighlight,
+}: Props) {
+  const id = useId();
+  const reducedMotion = useReducedMotion() === true;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+  function handleDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return;
-    const oldIndex = widgets.findIndex((w) => w.instanceId === active.id);
-    const newIndex = widgets.findIndex((w) => w.instanceId === over.id);
-    if (oldIndex !== -1 && newIndex !== -1) {
-      onReorder(arrayMove(widgets, oldIndex, newIndex));
-    }
+    const from = widgets.findIndex((widget) => widget.instanceId === active.id);
+    const to = widgets.findIndex((widget) => widget.instanceId === over.id);
+    if (from >= 0 && to >= 0) onReorder(arrayMove(widgets, from, to));
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={widgets.map((w) => w.instanceId)} strategy={rectSortingStrategy}>
-        {/* 4-column grid; row height is set by content but with a min */}
-        <div className="grid auto-rows-[minmax(160px,auto)] grid-cols-4 gap-4">
-          {widgets.map((instance) => {
+    <DndContext
+      id={id}
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={widgets.map((widget) => widget.instanceId)}
+        strategy={rectSortingStrategy}
+      >
+        <div className="dashboardGrid">
+          {widgets.map((instance, index) => {
             const Component = WIDGET_COMPONENTS[instance.widgetId];
-            if (!Component) return null;
             return (
               <WidgetShell
                 key={instance.instanceId}
                 instance={instance}
                 editing={editing}
+                first={index === 0}
+                last={index === widgets.length - 1}
+                reducedMotion={reducedMotion}
+                onMoveFirst={() => onReorder(arrayMove(widgets, index, 0))}
+                onMove={(offset) => onReorder(arrayMove(widgets, index, index + offset))}
                 onResize={onResize}
                 onRemove={onRemove}
+                onToggleHighlight={onToggleHighlight}
               >
                 <Component size={instance.size} />
               </WidgetShell>

@@ -1,0 +1,441 @@
+.studentDashboard {
+  --dashboard-color: var(--brand);
+  --dashboard-gap: clamp(0.85rem, 1.6cqi, 1.25rem);
+  --widget-inset: clamp(1rem, 1.75cqi, 1.4rem);
+  --widget-row: 12rem;
+  --widget-tall: 19rem;
+  --dashboard-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  container-type: inline-size;
+}
+
+.studentDashboard [data-swatch='theme'] {
+  --swatch: var(--brand);
+}
+.studentDashboard[data-accent='lagoon'],
+.studentDashboard [data-swatch='lagoon'] {
+  --swatch: oklch(0.68 0.14 175);
+}
+.studentDashboard[data-accent='orchid'],
+.studentDashboard [data-swatch='orchid'] {
+  --swatch: oklch(0.67 0.16 316);
+}
+.studentDashboard[data-accent='coral'],
+.studentDashboard [data-swatch='coral'] {
+  --swatch: oklch(0.68 0.17 27);
+}
+.studentDashboard[data-accent='gold'],
+.studentDashboard [data-swatch='gold'] {
+  --swatch: oklch(0.76 0.16 83);
+}
+.studentDashboard[data-accent] {
+  --dashboard-color: var(--swatch, var(--brand));
+}
+
+.studentDashboard[data-density='compact'] {
+  --dashboard-gap: 0.65rem;
+  --widget-inset: 0.9rem;
+  --widget-row: 11rem;
+  --widget-tall: 16.5rem;
+}
+
+.studentDashboard[data-density='spacious'] {
+  --dashboard-gap: clamp(1rem, 2.1cqi, 1.65rem);
+  --widget-inset: clamp(1.15rem, 2.3cqi, 1.75rem);
+  --widget-row: 14rem;
+  --widget-tall: 23rem;
+}
+
+.studentDashboard .planner {
+  display: grid;
+  gap: 1.25rem;
+  align-items: center;
+  padding: clamp(1rem, 3cqi, 2rem);
+  margin-block-end: clamp(1.25rem, 3cqi, 2rem);
+  border: 1px solid color-mix(in oklch, var(--dashboard-color) 32%, var(--border));
+  border-radius: 1.25rem;
+  background: color-mix(in oklch, var(--dashboard-color) 11%, var(--card));
+  transition:
+    background-color 200ms,
+    border-color 200ms;
+}
+
+.studentDashboard .plannerDate {
+  max-width: 19ch;
+  font-size: clamp(1.65rem, 4cqi, 2.85rem);
+  font-weight: 650;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.studentDashboard .plannerGreeting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  align-items: center;
+  margin-top: 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.studentDashboard .plannerGreeting time {
+  padding-inline-start: 0.9rem;
+  border-inline-start: 1px solid var(--border-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.studentDashboard .plannerCalendar {
+  min-width: 0;
+}
+
+.studentDashboard .plannerLink {
+  display: inline-flex;
+  min-height: 2.75rem;
+  gap: 0.45rem;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding-inline: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.studentDashboard .plannerLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.studentDashboard .plannerDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(0.2rem, 0.8cqi, 0.65rem);
+}
+
+.studentDashboard .plannerDay {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(2.85rem, 6cqi, 3.8rem);
+  align-content: center;
+  justify-items: center;
+  border-radius: 0.65rem;
+  background: color-mix(in oklch, var(--card) 72%, transparent);
+  color: var(--foreground);
+  animation: dashboardCalendarIn 420ms var(--dashboard-ease) backwards;
+  transition:
+    background-color 200ms,
+    color 200ms,
+    transform 140ms var(--dashboard-ease);
+}
+
+.studentDashboard .plannerDay:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.studentDashboard .plannerDays li:nth-last-child(-n + 2) .plannerDay:not([aria-pressed='true']) {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.studentDashboard .plannerDay[aria-pressed='true'] {
+  background: color-mix(in oklch, var(--dashboard-color) 62%, var(--foreground));
+  color: var(--background);
+}
+
+.studentDashboard .plannerDay:hover:not(:disabled, [aria-pressed='true']),
+.studentDashboard .plannerDay[aria-current='date']:not([aria-pressed='true']) {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--dashboard-color) 72%, var(--border));
+}
+
+.studentDashboard .plannerPreview {
+  min-height: 1.25rem;
+  margin-top: 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.studentDashboard .plannerPreviewText {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.65rem;
+  animation: dashboardWidgetIn 220ms var(--dashboard-ease) backwards;
+}
+
+.studentDashboard .plannerPreviewText strong {
+  color: var(--foreground);
+}
+
+.studentDashboard .dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dashboard-gap);
+}
+
+.studentDashboard .dashboardWidget {
+  container: dashboard-widget / inline-size;
+  min-height: var(--widget-row);
+  border-radius: 1rem;
+  transition-property: border-color, background-color;
+  transition-duration: 180ms;
+}
+
+.studentDashboard .dashboardWidget[data-tall='true'] {
+  min-height: var(--widget-tall);
+}
+.studentDashboard .dashboardWidget[data-highlighted='true'] {
+  border-color: color-mix(in oklch, var(--dashboard-color) 46%, var(--border));
+  background: color-mix(in oklch, var(--dashboard-color) 7%, var(--card));
+}
+.studentDashboard .dashboardWidget[data-dragging='true'] {
+  border-color: var(--dashboard-color);
+}
+.studentDashboard .widgetScroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.studentDashboard .widgetToolbar {
+  display: flex;
+  min-height: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.studentDashboard .widgetControl {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  padding-inline: 0.45rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.studentDashboard .widgetControl input {
+  accent-color: var(--dashboard-color);
+}
+.studentDashboard .widgetControl:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.studentDashboard .widgetControl:hover:not(:disabled),
+.studentDashboard .widgetRowLink:hover {
+  background: color-mix(in oklch, var(--dashboard-color) 9%, var(--card));
+}
+.studentDashboard .widgetControl:focus-visible,
+.studentDashboard .widgetControl:has(input:focus-visible),
+.studentDashboard .widgetFeatureLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.studentDashboard .widgetTag {
+  display: inline-block;
+  border-radius: 0.4rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.studentDashboard .widgetTag[data-active='true'],
+.studentDashboard .widgetWeekdays [aria-pressed='true'] {
+  background: color-mix(in oklch, var(--dashboard-color) 20%, var(--card));
+  color: var(--foreground);
+}
+
+.studentDashboard .widgetUnread {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  margin: 0 0.4rem 0.12rem 0;
+  border-radius: 50%;
+  background: var(--dashboard-color);
+}
+
+.studentDashboard .widgetAvatar,
+.studentDashboard .widgetTimelineTime {
+  display: grid;
+  place-content: center;
+  min-width: 2.125rem;
+  min-height: 2.125rem;
+  border-radius: 0.6rem;
+  background: var(--muted);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.studentDashboard .widgetTimelineTime {
+  min-width: 2.85rem;
+  padding: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.studentDashboard .widgetTimelineTime span {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+.studentDashboard .widgetTimelineTime[data-active='true'] {
+  background: color-mix(in oklch, var(--dashboard-color) 20%, var(--card));
+}
+
+.studentDashboard .widgetFeature,
+.studentDashboard .widgetFeatureLink {
+  background: color-mix(in oklch, var(--dashboard-color) 7%, var(--card));
+}
+.studentDashboard .widgetFeatureLink:hover {
+  background: color-mix(in oklch, var(--dashboard-color) 14%, var(--card));
+}
+.studentDashboard .widgetWeekdays {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.2rem;
+}
+.studentDashboard .widgetWeekdays .widgetControl {
+  padding-inline: 0.125rem;
+}
+.studentDashboard .widgetLessonProgress {
+  display: block;
+  width: 100%;
+  height: 0.3rem;
+  margin-top: 0.55rem;
+  accent-color: var(--dashboard-color);
+}
+.studentDashboard .widgetShortcutDetail,
+.studentDashboard .widgetShortcutArrow {
+  display: none;
+}
+
+@container dashboard-widget (width >= 23rem) {
+  .studentDashboard .widgetShortcutDetail,
+  .studentDashboard .widgetShortcutArrow {
+    display: block;
+  }
+}
+
+.studentDashboard .dashboardWidget {
+  animation: dashboardWidgetIn 280ms var(--dashboard-ease) backwards;
+}
+
+@keyframes dashboardWidgetIn {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.studentDashboard .appearancePanel {
+  display: grid;
+  gap: 0.9rem 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  animation: dashboardWidgetIn 220ms var(--dashboard-ease) backwards;
+}
+
+.studentDashboard .appearanceChoice {
+  cursor: pointer;
+}
+
+.studentDashboard .appearanceChoice > span {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.6rem;
+  padding-inline: 0.65rem;
+  border: 1px solid var(--border);
+  font-size: 0.8125rem;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+
+.studentDashboard .appearanceChoice:hover > span,
+.studentDashboard .appearanceChoice > input:checked + span {
+  background: color-mix(in oklch, var(--dashboard-color) 11%, var(--card));
+}
+.studentDashboard .appearanceChoice > input:checked + span {
+  border-color: color-mix(in oklch, var(--dashboard-color) 65%, var(--border));
+}
+
+.studentDashboard .appearanceChoice > input:focus-visible + span,
+.studentDashboard .plannerDay:focus-visible,
+.studentDashboard .plannerLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.studentDashboard .accentSwatch {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  color: oklch(0.16 0 0);
+  background: var(--swatch);
+}
+.studentDashboard .appearanceChoice > input:not(:checked) + span svg {
+  visibility: hidden;
+}
+
+@container (width >= 38rem) {
+  .studentDashboard .dashboardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: var(--widget-row);
+  }
+  .studentDashboard .dashboardWidget[data-tall='true'] {
+    min-height: 0;
+  }
+  .studentDashboard .appearancePanel {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@container (width >= 47rem) {
+  .studentDashboard .planner {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 1fr);
+  }
+}
+
+@container (width >= 64rem) {
+  .studentDashboard .dashboardGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@keyframes dashboardCalendarIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studentDashboard .plannerDay,
+  .studentDashboard .plannerPreviewText,
+  .studentDashboard .appearancePanel,
+  .studentDashboard .planner,
+  .studentDashboard .dashboardWidget,
+  .studentDashboard .appearanceChoice > span {
+    animation: none;
+    transition: none;
+  }
+
+  .studentDashboard .plannerDay:active:not(:disabled) {
+    transform: none;
+  }
+}

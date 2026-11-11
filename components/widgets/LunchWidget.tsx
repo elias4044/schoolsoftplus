@@ -1,140 +1,135 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, UtensilsCrossed } from 'lucide-react';
 
-import { apiFetch } from '@/lib/api-client';
-import type { WidgetSize } from '@/lib/widgets/types';
-import { Badge } from '@/components/ui/badge';
+import { readCache, useCachedResource } from '@/lib/cache';
+import { fetchLunch, getWeek, lunchKey, type ApiDay } from '@/lib/cache/lunch';
+import { DAYS, DAYS_SHORT } from '@/lib/schedule-utils';
 import { Button } from '@/components/ui/button';
 
-interface LunchDay {
-  day: string;
-  meals: string[];
-}
-interface Props {
-  size: WidgetSize;
-}
+import { WidgetContent, WidgetNotice, WidgetTag } from './WidgetContent';
 
-function getWeekInfo(offset: number) {
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-  const week = String(Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7) + offset).padStart(
-    2,
-    '0'
-  );
-  const year = String(now.getFullYear());
-  const d = new Date(now);
-  d.setDate(d.getDate() + offset * 7);
-  const label = `Week ${week}, ${year}`;
-  return { week, year, label };
-}
-
-export default function LunchWidget({ size }: Props) {
-  const [menu, setMenu] = useState<LunchDay[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function LunchWidget() {
   const [offset, setOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const { week, year, range } = getWeek(offset);
+  const key = lunchKey(year, week);
+  const today = ((new Date().getDay() + 6) % 7) + 1;
+  const preferredDay = selectedDay ?? (offset === 0 && today <= 5 ? today : 1);
 
-  const { week, year, label } = getWeekInfo(offset);
-
-  useEffect(() => {
-    setLoading(true);
-    type ApiDish = { dish?: string };
-    type ApiDay = { dayId: number; dishes?: ApiDish[] };
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-    apiFetch<{ success: boolean; data: ApiDay[] }>('/api/lunch', { params: { week, year } })
-      .then((res) => {
-        const arr = Array.isArray(res?.data) ? res.data : [];
-        setMenu(
-          arr.map((d) => ({
-            day: weekdays[(d.dayId ?? 1) - 1] ?? `Day ${d.dayId}`,
-            meals: (d.dishes ?? [])
-              .flatMap((ds) => (ds.dish ?? '').split(/\r?\n\r?\n/))
-              .map((s) => s.replace(/\r?\n/g, ' ').trim())
-              .filter(Boolean),
-          }))
-        );
-      })
-      .catch(() => setMenu([]))
-      .finally(() => setLoading(false));
-  }, [week, year]);
-
-  const today = new Date().toLocaleDateString('en-SE', { weekday: 'long' });
-  const compact = size === '2x1' || size === '1x2' || size === '1x1';
+  function moveWeek(delta: number) {
+    setOffset((value) => value + delta);
+    setSelectedDay(null);
+  }
 
   return (
-    <div className="flex h-full flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-[11px]">{label}</p>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => setOffset((o) => o - 1)}
-          >
-            <ChevronLeft className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => setOffset((o) => o + 1)}
-          >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
-        </div>
+    <>
+      <div className="widgetToolbar">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Previous lunch week"
+          onClick={() => moveWeek(-1)}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="text-center tabular-nums" aria-live="polite">
+          {range}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Next lunch week"
+          onClick={() => moveWeek(1)}
+        >
+          <ChevronRight />
+        </Button>
       </div>
+      <LunchMenu
+        key={key}
+        year={year}
+        week={week}
+        preferredDay={preferredDay}
+        today={offset === 0 ? today : null}
+        onSelectDay={setSelectedDay}
+      />
+    </>
+  );
+}
 
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />
-          ))}
-        </div>
-      ) : menu.length === 0 ? (
-        <p className="text-muted-foreground py-4 text-center text-xs">No menu available.</p>
-      ) : (
-        <div className="flex-1 space-y-2 overflow-y-auto">
-          {(compact ? menu.filter((d) => d.day === today) || menu.slice(0, 2) : menu).map((day) => (
-            <div
-              key={day.day}
-              className={`rounded-lg p-2.5 ${day.day === today ? 'bg-brand-dim border-primary/20 border' : 'bg-white/3'}`}
-            >
-              <div className="mb-1.5 flex items-center justify-between">
-                <p className="text-xs font-semibold">{day.day}</p>
-                {day.day === today && (
-                  <Badge
-                    className="px-1.5 py-0 text-[9px]"
-                    style={{
-                      background: 'oklch(0.65 0.22 278 / 20%)',
-                      color: 'oklch(0.75 0.15 278)',
-                      border: '1px solid oklch(0.65 0.22 278 / 30%)',
-                    }}
-                  >
-                    Today
-                  </Badge>
-                )}
-              </div>
-              {day.meals.length === 0 ? (
-                <p className="text-muted-foreground text-[10px]">No menu</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {day.meals.map((m, i) => (
-                    <li key={i} className="text-foreground/80 flex items-start gap-1.5 text-[11px]">
-                      <span className="text-primary/50 mt-0.5 shrink-0">·</span>
-                      {m}
+function LunchMenu({
+  year,
+  week,
+  preferredDay,
+  today,
+  onSelectDay,
+}: {
+  year: number;
+  week: number;
+  preferredDay: number;
+  today: number | null;
+  onSelectDay: (day: number) => void;
+}) {
+  const key = lunchKey(year, week);
+  const resource = useCachedResource<ApiDay[]>(key, (force) => {
+    const cached = readCache<ApiDay[]>(key);
+    return !force && cached && Date.now() - cached.savedAt < 60_000
+      ? Promise.resolve(cached.data)
+      : fetchLunch(year, week);
+  });
+  return (
+    <WidgetContent resource={resource} empty="No lunch menu for this week.">
+      {(menu) => {
+        const days = [...menu].sort((a, b) => a.dayId - b.dayId);
+        const day = days.find((item) => item.dayId === preferredDay) ?? days[0];
+        if (!day) return null;
+        const label = (id: number) => DAYS[id - 1] ?? `Day ${id}`;
+        const meals = (day.dishes ?? [])
+          .flatMap(({ dish }) => (dish ?? '').split(/\r?\n\r?\n/))
+          .map((dish) => dish.replace(/\s+/g, ' ').trim())
+          .filter(Boolean);
+        return (
+          <>
+            <div role="group" aria-label="Lunch day" className="widgetWeekdays">
+              {days.map(({ dayId }) => (
+                <button
+                  key={dayId}
+                  type="button"
+                  className="widgetControl"
+                  aria-label={label(dayId)}
+                  aria-current={dayId === today ? 'date' : undefined}
+                  aria-pressed={dayId === day.dayId}
+                  onClick={() => onSelectDay(dayId)}
+                >
+                  {DAYS_SHORT[dayId - 1] ?? dayId}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2.5 space-y-1.5">
+              <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+                {label(day.dayId)}
+                {day.dayId === today && <WidgetTag active>Today</WidgetTag>}
+              </p>
+              {meals.length ? (
+                <ul className="divide-border/70 divide-y">
+                  {meals.map((meal, index) => (
+                    <li key={index} className="flex items-start gap-2 py-2 text-sm leading-snug">
+                      <UtensilsCrossed
+                        aria-hidden
+                        className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
+                      />
+                      {meal}
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <WidgetNotice>No meals listed for this day.</WidgetNotice>
               )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          </>
+        );
+      }}
+    </WidgetContent>
   );
 }

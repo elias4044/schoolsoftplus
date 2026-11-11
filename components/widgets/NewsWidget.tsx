@@ -1,79 +1,68 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { ArrowUpRight, Paperclip } from 'lucide-react';
 
-import { apiFetch } from '@/lib/api-client';
-import type { WidgetSize } from '@/lib/widgets/types';
+import { stripHtml, type NewsSummary } from '@/components/news/news-types';
 
-interface NewsItem {
-  id: string;
-  title: string;
-  preview?: string | null;
+import { listData, useWidgetResource, WidgetContent, WidgetRow, WidgetTag } from './WidgetContent';
+
+type NewsItem = NewsSummary & { preview?: string | null };
+
+const publishedDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+
+function newsDate(item: NewsItem) {
+  const date = new Date(item.creDate ?? '');
+  return Number.isFinite(date.getTime()) ? publishedDate.format(date) : undefined;
 }
-interface Props {
-  size: WidgetSize;
-}
 
-export default function NewsWidget({ size }: Props) {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    apiFetch<any>('/api/news')
-      .then((res) => {
-        const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        const mapped = list.map((item: any) => ({
-          id: String(item.id),
-          title: item.title,
-          preview:
-            item.preview ||
-            (item.description
-              ? item.description
-                  .replace(/<[^>]*>/g, ' ')
-                  .replace(/\s+/g, ' ')
-                  .trim()
-              : null),
-        }));
-        setNews(mapped);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const limit = size === '2x2' ? 4 : 8;
-
-  if (loading)
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse space-y-1.5 rounded-xl bg-white/3 p-3">
-            <div className="h-3 w-1/2 rounded bg-white/5" />
-            <div className="h-2.5 w-full rounded bg-white/5" />
-          </div>
-        ))}
-      </div>
-    );
-
-  if (news.length === 0)
-    return <p className="text-muted-foreground py-6 text-center text-xs">No news available.</p>;
-
+export default function NewsWidget() {
+  const resource = useWidgetResource('/api/news', listData<NewsItem>);
   return (
-    <div className="h-full space-y-2 overflow-y-auto">
-      {news.slice(0, limit).map((item, i) => (
-        <motion.div
-          key={item.id ?? i}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="rounded-lg border border-white/7 bg-white/2 p-2.5 transition-colors hover:border-white/15"
-        >
-          <p className="text-foreground text-xs leading-snug font-medium">{item.title}</p>
-          {item.preview && size !== '2x1' && (
-            <p className="text-muted-foreground mt-1 line-clamp-2 text-[10px]">{item.preview}</p>
-          )}
-        </motion.div>
-      ))}
-    </div>
+    <WidgetContent resource={resource} empty="No school news to show.">
+      {(news) => {
+        if (!news.length) return null;
+        const [lead, ...rest] = news;
+        const preview = stripHtml(lead.preview || lead.description);
+        return (
+          <>
+            <Link
+              href={`/news?id=${lead.id}`}
+              prefetch={false}
+              className="widgetFeatureLink block rounded-lg px-3 py-2.5"
+            >
+              <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                {lead.read === false && <WidgetTag active>Unread</WidgetTag>}
+                <span className="min-w-0 flex-1 truncate">
+                  {[lead.category, newsDate(lead)].filter(Boolean).join(' / ')}
+                </span>
+                {lead.hasAttachment && (
+                  <Paperclip aria-label="Attachment" className="size-3.5 shrink-0" />
+                )}
+                <ArrowUpRight aria-hidden className="size-4 shrink-0" />
+              </span>
+              <span className="mt-1 line-clamp-2 block text-base leading-snug font-semibold">
+                {lead.title}
+              </span>
+              {preview && (
+                <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs leading-relaxed">
+                  {preview}
+                </span>
+              )}
+            </Link>
+            {rest.slice(0, 7).map((item) => (
+              <WidgetRow
+                key={item.id}
+                title={item.title}
+                detail={[item.category, item.author?.name].filter(Boolean).join(' / ')}
+                aside={newsDate(item)}
+                unread={item.read === false}
+                href={`/news?id=${item.id}`}
+              />
+            ))}
+          </>
+        );
+      }}
+    </WidgetContent>
   );
 }
