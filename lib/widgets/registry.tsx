@@ -1,8 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  CalendarCheck,
   CalendarDays,
   ClipboardList,
+  Clock3,
   CloudSun,
+  GraduationCap,
+  LayoutGrid,
   MessageSquare,
   Newspaper,
   StickyNote,
@@ -19,11 +23,13 @@ export interface WidgetMeta {
   icon: LucideIcon;
   defaultSize: WidgetSize;
   allowedSizes: WidgetSize[];
+  href?: string;
 }
 
 export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   homework: {
     id: 'homework',
+    href: '/subjects',
     label: 'Assignments',
     description: 'Assignments and tasks due this week from SchoolSoft.',
     icon: ClipboardList,
@@ -32,6 +38,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   schedule: {
     id: 'schedule',
+    href: '/schedule',
     label: "Today's Schedule",
     description: "Today's lessons at a glance.",
     icon: CalendarDays,
@@ -40,6 +47,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   notes: {
     id: 'notes',
+    href: '/notes',
     label: 'Notes',
     description: 'Personal notes stored in the cloud.',
     icon: StickyNote,
@@ -48,6 +56,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   lunch: {
     id: 'lunch',
+    href: '/lunch',
     label: 'Lunch Menu',
     description: "This week's school lunch menu.",
     icon: UtensilsCrossed,
@@ -56,6 +65,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   news: {
     id: 'news',
+    href: '/news',
     label: 'News',
     description: 'Latest news from school.',
     icon: Newspaper,
@@ -72,6 +82,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   countdown: {
     id: 'countdown',
+    href: '/countdown',
     label: 'Countdown',
     description: 'Live countdowns to your events, exams and important dates.',
     icon: Timer,
@@ -80,11 +91,46 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetMeta> = {
   },
   messages: {
     id: 'messages',
+    href: '/messages',
     label: 'Messages',
     description: 'Latest conversations and unread messages.',
     icon: MessageSquare,
     defaultSize: '2x2',
     allowedSizes: ['2x1', '2x2', '4x2'],
+  },
+  'next-lesson': {
+    id: 'next-lesson',
+    label: 'Up next',
+    description: 'See your current or next lesson and where to go.',
+    icon: Clock3,
+    href: '/schedule',
+    defaultSize: '2x1',
+    allowedSizes: ['2x1', '4x1'],
+  },
+  results: {
+    id: 'results',
+    label: 'Recent results',
+    description: 'See newly reported assessments and open their details.',
+    icon: GraduationCap,
+    href: '/subjects',
+    defaultSize: '2x1',
+    allowedSizes: ['2x1', '2x2', '4x2'],
+  },
+  bookings: {
+    id: 'bookings',
+    label: 'School bookings',
+    description: 'See booking periods for meetings and school events.',
+    icon: CalendarCheck,
+    defaultSize: '2x1',
+    allowedSizes: ['2x1', '2x2', '4x2'],
+  },
+  shortcuts: {
+    id: 'shortcuts',
+    label: 'Quick links',
+    description: 'Jump to frequently used SchoolSoft+ tools.',
+    icon: LayoutGrid,
+    defaultSize: '2x1',
+    allowedSizes: ['2x1', '4x1'],
   },
 };
 
@@ -98,15 +144,12 @@ export const SIZE_LABELS: Record<WidgetSize, string> = {
   '4x2': 'Full-width',
 };
 
-// Convert size token → Tailwind col/row span classes (on a 4-col grid)
 export function sizeToClasses(size: WidgetSize): string {
-  const map: Record<WidgetSize, string> = {
-    '1x1': 'col-span-1 row-span-1',
-    '2x1': 'col-span-2 row-span-1',
-    '4x1': 'col-span-4 row-span-1',
-    '1x2': 'col-span-1 row-span-2',
-    '2x2': 'col-span-2 row-span-2',
-    '4x2': 'col-span-4 row-span-2',
-  };
-  return map[size] ?? 'col-span-2 row-span-2';
+  const widths = {
+    '1': '@min-[64rem]:col-span-1',
+    '2': '@min-[64rem]:col-span-2',
+    '4': '@min-[38rem]:col-span-2 @min-[64rem]:col-span-4',
+  } as const;
+  const [width] = size.split('x') as ['1' | '2' | '4'];
+  return widths[width];
 }

@@ -28,6 +28,7 @@ function createLoader(stubs = {}) {
         exports: loaded.exports,
         Buffer,
         URL,
+        URLSearchParams,
         Headers,
         Date,
         Request,
@@ -349,6 +350,111 @@ function loadRoute(route, authenticated = true, overrides = {}) {
     ...overrides,
   })(`app/api/${route}/route.ts`);
 }
+
+test('dashboard reads the current Stockholm school week and forwards each resource independently', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-12-29T23:30:00Z') });
+  const calls = [];
+  const api = { defaults: { baseURL: 'https://sms.schoolsoft.se/engelska' } };
+  const upstreamData = [{ id: 123 }];
+  const { GET } = loadRoute('dashboard', true, {
+    '@/app/api/lib/schoolsoft': {
+      requireSession: async () => ({ school: 'engelska', cookieString: 'JSESSIONID=example' }),
+      createSchoolsoftClient: (school) => {
+        assert.equal(school, 'engelska');
+        return api;
+      },
+      getRequestSession: () => null,
+    },
+    '@/app/api/lib/schoolsoftReadCache': {
+      cachedSchoolsoftGet: async (client, cookies, path, options) => {
+        assert.equal(client, api);
+        assert.equal(cookies, 'JSESSIONID=example');
+        calls.push({ path, force: options.force });
+        return { data: upstreamData };
+      },
+    },
+    '@/app/api/lib/statsHelper': { trackAssignmentsFetch: () => {} },
+  });
+  for (const resource of ['assignments', 'results', 'bookings']) {
+    const response = await GET(
+      new NextRequest(`http://localhost/api/dashboard?resource=${resource}&refresh=1`)
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { data: upstreamData });
+    assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
+  }
+  assert.deepEqual(calls, [
+    {
+      path: '/rest-api/student/startpage/assignments?from_date=2024-12-30&to_date=2025-01-05',
+      force: true,
+    },
+    { path: '/rest-api/student/startpage/assessments?limit=6&onlyUnRead=false', force: true },
+    {
+      path: '/rest-api/student/startpage/timebooking/current?limit=6&onlyShowUnread=false',
+      force: true,
+    },
+  ]);
+  const invalid = await GET(new NextRequest('http://localhost/api/dashboard?resource=unknown'));
+  assert.equal(invalid.status, 400);
+  assert.equal(calls.length, 3);
+});
+
+test('dashboard layout saves new and legacy widgets only for the requesting account', async () => {
+  const saved = [];
+  const { PUT } = loadRoute('layout', true, {
+    '@/app/api/lib/layoutDb': {
+      saveLayout: async (account, layout) => saved.push({ account, layout }),
+    },
+  });
+  const layout = {
+    version: 1,
+    widgets: ['homework', 'next-lesson', 'results', 'bookings', 'shortcuts'].map((widgetId) => ({
+      instanceId: widgetId,
+      widgetId,
+      size: '2x1',
+    })),
+  };
+  const save = (account) =>
+    PUT(
+      new NextRequest(`http://localhost/api/layout?account=${account}`, {
+        method: 'PUT',
+        body: JSON.stringify({ layout }),
+      })
+    );
+  assert.equal((await save('another.account')).status, 401);
+  assert.equal(saved.length, 0);
+  const response = await save('first.last');
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).layout, layout);
+  assert.equal(saved[0].account, 'first.last');
+});
+
+test('dashboard appearance changes persist even when the widgets stay the same', async () => {
+  const { load, commits } = createStore();
+  const layoutDb = load('app/api/lib/layoutDb.ts');
+  const { GET, PUT } = loadRoute('layout', true, { '@/app/api/lib/layoutDb': layoutDb });
+  const url = 'http://localhost/api/layout?account=first.last';
+  const widgets = [
+    { instanceId: 'schedule', widgetId: 'schedule', size: '2x2', highlighted: true },
+  ];
+  const save = (appearance) =>
+    PUT(
+      new NextRequest(url, {
+        method: 'PUT',
+        body: JSON.stringify({ layout: { version: 1, widgets, appearance } }),
+      })
+    );
+  const appearance = { accent: 'lagoon', density: 'compact', showPlanner: true };
+  assert.equal((await save(appearance)).status, 200);
+  const updated = { ...appearance, showPlanner: false };
+  assert.equal((await save(updated)).status, 200);
+  assert.equal((await save({ ...updated, density: 'invalid' })).status, 400);
+  const response = await GET(new NextRequest(url));
+  const { layout } = await response.json();
+  assert.deepEqual(layout.appearance, updated);
+  assert.deepEqual(layout.widgets, widgets);
+  assert.equal(commits.flat().length, 2);
+});
 
 test('message sends accept null or omitted replies and validate reply IDs before writing', async () => {
   const writes = [];

@@ -1,133 +1,142 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Clock, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, Clock3, MapPin } from 'lucide-react';
 
-import { apiFetch } from '@/lib/api-client';
-import { cn } from '@/lib/utils';
+import { readCache, useCachedResource } from '@/lib/cache';
+import { fetchSchedule, scheduleKey } from '@/lib/cache/schedule';
+import { getWeekBounds, localDateKey, toMinutes, type Lesson } from '@/lib/schedule-utils';
 import type { WidgetSize } from '@/lib/widgets/types';
-import { Badge } from '@/components/ui/badge';
 
-interface Lesson {
-  name: string;
-  teacher?: string;
-  room?: string;
-  start: string;
-  end: string;
-  startDate?: string;
+import { WidgetContent, WidgetRow, WidgetTag } from './WidgetContent';
+
+const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' });
+
+export function useDashboardSchedule(week: number) {
+  const key = scheduleKey(week);
+  return useCachedResource<Lesson[]>(key, (force) => {
+    const cached = readCache<Lesson[]>(key);
+    return !force && cached && Date.now() - cached.savedAt < 60_000
+      ? Promise.resolve(cached.data)
+      : fetchSchedule(week);
+  });
 }
 
-interface Props {
-  size: WidgetSize;
-}
-
-export default function ScheduleWidget({ size }: Props) {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [loading, setLoading] = useState(true);
-
+function useTodaySchedule() {
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    apiFetch<{ success: boolean; schedule?: any[] }>('/api/schedule')
-      .then((res) => {
-        const arr = Array.isArray(res?.schedule) ? res.schedule : [];
-        const today = new Date().toISOString().slice(0, 10);
-        const toTime = (d: Date) => d.toTimeString().slice(0, 5);
-        const mapped: Lesson[] = arr
-          .filter((ev) => {
-            const s = ev.startDate ?? ev.start ?? '';
-            return s.startsWith(today);
-          })
-          .map((ev) => {
-            const s = new Date(ev.startDate ?? ev.start);
-            const e = new Date(ev.endDate ?? ev.end);
-            return {
-              name: ev.name ?? ev.title ?? ev.subject ?? 'Lesson',
-              teacher: ev.teacher ?? undefined,
-              room: ev.room ?? ev.location ?? undefined,
-              start: isNaN(s.getTime()) ? '' : toTime(s),
-              end: isNaN(e.getTime()) ? '' : toTime(e),
-              startDate: ev.startDate ?? ev.start ?? '',
-            };
-          });
-        setLessons(mapped);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const update = () => setNow(new Date());
+    const timer = window.setInterval(update, 15_000);
+    window.addEventListener('focus', update);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', update);
+    };
   }, []);
+  const { week } = getWeekBounds(0);
+  return {
+    resource: useDashboardSchedule(week),
+    date: localDateKey(now),
+    time: now.toTimeString().slice(0, 5),
+  };
+}
 
-  const now = new Date();
-
-  const limit = size.endsWith('x1') ? 3 : 8;
-
-  if (loading) return <LoadingRows rows={3} />;
-  if (lessons.length === 0) return <Empty text="No lessons today!" />;
-
+export default function ScheduleWidget({ size }: { size: WidgetSize }) {
+  const { resource, date, time } = useTodaySchedule();
+  const compact = size.endsWith('x1');
   return (
-    <div className="h-full space-y-1.5 overflow-y-auto">
-      {lessons.slice(0, limit).map((lesson, i) => {
-        const start = parseTime(lesson.start, now);
-        const end = parseTime(lesson.end, now);
-        const isNow = start <= now && now <= end;
-
+    <WidgetContent resource={resource} empty="No lessons scheduled today.">
+      {(lessons) => {
+        const today = lessons.filter((lesson) => lesson.date === date);
+        if (!today.length) return null;
+        const remaining = today.filter((lesson) => lesson.end > time);
+        const visible = compact && remaining.length ? remaining : today;
         return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={cn(
-              'flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors',
-              isNow ? 'bg-brand-dim' : 'hover:bg-white/3'
+          <>
+            {!compact && (
+              <div className="widgetToolbar">
+                <span>
+                  {today.length} {today.length === 1 ? 'lesson' : 'lessons'}
+                </span>
+                <span>
+                  {remaining.length ? `${remaining.length} left today` : 'School day finished'}
+                </span>
+              </div>
             )}
-          >
-            <div className="text-muted-foreground w-20 shrink-0 text-[10px] tabular-nums">
-              {lesson.start}–{lesson.end}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium">{lesson.name}</p>
-              {lesson.room && (
-                <p className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {lesson.room}
-                </p>
-              )}
-            </div>
-            {isNow && (
-              <span
-                className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                style={{ background: 'oklch(0.65 0.22 278 / 20%)', color: 'oklch(0.75 0.15 278)' }}
-              >
-                NOW
-              </span>
-            )}
-          </motion.div>
+            {visible.map((lesson) => {
+              const active = lesson.start <= time && time < lesson.end;
+              return (
+                <WidgetRow
+                  key={lesson.eventId}
+                  title={lesson.name}
+                  leading={
+                    <span className="widgetTimelineTime" data-active={active || undefined}>
+                      {lesson.start}
+                      <span>{lesson.end}</span>
+                    </span>
+                  }
+                  detail={[lesson.room, lesson.teacher].filter(Boolean).join(' / ')}
+                  aside={active ? <WidgetTag active>Now</WidgetTag> : undefined}
+                />
+              );
+            })}
+          </>
         );
-      })}
-    </div>
+      }}
+    </WidgetContent>
   );
 }
 
-function parseTime(timeStr: string, base: Date): Date {
-  const [h, m] = timeStr.split(':').map(Number);
-  const d = new Date(base);
-  d.setHours(h ?? 0, m ?? 0, 0, 0);
-  return d;
-}
-
-function LoadingRows({ rows }: { rows: number }) {
+export function NextLessonWidget() {
+  const { resource, date, time } = useTodaySchedule();
   return (
-    <div className="space-y-2">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          className="h-8 animate-pulse rounded-md"
-          style={{ background: 'oklch(1 0 0 / 5%)' }}
-        />
-      ))}
-    </div>
+    <WidgetContent resource={resource} empty="No more lessons on this week's timetable.">
+      {(lessons) => {
+        const lesson =
+          lessons.find((entry) => entry.date === date && entry.end > time) ??
+          lessons.find((entry) => entry.date > date);
+        if (!lesson) return null;
+        const active = lesson.date === date && lesson.start <= time;
+        const day =
+          lesson.date === date ? 'Today' : weekday.format(new Date(lesson.date + 'T00:00:00Z'));
+        const duration = toMinutes(lesson.end) - toMinutes(lesson.start);
+        const elapsed = toMinutes(time) - toMinutes(lesson.start);
+        return (
+          <Link
+            href="/schedule"
+            className="widgetFeatureLink focus-visible:ring-ring block rounded-lg px-3 py-2.5 transition-colors outline-none focus-visible:ring-2"
+          >
+            <span className="flex items-center justify-between gap-2">
+              <WidgetTag active={active}>{active ? 'In progress' : day}</WidgetTag>
+              <ArrowUpRight aria-hidden className="text-muted-foreground size-4 shrink-0" />
+            </span>
+            <span className="mt-1 block truncate text-xl leading-snug font-semibold tracking-tight">
+              {lesson.name}
+            </span>
+            <span className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+              <span className="inline-flex items-center gap-1">
+                <Clock3 aria-hidden className="size-3.5" />
+                {lesson.start} - {lesson.end}
+              </span>
+              {lesson.room && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <MapPin aria-hidden className="size-3.5 shrink-0" />
+                  <span className="truncate">{lesson.room}</span>
+                </span>
+              )}
+            </span>
+            {active && duration > 0 && (
+              <progress
+                className="widgetLessonProgress"
+                aria-label="Lesson progress"
+                value={Math.min(elapsed, duration)}
+                max={duration}
+              />
+            )}
+          </Link>
+        );
+      }}
+    </WidgetContent>
   );
-}
-
-function Empty({ text }: { text: string }) {
-  return <p className="text-muted-foreground py-6 text-center text-xs">{text}</p>;
 }

@@ -1,9 +1,12 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search } from 'lucide-react';
 
 import { WIDGET_REGISTRY } from '@/lib/widgets/registry';
-import type { WidgetId, WidgetInstance } from '@/lib/widgets/types';
+import { MAX_WIDGETS, type WidgetId, type WidgetInstance } from '@/lib/widgets/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 
 interface Props {
@@ -14,51 +17,62 @@ interface Props {
 }
 
 export function AddWidgetPanel({ open, onClose, existingWidgets, onAdd }: Props) {
-  const activeIds = new Set(existingWidgets.map((w) => w.widgetId));
+  const [query, setQuery] = useState('');
+  const search = query.trim().toLowerCase();
+  const widgets = Object.values(WIDGET_REGISTRY).filter((meta) =>
+    `${meta.label} ${meta.description}`.toLowerCase().includes(search)
+  );
+  const activeIds = new Set(existingWidgets.map((widget) => widget.widgetId));
+  const full = existingWidgets.length >= MAX_WIDGETS;
 
   return (
     <Sheet
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
-      title="Add Widget"
+      title="Widget library"
     >
-      <div className="flex-1 space-y-2 overflow-y-auto p-4">
-        {(Object.values(WIDGET_REGISTRY) as (typeof WIDGET_REGISTRY)[WidgetId][]).map((meta) => {
-          const Icon = meta.icon;
-          const active = activeIds.has(meta.id);
-          return (
-            <button
-              key={meta.id}
-              onClick={() => {
-                onAdd(meta.id);
-                onClose();
-              }}
-              className="group hover:bg-accent focus-visible:ring-ring flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors outline-none focus-visible:ring-2"
+      <div className="relative mx-5 mb-3">
+        <Search
+          aria-hidden
+          className="text-muted-foreground pointer-events-none absolute top-3.5 left-3 size-4"
+        />
+        <Input
+          className="h-11 pl-9"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search widgets"
+          aria-label="Search widgets"
+        />
+      </div>
+      {full && (
+        <p className="text-muted-foreground px-5 pb-2 text-sm">
+          Dashboard is full. Remove a widget to add another.
+        </p>
+      )}
+      <div className="divide-border/70 flex-1 divide-y overflow-y-auto px-5 pb-4">
+        {widgets.map(({ id, icon: Icon, label, description }) => (
+          <div key={id} className="flex items-center gap-3 py-2.5">
+            <Icon aria-hidden className="text-muted-foreground size-4 shrink-0 self-start" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{label}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{description}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              disabled={full}
+              aria-label={activeIds.has(id) ? `Add another ${label} widget` : `Add ${label}`}
+              onClick={() => onAdd(id)}
             >
-              <div className="text-muted-foreground mt-1 flex size-5 shrink-0 items-center justify-center">
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-foreground flex flex-wrap items-center gap-x-2 text-sm font-medium">
-                  {meta.label}
-                  {active && (
-                    <span className="text-muted-foreground text-xs font-normal">
-                      (on dashboard)
-                    </span>
-                  )}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-                  {meta.description}
-                </p>
-              </div>
-              <div className="text-muted-foreground mt-1 shrink-0">
-                <Plus className="text-primary h-3.5 w-3.5" />
-              </div>
-            </button>
-          );
-        })}
+              <Plus />
+            </Button>
+          </div>
+        ))}
+        {!widgets.length && (
+          <p className="text-muted-foreground py-5 text-sm">No widgets match your search.</p>
+        )}
       </div>
     </Sheet>
   );
