@@ -1,4 +1,7 @@
+## **NOTE: The main server is currently down — please refer to the backup server**: [ssp.e4044.com](https://ssp.e4044.com)
+
 <div align="center">
+  
   <img src="public/logo.png" alt="SchoolSoft+ Logo" width="72" height="72" />
 
   <h1>SchoolSoft+</h1>
